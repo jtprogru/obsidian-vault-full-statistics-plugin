@@ -35,23 +35,23 @@ class MarkdownTokenizer implements Tokenizer {
   }
 
   private stripHighlights(token: string): string {
-    const STRIP_HIGHLIGHTS = /^(==)?(.*?)(==)?$/;
-    return STRIP_HIGHLIGHTS.exec(token)[2];
+	const STRIP_HIGHLIGHTS = /^(==)?(.*?)(==)?$/;
+	return this.strip(STRIP_HIGHLIGHTS, token);
   }
 
   private stripFormatting(token: string): string {
     const STRIP_FORMATTING = /^(_+|\*+)?(.*?)(_+|\*+)?$/;
-    return STRIP_FORMATTING.exec(token)[2];
+    return this.strip(STRIP_FORMATTING, token);
   }
 
   private stripPunctuation(token: string): string {
     const STRIP_PUNCTUATION = /^(`|\.|:|"|,|!|\?)?(.*?)(`|\.|:|"|,|!|\?)?$/;
-    return STRIP_PUNCTUATION.exec(token)[2];
+	return this.strip(STRIP_PUNCTUATION, token);
   }
 
   private stripWikiLinks(token: string): string {
     const STRIP_WIKI_LINKS = /^(\[\[)?(.*?)(\]\])?$/;
-    return STRIP_WIKI_LINKS.exec(token)[2];
+    return this.strip(STRIP_WIKI_LINKS, token);
   }
 
   private stripAll(token: string): string {
@@ -86,6 +86,15 @@ class MarkdownTokenizer implements Tokenizer {
         filter(token => token.length > 0);
       return words;
     }
+  }
+  private strip(pattern: RegExp, token: string): string {
+	const match =  pattern.exec(token);
+
+	if (match && match.length >= 3) {
+	  return match[2];
+	}
+
+	return '';
   }
 }
 
