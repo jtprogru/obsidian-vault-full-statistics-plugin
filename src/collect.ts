@@ -72,11 +72,16 @@ export class FullVaultMetricsCollector {
   private async processBacklog() {
     while (this.backlog.length > 0) {
       let path = this.backlog.shift();
-      // console.log(`processing ${path}`);
+	  if (path == null) {
+		break;
+	  }
+    //   console.log(`processing ${path}`);
       let file = this.vault.getAbstractFileByPath(path) as TFile;
       // console.log(`path = ${path}; file = ${file}`);
       let metrics = await this.collect(file);
-      this.update(path, metrics);
+	  if ((metrics !== null) && (metrics !== undefined)) {
+	    this.update(path, metrics);
+	  }
     }
     // console.log("done");
   }
@@ -110,8 +115,8 @@ export class FullVaultMetricsCollector {
     }
   }
 
-  public async collect(file: TFile): Promise<FullVaultMetrics> {
-    let metadata: CachedMetadata;
+  public async collect(file: TFile): Promise<FullVaultMetrics | null | undefined> {
+    let metadata: CachedMetadata | null;
     try {
       metadata = this.metadataCache.getFileCache(file);
     } catch (e) {
@@ -123,8 +128,8 @@ export class FullVaultMetricsCollector {
       metadata = null;
     }
 
-    if (metadata == null) {
-      return Promise.resolve(null);
+    if (metadata === null) {
+      return null;
     }
 
     switch (this.getFileType(file)) {
@@ -140,7 +145,7 @@ export class FullVaultMetricsCollector {
 
     // Remove the existing values for the passed file if present, update the
     // raw values, then add the values for the passed file to the totals.
-    this.vaultMetrics?.dec(this.data.get(key));
+    this.vaultMetrics?.dec(this.data.get(key) ?? new FullVaultMetrics());
 
     if (metrics == null) {
       this.data.delete(key);
@@ -188,8 +193,7 @@ class NoteMetricsCollector {
     metrics.attachments = 0;
     metrics.size = file.stat?.size;
     metrics.links = metadata?.links?.length || 0;
-    metrics.words = 0;
-    metrics.words = await this.vault.cachedRead(file).then((content: string) => {
+    const words = await this.vault.cachedRead(file).then((content: string) => {
       return metadata.sections?.map(section => {
         const sectionType = section.type;
         const startOffset = section.position?.start?.offset;
@@ -207,6 +211,7 @@ class NoteMetricsCollector {
       console.log(`${file.path} ${e}`);
       return 0;
     });
+	metrics.words = words ?? 0;
 
     return metrics;
   }
