@@ -1,8 +1,9 @@
-/*
+.obsidian-vault-full-statistics--item {
+    margin-left: 0.75em;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.obsidian-vault-full-statistics--item--inactive {
+    display: none;
+}
 
-If your plugin does not need CSS, delete this file.
-
-*/
+.obsidian-vault-full-statistics--item--active {}

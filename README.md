@@ -1,96 +1,101 @@
-# Obsidian Sample Plugin
+# Obsidian Vault Full Statistics Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+NOTE: This plugin is modified fork of the [Obsidian Vault Statistics Plugin](https://github.com/bkyle/obsidian-vault-full-statistics-plugin/) plugin.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+Status bar item with vault statistics including the number of notes, files, attachments, and links.
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+## Usage
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+After the plugin is installed and enabled you will see a new item appear in the status bar showing you the number of notes in your vault.
 
-## First time developing plugins?
+- Click on the status bar item to cycle through the available statistics.
+- Hover over the status bar item to see all of the available statistics.
 
-Quick starting guide for new plugin devs:
+## Advanced Usage
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+### Showing All Statistics
 
-## Releasing new releases
+All statistics can be shown by creating and enabling a CSS snippet with the following content.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
-
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
-
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
+```css
+/* Show all vault statistics. */
+.obsidian-vault-full-statistics--item {
+    display: initial !important;
 }
 ```
 
-If you have multiple URLs, you can also do:
+### Showing Selected Statistics
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
+Similarly to the above, one can show certain statistics using a similar method to the above.  Below is a snippet that hides all by the notes and attachments statistics.  The snippet can be modified to include more or different statistics.
+
+``` css
+/* Hide all statistics. */
+.obsidian-vault-full-statistics--item {
+    display: none !important;
+}
+
+/* Always show the notes and attachments statistics. */
+.obsidian-vault-full-statistics--item-notes,
+.obsidian-vault-full-statistics--item-attachments {
+    display: initial !important;
 }
 ```
 
-## API Documentation
+## Version History
 
-See https://github.com/obsidianmd/obsidian-api
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+### [Unreleased]
+
+- Added
+- Changed
+- Deprecated
+- Removed
+- Fixed
+  - Comment sections are explicitly processed and do not count toward statistics (#22)
+
+### [0.1.3] - 2022-10-25
+
+- Fixed
+  - Fixed issue with deleted and renamed files not correctly updating file statistics (#17)
+  - Removed errant `debugger` statement (#14)
+
+### [0.1.2] - 2022-08-05
+
+- Added
+  - Added Settings pane
+- Changed
+  - Users can now optionally show all or a subset of metrics instead of the default click-to-cycle behaviour (#6)
+
+### [0.1.1] - 2022-08-05
+
+- Fixed
+  - Fixed issue when processing files with admonitions (#12)
+
+### [0.1.0] - 2021-12-30
+
+- Added
+  - Added word count metric (#8)
+
+### [0.0.8] - 2021-12-18
+
+- Added
+  - Initial support for displaying multiple statistics at the same time. (#6)
+
+### [0.0.6] - 2021-12-14
+
+- Fixed
+  - FIXED: Reported values only contain 2 significant digits (#7)
+
+### [0.0.5] - 2021-12-12
+
+- Changed
+  - Displayed statistics are formatted with grouping for increase readability.
+  - Added Vault Size statistic which calculates the total size of all files in the vault that are understood by Obsidian  The display value is scaled to the appropriate unit.  (#5)
+
+### [0.0.4] - 2021-02-25
+
+- Fixed
+  - Statistics will be calculated automatically as soon as the plugin loads.
