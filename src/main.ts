@@ -2,9 +2,9 @@ import { Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadat
 import { BytesFormatter, DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
-import { StatisticsPluginSettings, StatisticsPluginSettingTab } from './settings';
+import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
 
-const DEFAULT_SETTINGS: Partial<StatisticsPluginSettings> = {
+const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
   displayIndividualItems: false,
   showNotes: false,
   showAttachments: false,
@@ -14,14 +14,14 @@ const DEFAULT_SETTINGS: Partial<StatisticsPluginSettings> = {
   showSize: false,
 };
 
-export default class StatisticsPlugin extends Plugin {
+export default class FullStatisticsPlugin extends Plugin {
 
-  private statusBarItem: StatisticsStatusBarItem = null;
+  private statusBarItem: FullStatisticsStatusBarItem | null = null;
 
   public vaultMetricsCollector: FullVaultMetricsCollector;
   public vaultMetrics: FullVaultMetrics;
 
-  settings: StatisticsPluginSettings;
+  settings: FullStatisticsPluginSettings;
 
   async onload() {
     console.log('Loading vault-statistics Plugin');
@@ -36,10 +36,10 @@ export default class StatisticsPlugin extends Plugin {
       setFullVaultMetrics(this.vaultMetrics).
       start();
 
-    this.statusBarItem = new StatisticsStatusBarItem(this, this.addStatusBarItem()).
+    this.statusBarItem = new FullStatisticsStatusBarItem(this, this.addStatusBarItem()).
       setFullVaultMetrics(this.vaultMetrics);
 
-    this.addSettingTab(new StatisticsPluginSettingTab(this.app, this));
+    this.addSettingTab(new FullStatisticsPluginSettingTab(this.app, this));
   }
 
   async loadSettings() {
@@ -47,8 +47,10 @@ export default class StatisticsPlugin extends Plugin {
   }
   
   async saveSettings() {
-    await this.saveData(this.settings);
-    this.statusBarItem.refresh();
+	await this.saveData(this.settings);
+	if (this.statusBarItem) {
+	  this.statusBarItem.refresh();
+	}
   }
 }
 
@@ -70,7 +72,7 @@ class StatisticView {
    * @param containerEl The parent element for the view.
    */
   constructor(containerEl: HTMLElement) {
-    this.containerEl = containerEl.createSpan({ cls: ["obsidian-vault-statistics--item"] });
+    this.containerEl = containerEl.createSpan({ cls: ["obsidian-vault-full-statistics--item"] });
     this.setActive(false);
   }
 
@@ -78,7 +80,7 @@ class StatisticView {
    * Sets the name of the statistic.
    */
   setStatisticName(name: string): StatisticView {
-    this.containerEl.addClass(`obsidian-vault-statistics--item-${name}`);
+    this.containerEl.addClass(`obsidian-vault-full-statistics--item-${name}`);
     return this;
   }
 
@@ -93,19 +95,19 @@ class StatisticView {
   /**
    * Updates the view with the desired active status.
    *
-   * Active views have the CSS class `obsidian-vault-statistics--item-active`
+   * Active views have the CSS class `obsidian-vault-full-statistics--item-active`
    * applied, inactive views have the CSS class
-   * `obsidian-vault-statistics--item-inactive` applied. These classes are
+   * `obsidian-vault-full-statistics--item-inactive` applied. These classes are
    * mutually exclusive.
    */
   setActive(isActive: boolean): StatisticView {
-    this.containerEl.removeClass("obsidian-vault-statistics--item--active");
-    this.containerEl.removeClass("obsidian-vault-statistics--item--inactive");
+    this.containerEl.removeClass("obsidian-vault-full-statistics--item--active");
+    this.containerEl.removeClass("obsidian-vault-full-statistics--item--inactive");
 
     if (isActive) {
-      this.containerEl.addClass("obsidian-vault-statistics--item--active");
+      this.containerEl.addClass("obsidian-vault-full-statistics--item--active");
     } else {
-      this.containerEl.addClass("obsidian-vault-statistics--item--inactive");
+      this.containerEl.addClass("obsidian-vault-full-statistics--item--inactive");
     }
 
     return this;
@@ -127,9 +129,9 @@ class StatisticView {
   }
 }
 
-class StatisticsStatusBarItem {
+class FullStatisticsStatusBarItem {
 
-  private owner: StatisticsPlugin;
+  private owner: FullStatisticsPlugin;
 
   // handle of the status bar item to draw into.
   private statusBarItem: HTMLElement;
@@ -142,7 +144,7 @@ class StatisticsStatusBarItem {
 
   private statisticViews: Array<StatisticView> = [];
 
-  constructor(owner: StatisticsPlugin, statusBarItem: HTMLElement) {
+  constructor(owner: FullStatisticsPlugin, statusBarItem: HTMLElement) {
     this.owner = owner;
     this.statusBarItem = statusBarItem;
 

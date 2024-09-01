@@ -2,7 +2,7 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 
 import StatisticsPlugin from "./main";
 
-export interface StatisticsPluginSettings {
+export interface FullStatisticsPluginSettings {
   displayIndividualItems: boolean,
   showNotes: boolean,
   showAttachments: boolean,
@@ -12,7 +12,7 @@ export interface StatisticsPluginSettings {
   showSize: boolean,
 }
 
-export class StatisticsPluginSettingTab extends PluginSettingTab {
+export class FullStatisticsPluginSettingTab extends PluginSettingTab {
   plugin: StatisticsPlugin;
 
   constructor(app: App, plugin: StatisticsPlugin) {
