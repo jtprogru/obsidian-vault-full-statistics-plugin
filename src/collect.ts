@@ -194,24 +194,26 @@ class NoteMetricsCollector {
     metrics.size = file.stat?.size;
     metrics.links = metadata?.links?.length || 0;
     const words = await this.vault.cachedRead(file).then((content: string) => {
-      return metadata.sections?.map(section => {
-        const sectionType = section.type;
-        const startOffset = section.position?.start?.offset;
-        const endOffset = section.position?.end?.offset;
-        const tokenizer = NoteMetricsCollector.TOKENIZERS.get(sectionType);
-        if (!tokenizer) {
-          console.log(`${file.path}: no tokenizer, section.type=${section.type}`);
-          return 0;
-        } else {
-          const tokens = tokenizer.tokenize(content.substring(startOffset, endOffset));
-          return tokens.length;
-        }
-      }).reduce((a, b) => a + b, 0);
-    }).catch((e) => {
-      console.log(`${file.path} ${e}`);
-      return 0;
-    });
+		return metadata.sections?.map(section => {
+		  const sectionType = section.type;
+		  const startOffset = section.position?.start?.offset;
+		  const endOffset = section.position?.end?.offset;
+		  const tokenizer = NoteMetricsCollector.TOKENIZERS.get(sectionType);
+		  if (!tokenizer) {
+			console.log(`${file.path}: no tokenizer, section.type=${section.type}`);
+			return 0;
+		  } else {
+			const tokens = tokenizer.tokenize(content.substring(startOffset, endOffset));
+			return tokens.length;
+		  }
+		}).reduce((a, b) => a + b, 0);
+	  }).catch((e) => {
+		console.log(`${file.path} ${e}`);
+		return 0;
+	  });
 	metrics.words = words ?? 0;
+	metrics.quality = metrics.links / metrics.notes ?? 0.0;
+	metrics.tags = metadata?.tags?.length || 0;
 
     return metrics;
   }
@@ -227,6 +229,8 @@ class FileMetricsCollector {
     metrics.size = file.stat?.size;
     metrics.links = 0;
     metrics.words = 0;
+	metrics.quality = 0.0;
+	metrics.tags = 0;
     return metrics;
   }
 }
