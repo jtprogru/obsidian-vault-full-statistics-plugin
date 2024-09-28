@@ -1,9 +1,10 @@
 .obsidian-vault-full-statistics--item {
-    margin-left: 0.6em;
+	margin-left: 0.2em;
+	margin-right: 0.2em;
 }
 
 .obsidian-vault-full-statistics--item--inactive {
-    display: none;
+		display: none;
 }
 
 .obsidian-vault-full-statistics--item--active {}
