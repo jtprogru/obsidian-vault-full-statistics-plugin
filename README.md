@@ -1,6 +1,6 @@
 # Obsidian Vault Full Statistics Plugin
 
-**NOTE**: This plugin is modified fork of the [Obsidian Vault Statistics Plugin](https://github.com/bkyle/obsidian-vault-full-statistics-plugin/) plugin.
+**NOTE**: This plugin is modified fork of the [Obsidian Vault Statistics Plugin](https://github.com/bkyle/obsidian-vault-statistics-plugin) plugin.
 
 Status bar item with vault statistics including the number of notes, files, attachments, and links.
 
