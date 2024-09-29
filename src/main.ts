@@ -169,11 +169,11 @@ class FullStatisticsStatusBarItem {
 			setStatisticName("size").
 			setFormatter((s: FullVaultMetrics) => { return new BytesFormatter().format(s.size) }));
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("quality").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("quality").format(s.quality) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("tags").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("tags").format(s.tags) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("QoV").
+			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("QoV").format(s.quality) }));
 
 		this.statusBarItem.onClickEvent(() => { this.onclick() });
 	}
@@ -195,8 +195,8 @@ class FullStatisticsStatusBarItem {
 			this.statisticViews[3].setActive(this.owner.settings.showLinks).refresh(this.vaultMetrics);
 			this.statisticViews[4].setActive(this.owner.settings.showWords).refresh(this.vaultMetrics);
 			this.statisticViews[5].setActive(this.owner.settings.showSize).refresh(this.vaultMetrics);
-			this.statisticViews[6].setActive(this.owner.settings.showQuality).refresh(this.vaultMetrics);
-			this.statisticViews[7].setActive(this.owner.settings.showTags).refresh(this.vaultMetrics);
+			this.statisticViews[6].setActive(this.owner.settings.showTags).refresh(this.vaultMetrics);
+			this.statisticViews[7].setActive(this.owner.settings.showQuality).refresh(this.vaultMetrics);
 		} else {
 			this.statisticViews.forEach((view, i) => {
 				view.setActive(this.displayedStatisticIndex == i).refresh(this.vaultMetrics);

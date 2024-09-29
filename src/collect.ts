@@ -77,7 +77,7 @@ export class FullVaultMetricsCollector {
 	  }
     //   console.log(`processing ${path}`);
       let file = this.vault.getAbstractFileByPath(path) as TFile;
-      // console.log(`path = ${path}; file = ${file}`);
+    //   console.log(`path = ${path}; file = ${file}`);
       let metrics = await this.collect(file);
 	  if ((metrics !== null) && (metrics !== undefined)) {
 	    this.update(path, metrics);
@@ -213,7 +213,7 @@ class NoteMetricsCollector {
 	  });
 	metrics.words = words ?? 0;
 	metrics.quality = metrics.links / metrics.notes ?? 0.0;
-	metrics.tags = metadata?.tags?.length || 0;
+	metrics.tags = metadata?.tags?.length ?? 0;
 
     return metrics;
   }

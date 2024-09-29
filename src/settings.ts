@@ -109,24 +109,23 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-	
-	new Setting(containerEl)
-			.setName("Show quality")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showQuality)
-					.onChange(async (value) => {
-						this.plugin.settings.showQuality = value;
-						await this.plugin.saveSettings();
-					});
-			});
-	new Setting(containerEl)
+		new Setting(containerEl)
 			.setName("Show tags")
 			.addToggle((value) => {
 				value
 					.setValue(this.plugin.settings.showTags)
 					.onChange(async (value) => {
 						this.plugin.settings.showTags = value;
+						await this.plugin.saveSettings();
+					});
+			});
+		new Setting(containerEl)
+			.setName("Show quality")
+			.addToggle((value) => {
+				value
+					.setValue(this.plugin.settings.showQuality)
+					.onChange(async (value) => {
+						this.plugin.settings.showQuality = value;
 						await this.plugin.saveSettings();
 					});
 			});
