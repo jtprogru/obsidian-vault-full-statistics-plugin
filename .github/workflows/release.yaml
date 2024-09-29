@@ -28,7 +28,7 @@ jobs:
           zip -r "${{ github.event.repository.name }}.zip" "${{ github.event.repository.name }}"
       - name: Release
         id: create_release
-        uses: actions/create-release@v1.1.4
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.ref }}

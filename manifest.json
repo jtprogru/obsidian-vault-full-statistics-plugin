@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-vault-full-statistics-plugin",
 	"name": "Vault Full Statistics",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"minAppVersion": "0.15.0",
 	"description": "Status bar item with vault full statistics such as number of notes, files, attachments, and links.",
 	"author": "Mikhail Savin",
