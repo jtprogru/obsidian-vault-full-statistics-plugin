@@ -10,8 +10,8 @@ Status bar item with vault full statistics including:
 - number of links – count of all links in the vault
 - number of words – count of all words in the vault
 - vault size – total size of all files in the vault
-- vault quality – number of links divided by number of notes
-- number of tags – count of all tags in the vault
+- (new feature) vault quality – number of links divided by number of notes
+- (new feature) number of tags – count of all tags in the vault
 
 ## Usage
 
