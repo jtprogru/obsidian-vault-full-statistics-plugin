@@ -1,0 +1,22 @@
+name: Build
+
+"on":
+  push:
+    branches:
+    - '*' 
+    tags:
+    - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout
+      
+      - uses: chill-viking/npm-ci@latest
+        name: Install dependencies
+      
+      - name: Build
+        run: |
+          npm run build
