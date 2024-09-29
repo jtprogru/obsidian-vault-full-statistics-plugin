@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+---
+version: "3"
+
+set:
+  - pipefail
+
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  install:
+    desc: 'Install all Node dependencies'
+    cmds:
+      - npm install
+
+  build:
+    desc: 'Build the project'
+    cmds:
+      - npm run build
+
+  dev:
+    desc: 'Start the development server'
+    cmds:
+      - npm run dev
+
+  version:
+    desc: 'Bump current version'
+    cmds:
+      - npm run version
