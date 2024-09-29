@@ -16,10 +16,11 @@ jobs:
         id: version
         run: |
           echo "::set-output name=tag::$(git describe --exact-match --tags HEAD | head -n1)"
+      - uses: chill-viking/npm-ci@latest
+        name: Install dependencies
       - name: Build
         run: |
-          npm install
-          npm run build
+            npm run build
       - name: Package
         run: |
           mkdir "${{ github.event.repository.name }}"
