@@ -9,9 +9,13 @@ Status bar item with vault full statistics including:
 - number of files – count of all files in the vault (attachments + notes)
 - number of links – count of all links in the vault
 - number of words – count of all words in the vault
-- vault size – total size of all files in the vault
+- size of vault – total size of all files in the vault
 - (new feature) vault quality – number of links divided by number of notes
 - (new feature) number of tags – count of all tags in the vault
+
+## Installation
+
+For installation this plugin please use [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin. Alternative installation way is download latest version of artifacts from [release section](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/releases) and move this in `<vault>/.obsidian/plugins/vault-full-statistics`.
 
 ## Usage
 
