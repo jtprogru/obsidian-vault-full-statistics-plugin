@@ -23,9 +23,9 @@ jobs:
             npm run build
       - name: Package
         run: |
-          mkdir "${{ github.event.repository.name }}"
-          cp main.js styles.css README.md manifest.json "${{ github.event.repository.name }}"
-          zip -r "${{ github.event.repository.name }}.zip" "${{ github.event.repository.name }}"
+          mkdir "vault-full-statistics"
+          cp main.js styles.css README.md manifest.json "vault-full-statistics"
+          zip -r "vault-full-statistics.zip" "vault-full-statistics"
       - name: Release
         id: create_release
         uses: actions/create-release@v1
@@ -43,8 +43,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.event.repository.name }}.zip
-          asset_name: ${{ github.event.repository.name }}-${{steps.version.outputs.tag}}.zip
+          asset_path: vault-full-statistics.zip
+          asset_name: vault-full-statistics-${{steps.version.outputs.tag}}.zip
           asset_content_type: application/zip
       - name: Upload main.js
         uses: actions/upload-release-asset@v1
