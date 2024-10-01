@@ -6,8 +6,12 @@ describe("base cases", () => {
 		expect(markdown_tokenize("")).toStrictEqual([]);
 	});
 
-	test("single word content yields single element", () => {
+	test("single word content yields single english element", () => {
 		expect(markdown_tokenize("foo")).toStrictEqual(["foo"]);
+	});
+
+	test("single word content yields single cyrillic element", () => {
+		expect(markdown_tokenize("это")).toStrictEqual(["это"]);
 	});
 });
 
@@ -16,8 +20,16 @@ describe("word boundaries", () => {
 		expect(markdown_tokenize("foo bar baz")).toStrictEqual(["foo", "bar", "baz"]);
 	});
 
+	test("\\s", () => {
+		expect(markdown_tokenize("это мир ваш")).toStrictEqual(["это", "мир", "ваш"]);
+	});
+
 	test("\\n", () => {
 		expect(markdown_tokenize("foo\nbar\nbaz")).toStrictEqual(["foo", "bar", "baz"]);
+	});
+
+	test("\\n", () => {
+		expect(markdown_tokenize("это\nмир\nваш")).toStrictEqual(["это", "мир", "ваш"]);
 	});
 
 	test("\\r", () => {
@@ -247,12 +259,12 @@ blandit nulla. Vivamus id posuere dui.")).
 	test("callouts", () => {
 		expect(markdown_tokenize("> [!Lorem]\
 > Ipsum, dolor sit amet.")).
-		toStrictEqual([
-			"Lorem",
-			"Ipsum",
-			"dolor",
-			"sit",
-			"amet",
-		]);
+			toStrictEqual([
+				"Lorem",
+				"Ipsum",
+				"dolor",
+				"sit",
+				"amet",
+			]);
 	});
 });

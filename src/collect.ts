@@ -76,12 +76,19 @@ export class FullVaultMetricsCollector {
 		break;
 	  }
     //   console.log(`processing ${path}`);
-      let file = this.vault.getAbstractFileByPath(path) as TFile;
-    //   console.log(`path = ${path}; file = ${file}`);
-      let metrics = await this.collect(file);
-	  if ((metrics !== null) && (metrics !== undefined)) {
-	    this.update(path, metrics);
+	  let file = this.vault.getAbstractFileByPath(path);
+	  if (file instanceof TFile) {
+		  
+		  try {
+			let metrics = await this.collect(file);
+			if ((metrics !== null) && (metrics !== undefined)) {
+				this.update(path, metrics);
+			}
+		  } catch (e) {
+			console.log(`error processing ${path}: ${e}`);
+		  }
 	  }
+    //   console.log(`path = ${path}; file = ${file}`);
     }
     // console.log("done");
   }
