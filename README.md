@@ -1,4 +1,4 @@
-# Obsidian Vault Full Statistics Plugin
+# Vault Full Statistics Plugin
 
 **NOTE**: This plugin is modified fork of the [Obsidian Vault Statistics Plugin](https://github.com/bkyle/obsidian-vault-statistics-plugin) plugin.
 
