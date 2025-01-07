@@ -3,6 +3,7 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import StatisticsPlugin from "./main";
 
 export interface FullStatisticsPluginSettings {
+	excludeDirectories: string,
 	displayIndividualItems: boolean,
 	showNotes: boolean,
 	showAttachments: boolean,
@@ -26,7 +27,19 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		let { containerEl } = this;
 
 		containerEl.empty();
-		
+
+		new Setting(containerEl)
+			.setName("Exclude directories")
+			.setDesc("Exclude directories from statistics")
+			.addText((value) => {
+				value
+					.setValue(this.plugin.settings.excludeDirectories)
+					.onChange(async (value) => {
+						this.plugin.settings.excludeDirectories = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
 		new Setting(containerEl)
 			.setName("Show individual items")
 			.setDesc("Whether to show multiple items at once or cycle them with a click")

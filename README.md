@@ -12,6 +12,7 @@ Status bar item with vault full statistics including:
 - size of vault – total size of all files in the vault
 - (new feature) vault quality – number of links divided by number of notes
 - (new feature) number of tags – count of all tags in the vault
+- (new feature) excluded dirs – comma-separated list of directories excluded from statistics
 
 ## Installation
 
