@@ -93,7 +93,7 @@ export class FullVaultMetricsCollector {
 				this.update(path, metrics);
 			}
 		  } catch (e) {
-			// console.log(`error processing ${path}: ${e}`);
+			console.log(`error processing ${path}: ${e}`);
 		  }
 	  }
     //   console.log(`path = ${path}; file = ${file}`);
