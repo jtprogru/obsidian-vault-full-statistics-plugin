@@ -16,6 +16,7 @@ export class FullVaultMetricsCollector {
   private metadataCache: MetadataCache;
   private data: Map<string, FullVaultMetrics> = new Map();
   private backlog: Array<string> = new Array();
+  private excludeDirectories: string;
   private vaultMetrics: FullVaultMetrics = new FullVaultMetrics();
 
   constructor(owner: Component) {
@@ -25,6 +26,11 @@ export class FullVaultMetricsCollector {
   public setVault(vault: Vault) {
     this.vault = vault;
     return this;
+  }
+
+  public setExcludeDirectories(excludeDirectories: string) {
+	this.excludeDirectories = excludeDirectories;
+	return this;
   }
 
   public setMetadataCache(metadataCache: MetadataCache) {
@@ -55,6 +61,8 @@ export class FullVaultMetricsCollector {
     });
     this.owner.registerInterval(+setInterval(() => { this.processBacklog() }, 2000));
 
+    this.setExcludeDirectories(this.excludeDirectories);
+
     return this;
   }
 
@@ -72,7 +80,7 @@ export class FullVaultMetricsCollector {
   private async processBacklog() {
     while (this.backlog.length > 0) {
       let path = this.backlog.shift();
-	  if (path == null) {
+	  if ((path == null) || (path.split("/").some((dir) => this.excludeDirectories.includes(dir)))) {
 		break;
 	  }
     //   console.log(`processing ${path}`);
@@ -85,7 +93,7 @@ export class FullVaultMetricsCollector {
 				this.update(path, metrics);
 			}
 		  } catch (e) {
-			console.log(`error processing ${path}: ${e}`);
+			// console.log(`error processing ${path}: ${e}`);
 		  }
 	  }
     //   console.log(`path = ${path}; file = ${file}`);
@@ -201,26 +209,26 @@ class NoteMetricsCollector {
     metrics.size = file.stat?.size;
     metrics.links = metadata?.links?.length || 0;
     const words = await this.vault.cachedRead(file).then((content: string) => {
-		return metadata.sections?.map(section => {
-		  const sectionType = section.type;
-		  const startOffset = section.position?.start?.offset;
-		  const endOffset = section.position?.end?.offset;
-		  const tokenizer = NoteMetricsCollector.TOKENIZERS.get(sectionType);
-		  if (!tokenizer) {
-			console.log(`${file.path}: no tokenizer, section.type=${section.type}`);
-			return 0;
-		  } else {
-			const tokens = tokenizer.tokenize(content.substring(startOffset, endOffset));
-			return tokens.length;
-		  }
-		}).reduce((a, b) => a + b, 0);
-	  }).catch((e) => {
-		console.log(`${file.path} ${e}`);
-		return 0;
-	  });
-	metrics.words = words ?? 0;
-	metrics.quality = metrics.links / metrics.notes ?? 0.0;
-	metrics.tags = metadata?.tags?.length ?? 0;
+        return metadata.sections?.map(section => {
+            const sectionType = section.type;
+            const startOffset = section.position?.start?.offset;
+            const endOffset = section.position?.end?.offset;
+            const tokenizer = NoteMetricsCollector.TOKENIZERS.get(sectionType);
+            if (!tokenizer) {
+                console.log(`${file.path}: no tokenizer, section.type=${section.type}`);
+                return 0;
+            } else {
+                const tokens = tokenizer.tokenize(content.substring(startOffset, endOffset));
+                return tokens.length;
+            }
+        }).reduce((a, b) => a + b, 0);
+    }).catch((e) => {
+        console.log(`${file.path} ${e}`);
+        return 0;
+    });
+    metrics.words = words ?? 0;
+    metrics.quality = metrics.notes !== 0 ? (metrics.links / metrics.notes) : 0.0;
+    metrics.tags = metadata?.tags?.length ?? 0;
 
     return metrics;
   }

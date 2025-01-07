@@ -36,6 +36,7 @@ export default class FullStatisticsPlugin extends Plugin {
 			setVault(this.app.vault).
 			setMetadataCache(this.app.metadataCache).
 			setFullVaultMetrics(this.vaultMetrics).
+			setExcludeDirectories(this.settings.excludeDirectories).
 			start();
 
 		this.statusBarItem = new FullStatisticsStatusBarItem(this, this.addStatusBarItem()).
@@ -63,7 +64,7 @@ export default class FullStatisticsPlugin extends Plugin {
 class StatisticView {
 
 	/** Root node for the {@link StatisticView}. */
-	private containerEl: HTMLElement;
+	private containerElementsForVaultFullStatistics: HTMLElement;
 
 	/** Formatter that extracts and formats a value from a {@link Statistics} instance. */
 	private formatter: (s: FullVaultMetrics) => string;
@@ -74,7 +75,7 @@ class StatisticView {
 	 * @param containerEl The parent element for the view.
 	 */
 	constructor(containerEl: HTMLElement) {
-		this.containerEl = containerEl.createSpan({ cls: ["obsidian-vault-full-statistics--item"] });
+		this.containerElementsForVaultFullStatistics = containerEl.createSpan({ cls: ["obsidian-vault-full-statistics--item"] });
 		this.setActive(false);
 	}
 
@@ -82,7 +83,7 @@ class StatisticView {
 	 * Sets the name of the statistic.
 	 */
 	setStatisticName(name: string): StatisticView {
-		this.containerEl.addClass(`obsidian-vault-full-statistics--item-${name}`);
+		this.containerElementsForVaultFullStatistics.addClass(`obsidian-vault-full-statistics--item-${name}`);
 		return this;
 	}
 
@@ -103,13 +104,13 @@ class StatisticView {
 	 * mutually exclusive.
 	 */
 	setActive(isActive: boolean): StatisticView {
-		this.containerEl.removeClass("obsidian-vault-full-statistics--item--active");
-		this.containerEl.removeClass("obsidian-vault-full-statistics--item--inactive");
+		this.containerElementsForVaultFullStatistics.removeClass("obsidian-vault-full-statistics--item--active");
+		this.containerElementsForVaultFullStatistics.removeClass("obsidian-vault-full-statistics--item--inactive");
 
 		if (isActive) {
-			this.containerEl.addClass("obsidian-vault-full-statistics--item--active");
+			this.containerElementsForVaultFullStatistics.addClass("obsidian-vault-full-statistics--item--active");
 		} else {
-			this.containerEl.addClass("obsidian-vault-full-statistics--item--inactive");
+			this.containerElementsForVaultFullStatistics.addClass("obsidian-vault-full-statistics--item--inactive");
 		}
 
 		return this;
@@ -120,14 +121,14 @@ class StatisticView {
 	 * Statistics}.
 	 */
 	refresh(s: FullVaultMetrics) {
-		this.containerEl.setText(this.formatter(s));
+		this.containerElementsForVaultFullStatistics.setText(this.formatter(s));
 	}
 
 	/**
 	 * Returns the text content of the view.
 	 */
 	getText(): string {
-		return this.containerEl.getText();
+		return this.containerElementsForVaultFullStatistics.getText();
 	}
 }
 

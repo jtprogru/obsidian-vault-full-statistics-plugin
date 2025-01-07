@@ -21,7 +21,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	words: number = 0;
 	quality: number = 0.00001;
 	tags: number = 0;
-
+	
 	public reset() {
 		this.files = 0;
 		this.notes = 0;
