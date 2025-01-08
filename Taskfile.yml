@@ -22,6 +22,11 @@ tasks:
     cmds:
       - npm run build
 
+  test:
+    desc: 'Run all tests in project'
+    cmds:
+      - npm test
+
   dev:
     desc: 'Start the development server'
     cmds:

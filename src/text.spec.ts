@@ -1,6 +1,5 @@
 import { markdown_tokenize } from './text';
 
-
 describe("base cases", () => {
 	test("empty string yields empty set", () => {
 		expect(markdown_tokenize("")).toStrictEqual([]);
@@ -73,31 +72,25 @@ describe("punctuation handling", () => {
 
 describe("filtering", () => {
 	test("non-words are removed", () => {
-		expect(markdown_tokenize("!")).toStrictEqual([]);
-		expect(markdown_tokenize("@")).toStrictEqual([]);
-		expect(markdown_tokenize("#")).toStrictEqual([]);
-		expect(markdown_tokenize("$")).toStrictEqual([]);
-		expect(markdown_tokenize("%")).toStrictEqual([]);
-		expect(markdown_tokenize("^")).toStrictEqual([]);
-		expect(markdown_tokenize("&")).toStrictEqual([]);
-		expect(markdown_tokenize("*")).toStrictEqual([]);
-		expect(markdown_tokenize("(")).toStrictEqual([]);
-		expect(markdown_tokenize(")")).toStrictEqual([]);
-		expect(markdown_tokenize("`")).toStrictEqual([]);
+		const nonWords = ["!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "`"];
+		nonWords.forEach(nonWord => {
+			expect(markdown_tokenize(nonWord)).toStrictEqual([]);
+		});
 	});
 
 	test("numbers are not words", () => {
-		expect(markdown_tokenize("1")).toStrictEqual([]);
-		expect(markdown_tokenize("123")).toStrictEqual([]);
-		expect(markdown_tokenize("1231231")).toStrictEqual([]);
+		const numbers = ["1", "123", "1231231"];
+		numbers.forEach(number => {
+			expect(markdown_tokenize(number)).toStrictEqual([]);
+		});
 	});
 
 	test("code block headers", () => {
-		expect(markdown_tokenize("```")).toStrictEqual([]);
-		expect(markdown_tokenize("```java")).toStrictEqual([]);
-		expect(markdown_tokenize("```perl")).toStrictEqual([]);
-		expect(markdown_tokenize("```python")).toStrictEqual([]);
-	})
+		const codeBlockHeaders = ["```", "```java", "```perl", "```python"];
+		codeBlockHeaders.forEach(header => {
+			expect(markdown_tokenize(header)).toStrictEqual([]);
+		});
+	});
 });
 
 describe("strip punctuation", () => {
@@ -108,33 +101,17 @@ describe("strip punctuation", () => {
 	});
 
 	test("formatting", () => {
-		expect(markdown_tokenize("*foo")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo*")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("*foo*")).toStrictEqual(["foo"]);
-
-		expect(markdown_tokenize("**foo")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo**")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("**foo**")).toStrictEqual(["foo"]);
-
-		expect(markdown_tokenize("__foo")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo__")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("__foo__")).toStrictEqual(["foo"]);
+		const formats = ["*foo", "foo*", "*foo*", "**foo", "foo**", "**foo**", "__foo", "foo__", "__foo__"];
+		formats.forEach(format => {
+			expect(markdown_tokenize(format)).toStrictEqual(["foo"]);
+		});
 	});
 
 	test("punctuation", () => {
-		expect(markdown_tokenize("\"foo")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo\"")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("\"foo\"")).toStrictEqual(["foo"]);
-
-		expect(markdown_tokenize("`foo")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo`")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("`foo`")).toStrictEqual(["foo"]);
-
-		expect(markdown_tokenize("foo:")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo.")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo,")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo?")).toStrictEqual(["foo"]);
-		expect(markdown_tokenize("foo!")).toStrictEqual(["foo"]);
+		const punctuations = ["\"foo", "foo\"", "\"foo\"", "`foo", "foo`", "`foo`", "foo:", "foo.", "foo,", "foo?", "foo!"];
+		punctuations.forEach(punctuation => {
+			expect(markdown_tokenize(punctuation)).toStrictEqual(["foo"]);
+		});
 	});
 
 	test("callouts", () => {
@@ -257,8 +234,7 @@ blandit nulla. Vivamus id posuere dui.")).
 	});
 
 	test("callouts", () => {
-		expect(markdown_tokenize("> [!Lorem]\
-> Ipsum, dolor sit amet.")).
+		expect(markdown_tokenize("> [!Lorem] Ipsum, dolor sit amet.")).
 			toStrictEqual([
 				"Lorem",
 				"Ipsum",
@@ -266,5 +242,20 @@ blandit nulla. Vivamus id posuere dui.")).
 				"sit",
 				"amet",
 			]);
+	});
+
+	test("complex markdown", () => {
+		expect(markdown_tokenize("**Bold** and _italic_ text with [link](http://example.com) and `code`."))
+			.toStrictEqual(["Bold", "and", "italic", "text", "with", "link", "and", "code"]);
+	});
+
+	test("nested markdown", () => {
+		expect(markdown_tokenize("**Bold _italic_** and `code` with [link](http://example.com)."))
+			.toStrictEqual(["Bold", "italic", "and", "code", "with", "link"]);
+	});
+
+	test("markdown with emojis", () => {
+		expect(markdown_tokenize("Hello :smile: world!"))
+			.toStrictEqual(["Hello", "smile", "world"]);
 	});
 });
