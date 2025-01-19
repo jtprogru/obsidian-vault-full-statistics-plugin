@@ -1,6 +1,6 @@
 {
 	"name": "vault-full-statistics",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"description": "Status bar item with vault full statistics such as number of notes, files, attachments, links, tags and quality of vault.",
 	"main": "main.js",
 	"scripts": {
