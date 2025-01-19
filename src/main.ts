@@ -5,6 +5,7 @@ import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
 
 const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
+	excludeDirectories: '',
 	displayIndividualItems: false,
 	showNotes: false,
 	showAttachments: false,
