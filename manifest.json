@@ -1,7 +1,7 @@
 {
 	"id": "vault-full-statistics",
 	"name": "Vault Full Statistics",
-	"version": "1.2.3",
+	"version": "1.3.0",
 	"minAppVersion": "0.15.0",
 	"description": "Status bar item with vault full statistics such as number of notes, files, attachments, links, tags and quality of vault.",
 	"author": "Mikhail Savin",
