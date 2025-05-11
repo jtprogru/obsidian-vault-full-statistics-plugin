@@ -1,8 +1,8 @@
-import { markdown_tokenize, unit_tokenize } from './text';
+import { markdown_tokenize, unit_tokenize, extract_tags_from_text } from './text';
 import { BytesFormatter, DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 
-describe("base cases", () => {
+describe("Base cases", () => {
 	test("empty string yields empty set", () => {
 		expect(markdown_tokenize("")).toStrictEqual([]);
 	});
@@ -16,7 +16,7 @@ describe("base cases", () => {
 	});
 });
 
-describe("word boundaries", () => {
+describe("Word boundaries", () => {
 	test("\\s", () => {
 		expect(markdown_tokenize("foo bar baz")).toStrictEqual(["foo", "bar", "baz"]);
 	});
@@ -66,13 +66,13 @@ describe("word boundaries", () => {
 	});
 });
 
-describe("punctuation handling", () => {
+describe("Punctuation handling", () => {
 	test("strips punctuation characters", () => {
 		expect(markdown_tokenize("foo\nbar\nbaz")).toStrictEqual(["foo", "bar", "baz"]);
 	});
 });
 
-describe("filtering", () => {
+describe("Filtering", () => {
 	test("non-words are removed", () => {
 		const nonWords = ["!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "`"];
 		nonWords.forEach(nonWord => {
@@ -95,7 +95,7 @@ describe("filtering", () => {
 	});
 });
 
-describe("strip punctuation", () => {
+describe("Strip punctuation", () => {
 	test("highlights", () => {
 		expect(markdown_tokenize("==foo")).toStrictEqual(["foo"]);
 		expect(markdown_tokenize("foo==")).toStrictEqual(["foo"]);
@@ -132,7 +132,7 @@ describe("strip punctuation", () => {
 	});
 });
 
-describe("integration tests", () => {
+describe("Integration tests", () => {
 	test("sentences", () => {
 		expect(markdown_tokenize("Lorem ipsum dolor sit amet, consectetur adipiscing elit.")).
 			toStrictEqual([
@@ -263,7 +263,7 @@ describe("integration tests", () => {
 	});
 });
 
-describe("unit_tokenize", () => {
+describe("Unit tokenize", () => {
 	test("always returns empty array", () => {
 		expect(unit_tokenize("")).toStrictEqual([]);
 		expect(unit_tokenize("foo bar baz")).toStrictEqual([]);
@@ -271,7 +271,7 @@ describe("unit_tokenize", () => {
 	});
 });
 
-describe("BytesFormatter", () => {
+describe("Bytes formatter", () => {
 	const fmt = new BytesFormatter();
 	test("formats bytes < 1KB", () => {
 		expect(fmt.format(512)).toBe("512.00 bytes");
@@ -287,7 +287,7 @@ describe("BytesFormatter", () => {
 	});
 });
 
-describe("DecimalUnitFormatter", () => {
+describe("Decimal unit formatter", () => {
 	const fmt = new DecimalUnitFormatter("notes");
 	test("formats integer", () => {
 		expect(fmt.format(1234)).toBe("1,234 notes");
@@ -300,7 +300,7 @@ describe("DecimalUnitFormatter", () => {
 	});
 });
 
-describe("FullVaultMetrics", () => {
+describe("Full vault metrics", () => {
 	test("reset sets all to zero except quality", () => {
 		const m = new FullVaultMetrics();
 		m.files = 5; m.notes = 2; m.attachments = 1; m.size = 100; m.links = 10; m.words = 50; m.quality = 42; m.tags = 3;
@@ -341,5 +341,33 @@ describe("FullVaultMetrics", () => {
 		expect(m.links).toBe(0);
 		expect(m.words).toBe(0);
 		expect(m.tags).toBe(0);
+	});
+});
+
+describe("Extract tags from text", () => {
+	test("simple tags", () => {
+		expect(extract_tags_from_text("#inbox some text #todo"))
+			.toStrictEqual(["#inbox", "#todo"]);
+	});
+	test("nested tags", () => {
+		expect(extract_tags_from_text("#inbox/simple #project/2024 #a/b/c"))
+			.toStrictEqual(["#inbox/simple", "#project/2024", "#a/b/c"]);
+	});
+	test("emoji tags", () => {
+		expect(extract_tags_from_text("#🦄 #inbox/😁 #🔥/work #💡/idea"))
+			.toStrictEqual(["#🦄", "#inbox/😁", "#🔥/work", "#💡/idea"]);
+	});
+	test("mixed tags and text", () => {
+		expect(extract_tags_from_text("Some #tag, #тег, #123, #foo/bar, and #🦄/test! #тест/пример"))
+			.toStrictEqual(["#tag", "#тег", "#123", "#foo/bar", "#🦄/test", "#тест/пример"]);
+	});
+	test("no tags", () => {
+		expect(extract_tags_from_text("no tags here"))
+			.toStrictEqual([]);
+	});
+	// Проверка, что не ловит # внутри слова
+	test("not inside words", () => {
+		expect(extract_tags_from_text("foo#bar #baz qux#quux #corge"))
+			.toStrictEqual(["#baz", "#corge"]);
 	});
 });
