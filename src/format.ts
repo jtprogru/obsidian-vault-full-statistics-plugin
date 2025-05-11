@@ -76,7 +76,7 @@ export class BytesFormatter extends ScalingUnitFormatter {
 
 	protected scale(value: number): [number, string] {
 		let units = ["bytes", "KB", "MB", "GB", "TB", "PB"]
-		while (value > 1024 && units.length > 0) {
+		while (value >= 1024 && units.length > 0) {
 			value = value / 1024
 			units.shift();
 		}
