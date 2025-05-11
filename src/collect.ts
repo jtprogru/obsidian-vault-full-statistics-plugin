@@ -1,6 +1,6 @@
 import { Component, Vault, MetadataCache, TFile, TFolder, CachedMetadata } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
-import { MARKDOWN_TOKENIZER, UNIT_TOKENIZER } from './text';
+import { MARKDOWN_TOKENIZER, UNIT_TOKENIZER, extract_tags_from_text } from './text';
 
 
 enum FileType {
@@ -230,7 +230,7 @@ class NoteMetricsCollector {
     metrics.attachments = 0;
     metrics.size = file.stat?.size;
     metrics.links = metadata?.links?.length ?? 0;
-    const words = await this.vault.cachedRead(file).then((content: string) => {
+    const words = await this.vault.cachedRead(file).then(async (content: string) => {
       // Ограничение размера анализа
       if (content.length > this.maxFileSize) {
         content = content.substring(0, this.maxFileSize);
@@ -254,7 +254,14 @@ class NoteMetricsCollector {
     });
     metrics.words = words ?? 0;
     metrics.quality = metrics.notes !== 0 ? (metrics.links / metrics.notes) : 0.0;
-    metrics.tags = metadata?.tags?.length ?? 0;
+
+    // Собираем теги из Obsidian и из текста
+    const fileContent = await this.vault.cachedRead(file);
+    const tagsFromText = extract_tags_from_text(fileContent);
+    const tagsFromMetadata = (metadata?.tags ?? []).map(t => (typeof t === 'string' ? t : t.tag));
+    // Объединяем и считаем уникальные
+    const allTags = new Set([...tagsFromText, ...tagsFromMetadata]);
+    metrics.tags = allTags.size;
 
     return metrics;
   }

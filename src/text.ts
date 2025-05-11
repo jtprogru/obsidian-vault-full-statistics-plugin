@@ -107,3 +107,21 @@ export function unit_tokenize(_: string): Array<string> {
 export function markdown_tokenize(content: string): Array<string> {
     return MARKDOWN_TOKENIZER.tokenize(content);
 }
+
+/**
+ * Извлекает все теги вида #тег, включая вложенные, эмодзи и спецсимволы.
+ * Возвращает массив уникальных тегов (с #, как в Obsidian).
+ */
+export function extract_tags_from_text(content: string): string[] {
+    // Тег начинается с #, за которым следует хотя бы один неразделительный символ,
+    // допускает вложенность (например, #inbox/simple), эмодзи, спецсимволы, Unicode
+    // Не включает # внутри слов (например, foo#bar не считается тегом)
+    // Тег заканчивается на пробел, знак препинания или конец строки
+    const tagRegex = /(^|[\s.,:;!?()[\]{}"'`~])#([\p{L}\p{N}_\-/\p{Emoji_Presentation}\p{Emoji}\p{S}]+)(?=[\s.,:;!?()[\]{}"'`~]|$)/gu;
+    const tags = new Set<string>();
+    let match;
+    while ((match = tagRegex.exec(content)) !== null) {
+        tags.add('#' + match[2]);
+    }
+    return Array.from(tags);
+}
