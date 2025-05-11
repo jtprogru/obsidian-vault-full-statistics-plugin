@@ -64,14 +64,28 @@ class MarkdownTokenizer implements Tokenizer {
     }
 
     private stripAll(token: string): string {
-        return [this.stripHighlights, this.stripFormatting, this.stripPunctuation, this.stripWikiLinks, this.stripUrls]
-            .reduce((acc, fn) => fn.call(this, acc), token);
+		let prev;
+		do {
+			prev = token;
+			token = this.stripHighlights(token);
+			token = this.stripFormatting(token);
+			token = this.stripPunctuation(token);
+			token = this.stripWikiLinks(token);
+			token = this.stripUrls(token);
+		} while (token !== prev);
+		return token;
+	}
+
+    private stripMarkdownLinks(token: string): string {
+        return token.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
     }
 
     public tokenize(content: string): Array<string> {
         if (content.trim() === "") {
             return [];
         }
+
+        content = this.stripMarkdownLinks(content);
 
         return content
             .split(MarkdownTokenizer.WORD_BOUNDARY)

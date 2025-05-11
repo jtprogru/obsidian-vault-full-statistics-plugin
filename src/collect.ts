@@ -11,13 +11,18 @@ enum FileType {
 
 export class FullVaultMetricsCollector {
 
-  private owner: Component;
+  private readonly owner: Component;
   private vault: Vault;
   private metadataCache: MetadataCache;
-  private data: Map<string, FullVaultMetrics> = new Map();
-  private backlog: Array<string> = new Array();
-  private excludeDirectories: string;
+  private readonly data: Map<string, FullVaultMetrics> = new Map();
+  private backlog: Set<string> = new Set();
+  private excludeDirectories: Set<string> = new Set();
   private vaultMetrics: FullVaultMetrics = new FullVaultMetrics();
+  private readonly cache: Map<string, {mtime: number, metrics: FullVaultMetrics}> = new Map();
+  private intervalId: number | null = null;
+  private readonly batchSize: number = 8;
+  private readonly maxFileSize: number = 512 * 1024; // 512 KB
+  private intervalMs: number = 2000;
 
   constructor(owner: Component) {
     this.owner = owner;
@@ -29,8 +34,10 @@ export class FullVaultMetricsCollector {
   }
 
   public setExcludeDirectories(excludeDirectories: string) {
-	this.excludeDirectories = excludeDirectories;
-	return this;
+    this.excludeDirectories = new Set(
+      excludeDirectories.split(',').map((d) => d.trim()).filter(Boolean)
+    );
+    return this;
   }
 
   public setMetadataCache(metadataCache: MetadataCache) {
@@ -52,72 +59,81 @@ export class FullVaultMetricsCollector {
     this.owner.registerEvent(this.metadataCache.on("changed", (file: TFile) => { this.onfilemodified(file) }));
 
     this.data.clear();
-    this.backlog = new Array();
+    this.backlog = new Set();
+    this.cache.clear();
     this.vaultMetrics?.reset();
     this.vault.getFiles().forEach((file: TFile) => {
       if (!(file instanceof TFolder)) {
         this.push(file);
       }
     });
-    this.owner.registerInterval(+setInterval(() => { this.processBacklog() }, 2000));
-
-    this.setExcludeDirectories(this.excludeDirectories);
+    this.setExcludeDirectories(this.excludeDirectories ? Array.from(this.excludeDirectories).join(',') : '');
+    this.setAdaptiveInterval();
 
     return this;
+  }
+
+  private setAdaptiveInterval() {
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+    }
+    let backlogSize = this.backlog.size;
+    if (backlogSize > 100) {
+      this.intervalMs = 500;
+    } else if (backlogSize < 10) {
+      this.intervalMs = 5000;
+    } else {
+      this.intervalMs = 2000;
+    }
+    this.intervalId = window.setInterval(() => this.processBacklog(), this.intervalMs);
   }
 
   private push(fileOrPath: TFile | string) {
     if (fileOrPath instanceof TFolder) {
       return;
     }
-
     let path = (fileOrPath instanceof TFile) ? fileOrPath.path : fileOrPath;
-    if (!this.backlog.contains(path)) {
-      this.backlog.push(path);
-    }
+    this.backlog.add(path);
+    this.setAdaptiveInterval();
   }
 
   private async processBacklog() {
-    while (this.backlog.length > 0) {
-      let path = this.backlog.shift();
-	  if ((path == null) || (path.split("/").some((dir) => this.excludeDirectories.includes(dir)))) {
-		break;
-	  }
-    //   console.log(`processing ${path}`);
-	  let file = this.vault.getAbstractFileByPath(path);
-	  if (file instanceof TFile) {
-		  
-		  try {
-			let metrics = await this.collect(file);
-			if ((metrics !== null) && (metrics !== undefined)) {
-				this.update(path, metrics);
-			}
-		  } catch (e) {
-			console.log(`error processing ${path}: ${e}`);
-		  }
-	  }
-    //   console.log(`path = ${path}; file = ${file}`);
-    }
-    // console.log("done");
+    if (this.backlog.size === 0) return;
+    const batch = Array.from(this.backlog).slice(0, this.batchSize);
+    await Promise.allSettled(batch.map(async (path) => {
+      if ((path == null) || path.split("/").some((dir) => this.excludeDirectories.has(dir))) {
+        this.backlog.delete(path);
+        return;
+      }
+      let file = this.vault.getAbstractFileByPath(path);
+      if (file instanceof TFile) {
+        try {
+          let metrics = await this.collect(file);
+          if (metrics !== null && metrics !== undefined) {
+            this.update(path, metrics);
+          }
+        } catch (e) {
+          console.log(`error processing ${path}: ${e}`);
+        }
+      }
+      this.backlog.delete(path);
+    }));
+    this.setAdaptiveInterval();
   }
 
   private async onfilecreated(file: TFile) {
-    // console.log(`onfilecreated(${file?.path})`);
     this.push(file);
   }
 
   private async onfilemodified(file: TFile) {
-    // console.log(`onfilemodified(${file?.path})`)
     this.push(file);
   }
 
   private async onfiledeleted(file: TFile) {
-    // console.log(`onfiledeleted(${file?.path})`)
     this.push(file);
   }
 
   private async onfilerenamed(file: TFile, oldPath: string) {
-    // console.log(`onfilerenamed(${file?.path})`)
     this.push(file);
     this.push(oldPath);
   }
@@ -131,28 +147,32 @@ export class FullVaultMetricsCollector {
   }
 
   public async collect(file: TFile): Promise<FullVaultMetrics | null | undefined> {
-    let metadata: CachedMetadata | null;
-    try {
-      metadata = this.metadataCache.getFileCache(file);
-    } catch (e) {
-      // getFileCache indicates that it should return either an instance
-      // of CachedMetadata or null.  The conditions under which a null 
-      // is returned are unspecified.  Empirically, if the file does not
-      // exist, e.g. it's been deleted or renamed then getFileCache will 
-      // throw an exception instead of returning null.
-      metadata = null;
-    }
-
+    const metadata = this.metadataCache.getFileCache(file);
     if (metadata === null) {
       return null;
     }
-
+    // Кэширование по пути и mtime
+    const cacheKey = file.path;
+    const mtime = file.stat?.mtime ?? 0;
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.mtime === mtime) {
+      return cached.metrics;
+    }
+    let metrics: FullVaultMetrics | null | undefined;
     switch (this.getFileType(file)) {
       case FileType.Note:
-        return new NoteMetricsCollector(this.vault).collect(file, metadata);
+        metrics = await new NoteMetricsCollector(this.vault, this.maxFileSize).collect(file, metadata);
+        break;
       case FileType.Attachment:
-        return new FileMetricsCollector().collect(file, metadata);
+        metrics = await new FileMetricsCollector().collect(file, metadata);
+        break;
+      default:
+        metrics = null;
     }
+    if (metrics) {
+      this.cache.set(cacheKey, {mtime, metrics});
+    }
+    return metrics;
   }
 
   public update(fileOrPath: TFile | string, metrics: FullVaultMetrics) {
@@ -175,7 +195,7 @@ export class FullVaultMetricsCollector {
 
 class NoteMetricsCollector {
 
-  static TOKENIZERS = new Map([
+  public static readonly TOKENIZERS = new Map([
     ["paragraph", MARKDOWN_TOKENIZER],
     ["heading", MARKDOWN_TOKENIZER],
     ["list", MARKDOWN_TOKENIZER],
@@ -194,10 +214,12 @@ class NoteMetricsCollector {
     ["comment", UNIT_TOKENIZER],
   ]);
 
-  private vault: Vault;
+  private readonly vault: Vault;
+  private readonly maxFileSize: number;
 
-  constructor(vault: Vault) {
+  constructor(vault: Vault, maxFileSize: number = 512 * 1024) {
     this.vault = vault;
+    this.maxFileSize = maxFileSize;
   }
 
   public async collect(file: TFile, metadata: CachedMetadata): Promise<FullVaultMetrics> {
@@ -207,24 +229,28 @@ class NoteMetricsCollector {
     metrics.notes = 1;
     metrics.attachments = 0;
     metrics.size = file.stat?.size;
-    metrics.links = metadata?.links?.length || 0;
+    metrics.links = metadata?.links?.length ?? 0;
     const words = await this.vault.cachedRead(file).then((content: string) => {
-        return metadata.sections?.map(section => {
-            const sectionType = section.type;
-            const startOffset = section.position?.start?.offset;
-            const endOffset = section.position?.end?.offset;
-            const tokenizer = NoteMetricsCollector.TOKENIZERS.get(sectionType);
-            if (!tokenizer) {
-                console.log(`${file.path}: no tokenizer, section.type=${section.type}`);
-                return 0;
-            } else {
-                const tokens = tokenizer.tokenize(content.substring(startOffset, endOffset));
-                return tokens.length;
-            }
-        }).reduce((a, b) => a + b, 0);
+      // Ограничение размера анализа
+      if (content.length > this.maxFileSize) {
+        content = content.substring(0, this.maxFileSize);
+      }
+      return metadata.sections?.map(section => {
+        const sectionType = section.type;
+        const startOffset = section.position?.start?.offset;
+        const endOffset = section.position?.end?.offset;
+        const tokenizer = NoteMetricsCollector.TOKENIZERS.get(sectionType);
+        if (!tokenizer) {
+          console.log(`${file.path}: no tokenizer, section.type=${section.type}`);
+          return 0;
+        } else {
+          const tokens = tokenizer.tokenize(content.substring(startOffset, endOffset));
+          return tokens.length;
+        }
+      }).reduce((a, b) => a + b, 0);
     }).catch((e) => {
-        console.log(`${file.path} ${e}`);
-        return 0;
+      console.log(`${file.path} ${e}`);
+      return 0;
     });
     metrics.words = words ?? 0;
     metrics.quality = metrics.notes !== 0 ? (metrics.links / metrics.notes) : 0.0;
