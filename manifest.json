@@ -3,7 +3,7 @@
 	"name": "Vault Full Statistics",
 	"version": "1.3.0",
 	"minAppVersion": "0.15.0",
-	"description": "Status bar item with vault full statistics such as number of notes, files, attachments, links, tags and quality of vault.",
+	"description": "Status bar item with vault statistics: number of notes, links, and QoV (Quality of Vault).",
 	"author": "Mikhail Savin",
 	"authorUrl": "https://github.com/jtprogru",
 	"isDesktopOnly": false
