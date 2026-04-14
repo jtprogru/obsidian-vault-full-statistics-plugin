@@ -5,16 +5,10 @@ import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
 
 const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
-	excludeDirectories: '',
 	displayIndividualItems: false,
 	showNotes: false,
-	showAttachments: false,
-	showFiles: false,
 	showLinks: false,
-	showWords: false,
-	showSize: false,
 	showQuality: false,
-	showTags: false,
 };
 
 export default class FullStatisticsPlugin extends Plugin {
@@ -28,7 +22,7 @@ export default class FullStatisticsPlugin extends Plugin {
 
 	async onload() {
 		console.log('Loading vault-statistics Plugin');
-		
+
 		await this.loadSettings();
 
 		this.vaultMetrics = new FullVaultMetrics();
@@ -37,7 +31,6 @@ export default class FullStatisticsPlugin extends Plugin {
 			setVault(this.app.vault).
 			setMetadataCache(this.app.metadataCache).
 			setFullVaultMetrics(this.vaultMetrics).
-			setExcludeDirectories(this.settings.excludeDirectories).
 			start();
 
 		this.statusBarItem = new FullStatisticsStatusBarItem(this, this.addStatusBarItem()).
@@ -49,7 +42,7 @@ export default class FullStatisticsPlugin extends Plugin {
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
-	
+
 	async saveSettings() {
 		await this.saveData(this.settings);
 		if (this.statusBarItem) {
@@ -118,7 +111,7 @@ class StatisticView {
 	}
 
 	/**
-	 * Refreshes the content of the view with content from the passed {@link
+	 * Refreshes the view with the content from the passed {@link
 	 * Statistics}.
 	 */
 	refresh(s: FullVaultMetrics) {
@@ -156,23 +149,8 @@ class FullStatisticsStatusBarItem {
 			setStatisticName("notes").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("notes").format(s.notes) }));
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("attachments").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("attachments").format(s.attachments) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("files").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("files").format(s.files) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("links").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("links").format(s.links) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("words").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("words").format(s.words) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("size").
-			setFormatter((s: FullVaultMetrics) => { return new BytesFormatter().format(s.size) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("tags").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("tags").format(s.tags) }));
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("QoV").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("QoV").format(s.quality) }));
@@ -192,13 +170,8 @@ class FullStatisticsStatusBarItem {
 	public refresh() {
 		if (this.owner.settings.displayIndividualItems) {
 			this.statisticViews[0].setActive(this.owner.settings.showNotes).refresh(this.vaultMetrics);
-			this.statisticViews[1].setActive(this.owner.settings.showAttachments).refresh(this.vaultMetrics);
-			this.statisticViews[2].setActive(this.owner.settings.showFiles).refresh(this.vaultMetrics);
-			this.statisticViews[3].setActive(this.owner.settings.showLinks).refresh(this.vaultMetrics);
-			this.statisticViews[4].setActive(this.owner.settings.showWords).refresh(this.vaultMetrics);
-			this.statisticViews[5].setActive(this.owner.settings.showSize).refresh(this.vaultMetrics);
-			this.statisticViews[6].setActive(this.owner.settings.showTags).refresh(this.vaultMetrics);
-			this.statisticViews[7].setActive(this.owner.settings.showQuality).refresh(this.vaultMetrics);
+			this.statisticViews[1].setActive(this.owner.settings.showLinks).refresh(this.vaultMetrics);
+			this.statisticViews[2].setActive(this.owner.settings.showQuality).refresh(this.vaultMetrics);
 		} else {
 			this.statisticViews.forEach((view, i) => {
 				view.setActive(this.displayedStatisticIndex == i).refresh(this.vaultMetrics);
