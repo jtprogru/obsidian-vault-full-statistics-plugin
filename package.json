@@ -1,6 +1,6 @@
 {
 	"name": "vault-full-statistics",
-	"version": "1.3.0",
+	"version": "1.4.0",
 	"description": "Status bar item with vault statistics: number of notes, links, and QoV (Quality of Vault).",
 	"main": "main.js",
 	"scripts": {
