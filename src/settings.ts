@@ -7,6 +7,7 @@ export interface FullStatisticsPluginSettings {
 	showNotes: boolean,
 	showLinks: boolean,
 	showQuality: boolean,
+	excludedFolders: string[],
 }
 
 export class FullStatisticsPluginSettingTab extends PluginSettingTab {
@@ -35,41 +36,60 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					});
 			});
 
-		if (!this.plugin.settings.displayIndividualItems) {
-			return;
+		if (this.plugin.settings.displayIndividualItems) {
+			new Setting(containerEl)
+				.setName("Show notes")
+				.addToggle((value) => {
+					value
+						.setValue(this.plugin.settings.showNotes)
+						.onChange(async (value) => {
+							this.plugin.settings.showNotes = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName("Show links")
+				.addToggle((value) => {
+					value
+						.setValue(this.plugin.settings.showLinks)
+						.onChange(async (value) => {
+							this.plugin.settings.showLinks = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName("Show quality")
+				.addToggle((value) => {
+					value
+						.setValue(this.plugin.settings.showQuality)
+						.onChange(async (value) => {
+							this.plugin.settings.showQuality = value;
+							await this.plugin.saveSettings();
+						});
+				});
 		}
 
 		new Setting(containerEl)
-			.setName("Show notes")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showNotes)
+			.setName("Excluded folders")
+			.setDesc("Folders to exclude from statistics. Enter one folder path per line. Example: Templates")
+			.addTextArea((text) => {
+				text
+					.setPlaceholder("Templates\nArchive\nDaily Notes")
+					.setValue(this.plugin.settings.excludedFolders.join("\n"))
 					.onChange(async (value) => {
-						this.plugin.settings.showNotes = value;
+						const folders = value
+							.split("\n")
+							.map(f => f.trim())
+							.filter(f => f.length > 0);
+						this.plugin.settings.excludedFolders = folders;
 						await this.plugin.saveSettings();
+						this.plugin.restartCollector();
 					});
-			});
-
-		new Setting(containerEl)
-			.setName("Show links")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showLinks)
-					.onChange(async (value) => {
-						this.plugin.settings.showLinks = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("Show quality")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showQuality)
-					.onChange(async (value) => {
-						this.plugin.settings.showQuality = value;
-						await this.plugin.saveSettings();
-					});
+				text.inputEl.rows = 6;
+				text.inputEl.style.width = "100%";
+				text.inputEl.style.fontFamily = "monospace";
 			});
 	}
 }

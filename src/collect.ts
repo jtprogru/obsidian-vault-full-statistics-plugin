@@ -18,6 +18,7 @@ export class FullVaultMetricsCollector {
   private readonly batchSize: number = 16;
   private intervalMs: number = 100;
   private readonly noteMetricsCollector: NoteMetricsCollector;
+  private excludedFolders: string[] = [];
 
   constructor(owner: Component) {
     this.owner = owner;
@@ -39,6 +40,19 @@ export class FullVaultMetricsCollector {
     return this;
   }
 
+  public setExcludedFolders(folders: string[]) {
+    this.excludedFolders = folders
+      .map(f => f.trim().replace(/\/+$/, ''))
+      .filter(f => f.length > 0);
+    return this;
+  }
+
+  private isExcluded(file: TFile): boolean {
+    return this.excludedFolders.some(folder =>
+      file.path === folder || file.path.startsWith(folder + '/')
+    );
+  }
+
   public start() {
     this.owner.registerEvent(this.vault.on("create", (file: TFile) => { this.onfilecreated(file) }));
     this.owner.registerEvent(this.vault.on("modify", (file: TFile) => { this.onfilemodified(file) }));
@@ -46,6 +60,18 @@ export class FullVaultMetricsCollector {
     this.owner.registerEvent(this.vault.on("rename", (file: TFile, oldPath: string) => { this.onfilerenamed(file, oldPath) }));
     this.owner.registerEvent(this.metadataCache.on("changed", (file: TFile) => { this.onfilemodified(file) }));
 
+    this.rescan();
+
+    return this;
+  }
+
+  public restart() {
+    this.noteMetricsCollector.clearCache();
+    this.rescan();
+    return this;
+  }
+
+  private rescan() {
     this.data.clear();
     this.backlog = new Set();
     this.vaultMetrics?.reset();
@@ -55,8 +81,6 @@ export class FullVaultMetricsCollector {
       }
     });
     this.setAdaptiveInterval();
-
-    return this;
   }
 
   private setAdaptiveInterval() {
@@ -87,18 +111,26 @@ export class FullVaultMetricsCollector {
     if (this.backlog.size === 0) return;
     const batch = Array.from(this.backlog).slice(0, this.batchSize);
     await Promise.allSettled(batch.map(async (path) => {
-      let file = this.vault.getAbstractFileByPath(path);
+      this.backlog.delete(path);
+      const file = this.vault.getAbstractFileByPath(path);
       if (file instanceof TFile) {
+        if (this.isExcluded(file)) {
+          // file is in excluded folder — remove from count if it was counted
+          this.update(path, null);
+          return;
+        }
         try {
-          let metrics = await this.collect(file);
+          const metrics = await this.collect(file);
           if (metrics !== null && metrics !== undefined) {
             this.update(path, metrics);
           }
         } catch (e) {
           console.log(`error processing ${path}: ${e}`);
         }
+      } else {
+        // file was deleted — remove from count
+        this.update(path, null);
       }
-      this.backlog.delete(path);
     }));
     this.setAdaptiveInterval();
   }
@@ -145,7 +177,7 @@ export class FullVaultMetricsCollector {
     return metrics;
   }
 
-  public update(fileOrPath: TFile | string, metrics: FullVaultMetrics) {
+  public update(fileOrPath: TFile | string, metrics: FullVaultMetrics | null) {
     let key = (fileOrPath instanceof TFile) ? fileOrPath.path : fileOrPath;
 
     this.vaultMetrics?.dec(this.data.get(key) ?? new FullVaultMetrics());
@@ -188,6 +220,10 @@ class NoteMetricsCollector {
     if (metadata?.embeds) count += metadata.embeds.length;
     if (metadata?.frontmatterLinks) count += metadata.frontmatterLinks.length;
     return count;
+  }
+
+  public clearCache() {
+    this.linkCache.clear();
   }
 
   public invalidateCache(path: string) {
