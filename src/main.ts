@@ -6,9 +6,9 @@ import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './
 
 const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	displayIndividualItems: false,
-	showNotes: false,
-	showLinks: false,
-	showQuality: false,
+	showNotes: true,
+	showLinks: true,
+	showQuality: true,
 };
 
 export default class FullStatisticsPlugin extends Plugin {
