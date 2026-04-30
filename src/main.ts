@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	showNotes: true,
 	showLinks: true,
 	showQuality: true,
+	excludedFolders: [],
 };
 
 export default class FullStatisticsPlugin extends Plugin {
@@ -31,6 +32,7 @@ export default class FullStatisticsPlugin extends Plugin {
 			setVault(this.app.vault).
 			setMetadataCache(this.app.metadataCache).
 			setFullVaultMetrics(this.vaultMetrics).
+			setExcludedFolders(this.settings.excludedFolders).
 			start();
 
 		this.statusBarItem = new FullStatisticsStatusBarItem(this, this.addStatusBarItem()).
@@ -48,6 +50,12 @@ export default class FullStatisticsPlugin extends Plugin {
 		if (this.statusBarItem) {
 			this.statusBarItem.refresh();
 		}
+	}
+
+	public restartCollector() {
+		this.vaultMetricsCollector
+			.setExcludedFolders(this.settings.excludedFolders)
+			.restart();
 	}
 }
 

@@ -18,14 +18,14 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 		this.quality = 0.00001;
 	}
 
-	public dec(metrics: FullVaultMetrics) {
+	public dec(metrics: FullVaultMetrics | null) {
 		this.notes -= metrics?.notes || 0;
 		this.links -= metrics?.links || 0;
 		this.quality = this.links / this.notes || 0.00001;
 		this.trigger("updated");
 	}
 
-	public inc(metrics: FullVaultMetrics) {
+	public inc(metrics: FullVaultMetrics | null) {
 		this.notes += metrics?.notes || 0;
 		this.links += metrics?.links || 0;
 		this.quality = this.links / this.notes || 0.00001;
