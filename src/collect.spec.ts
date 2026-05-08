@@ -1,5 +1,5 @@
 import { Component, MetadataCache, TFile } from 'obsidian';
-import { FullVaultMetricsCollector, NoteMetricsCollector } from './collect';
+import { FullVaultMetricsCollector, NoteMetricsCollector, isPluginGeneratedNote } from './collect';
 import { FullVaultMetrics } from './metrics';
 
 function makeMetadataCache(tags: Record<string, number>): MetadataCache {
@@ -176,11 +176,11 @@ describe("NoteMetricsCollector.collect — tags", () => {
 		expect(second?.metrics.tags).toBe(2);
 	});
 
-	test("returns null when neither links nor tags changed", async () => {
+	test("returns undefined when neither links nor tags changed (cache hit)", async () => {
 		const meta = { tags: [{ tag: "#a" }] } as any;
 		await nmc.collect(file, meta);
 		const second = await nmc.collect(file, meta);
-		expect(second).toBeNull();
+		expect(second).toBeUndefined();
 	});
 
 	test("recollects when tag identity changes even if count is the same", async () => {
@@ -265,6 +265,42 @@ describe("NoteMetricsCollector.collect — own/source/concept classification", (
 		const second = await nmc.collect(file, meta);
 		expect(second).not.toBeNull();
 		expect(second?.metrics.ownNotes).toBe(1);
+	});
+});
+
+describe("isPluginGeneratedNote", () => {
+	test("matches *.excalidraw.md filename", () => {
+		const f = { name: "Architecture.excalidraw.md", path: "drawings/Architecture.excalidraw.md" } as TFile;
+		expect(isPluginGeneratedNote(f, {} as any)).toBe(true);
+	});
+
+	test("matches frontmatter excalidraw-plugin key", () => {
+		const f = { name: "regular.md", path: "regular.md" } as TFile;
+		const meta = { frontmatter: { "excalidraw-plugin": "parsed" } } as any;
+		expect(isPluginGeneratedNote(f, meta)).toBe(true);
+	});
+
+	test("matches frontmatter kanban-plugin key", () => {
+		const f = { name: "Sprint board.md", path: "Sprint board.md" } as TFile;
+		const meta = { frontmatter: { "kanban-plugin": "basic" } } as any;
+		expect(isPluginGeneratedNote(f, meta)).toBe(true);
+	});
+
+	test("regular note is not plugin-generated", () => {
+		const f = { name: "Daily 2026-05-08.md", path: "journal/Daily 2026-05-08.md" } as TFile;
+		expect(isPluginGeneratedNote(f, {} as any)).toBe(false);
+	});
+
+	test("a note named like 'My excalidraw notes.md' is not flagged", () => {
+		// Only the literal `.excalidraw.md` suffix is the marker — substring
+		// matches in the body of a name should not trigger.
+		const f = { name: "My excalidraw notes.md", path: "My excalidraw notes.md" } as TFile;
+		expect(isPluginGeneratedNote(f, {} as any)).toBe(false);
+	});
+
+	test("filename match is case-insensitive", () => {
+		const f = { name: "Diagram.Excalidraw.MD", path: "Diagram.Excalidraw.MD" } as TFile;
+		expect(isPluginGeneratedNote(f, {} as any)).toBe(true);
 	});
 });
 

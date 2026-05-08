@@ -152,9 +152,14 @@ export class FullVaultMetricsCollector {
           return;
         }
         try {
-          const metrics = await this.collect(file);
-          if (metrics !== null && metrics !== undefined) {
-            this.update(path, metrics);
+          const result = await this.collect(file);
+          // Convention: null = file should not be counted (non-note,
+          // Excalidraw, etc.) — remove if previously counted; undefined
+          // = nothing changed (cache hit) — leave existing entry alone.
+          if (result === null) {
+            this.update(path, null);
+          } else if (result !== undefined) {
+            this.update(path, result);
           }
         } catch (e) {
           console.log(`error processing ${path}: ${e}`);
@@ -193,20 +198,21 @@ export class FullVaultMetricsCollector {
   }
 
   public async collect(file: TFile): Promise<CollectResult | null | undefined> {
-    const metadata = this.metadataCache.getFileCache(file);
-    if (metadata === null) {
+    if (this.getFileType(file) !== FileType.Note) {
       return null;
     }
 
-    let result: CollectResult | null | undefined;
-    switch (this.getFileType(file)) {
-      case FileType.Note:
-        result = await this.noteMetricsCollector.collect(file, metadata);
-        break;
-      default:
-        result = null;
+    // Use empty metadata when the cache has not indexed the file yet.
+    // Previously this path returned null and silently dropped the file from
+    // the count; now we still credit one note with zero links/tags so the
+    // notes total is accurate even before metadata is fully populated.
+    const metadata = this.metadataCache.getFileCache(file) ?? ({} as CachedMetadata);
+
+    if (isPluginGeneratedNote(file, metadata)) {
+      return null;
     }
-    return result;
+
+    return this.noteMetricsCollector.collect(file, metadata);
   }
 
   public update(fileOrPath: TFile | string, resultOrMetrics: CollectResult | FullVaultMetrics | null, _tags?: Set<string>) {
@@ -261,14 +267,14 @@ export class NoteMetricsCollector {
     return this;
   }
 
-  public async collect(file: TFile, metadata: CachedMetadata): Promise<CollectResult | null> {
+  public async collect(file: TFile, metadata: CachedMetadata): Promise<CollectResult | undefined> {
     const linkCount = this.countAllLinks(metadata);
     const noteTags = this.collectTags(metadata);
     const tagKey = Array.from(noteTags).sort().join("|");
     const cached = this.signatureCache.get(file.path);
 
     if (cached && cached.links === linkCount && cached.tagKey === tagKey) {
-      return null;
+      return undefined;
     }
 
     this.signatureCache.set(file.path, { links: linkCount, tagKey });
@@ -328,6 +334,25 @@ export class NoteMetricsCollector {
   public invalidateCache(path: string) {
     this.signatureCache.delete(path);
   }
+}
+
+/**
+ * Detects markdown files that are containers for plugin data rather than
+ * regular notes — Excalidraw drawings and Kanban boards. These should not
+ * count toward "notes" since they are not text documents the user is
+ * thinking in.
+ */
+export function isPluginGeneratedNote(file: TFile, metadata: CachedMetadata): boolean {
+  const name = file.name?.toLowerCase() ?? "";
+  if (name.endsWith(".excalidraw.md")) return true;
+
+  const fm = metadata?.frontmatter;
+  if (fm) {
+    if ("excalidraw-plugin" in fm) return true;
+    if ("kanban-plugin" in fm) return true;
+  }
+
+  return false;
 }
 
 function normalizeTag(tag: string): string {
