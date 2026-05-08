@@ -1,8 +1,21 @@
-import { Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder } from 'obsidian';
+import { Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf } from 'obsidian';
 import { BytesFormatter, DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
+import { HistoryStore, Snapshot } from './historyStore';
+import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
+
+interface PersistedData {
+	settings: Partial<FullStatisticsPluginSettings>;
+	history: Snapshot[];
+}
+
+function isPersistedData(raw: unknown): raw is PersistedData {
+	return !!raw && typeof raw === 'object'
+		&& 'settings' in (raw as object)
+		&& Array.isArray((raw as PersistedData).history);
+}
 
 const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	displayIndividualItems: false,
@@ -27,6 +40,7 @@ export default class FullStatisticsPlugin extends Plugin {
 
 	public vaultMetricsCollector: FullVaultMetricsCollector;
 	public vaultMetrics: FullVaultMetrics;
+	public historyStore: HistoryStore;
 
 	settings: FullStatisticsPluginSettings;
 
@@ -51,17 +65,75 @@ export default class FullStatisticsPlugin extends Plugin {
 			setFullVaultMetrics(this.vaultMetrics);
 
 		this.addSettingTab(new FullStatisticsPluginSettingTab(this.app, this));
+
+		// History snapshots: hook the metrics-updated event with a long debounce
+		// so we sample after the vault has settled rather than mid-backlog.
+		this.registerEvent(this.vaultMetrics.on('updated', this.maybeSnapshot));
+
+		this.registerView(VAULT_STATISTICS_VIEW_TYPE, (leaf: WorkspaceLeaf) =>
+			new VaultStatisticsView(leaf, this.vaultMetrics, this.historyStore));
+
+		this.addCommand({
+			id: 'open-vault-statistics-view',
+			name: 'Open vault statistics',
+			callback: () => this.activateStatisticsView(),
+		});
+
+		this.addRibbonIcon('bar-chart', 'Open vault statistics', () => this.activateStatisticsView());
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const raw = await this.loadData();
+		let storedSettings: Partial<FullStatisticsPluginSettings> | undefined;
+		let storedHistory: Snapshot[] = [];
+
+		if (isPersistedData(raw)) {
+			storedSettings = raw.settings;
+			storedHistory = raw.history;
+		} else {
+			// Legacy shape: data.json is the settings object directly.
+			storedSettings = raw as Partial<FullStatisticsPluginSettings> | undefined;
+		}
+
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings) as FullStatisticsPluginSettings;
+		this.historyStore = new HistoryStore(storedHistory);
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		await this.persist();
 		if (this.statusBarItem) {
 			this.statusBarItem.refresh();
 		}
+	}
+
+	private async persist() {
+		const payload: PersistedData = {
+			settings: this.settings,
+			history: this.historyStore.all(),
+		};
+		await this.saveData(payload);
+	}
+
+	private maybeSnapshot = debounce(() => {
+		const changed = this.historyStore.recordIfNeeded(new Date(), this.vaultMetrics);
+		if (changed) {
+			this.persist();
+		}
+	}, 10000, false);
+
+	private async activateStatisticsView() {
+		const { workspace } = this.app;
+		const existing = workspace.getLeavesOfType(VAULT_STATISTICS_VIEW_TYPE);
+		let leaf: WorkspaceLeaf | null;
+		if (existing.length > 0) {
+			leaf = existing[0];
+		} else {
+			leaf = workspace.getRightLeaf(false);
+			if (leaf) {
+				await leaf.setViewState({ type: VAULT_STATISTICS_VIEW_TYPE, active: true });
+			}
+		}
+		if (leaf) workspace.revealLeaf(leaf);
 	}
 
 	public restartCollector() {
