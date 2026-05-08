@@ -23,6 +23,7 @@ export interface FullStatisticsPluginSettings {
 	sourceTags: string[],
 	conceptTags: string[],
 	folderGroups: FolderGroup[],
+	showFolderBreakdown: boolean,
 }
 
 export function parseFolderGroups(text: string): FolderGroup[] {
@@ -178,99 +179,197 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				});
 		}
 
-		new Setting(containerEl)
-			.setName("Excluded folders")
-			.setDesc("Folders to exclude from statistics. Enter one folder path per line. Example: Templates")
-			.addTextArea((text) => {
-				text
-					.setPlaceholder("Templates\nArchive\nDaily Notes")
-					.setValue(this.plugin.settings.excludedFolders.join("\n"))
-					.onChange(async (value) => {
-						const folders = value
-							.split("\n")
-							.map(f => f.trim())
-							.filter(f => f.length > 0);
-						this.plugin.settings.excludedFolders = folders;
-						await this.plugin.saveSettings();
-						this.plugin.restartCollector();
-					});
-				text.inputEl.rows = 6;
-				text.inputEl.style.width = "100%";
-				text.inputEl.style.fontFamily = "monospace";
-			});
+		this.addEditableStringList(
+			containerEl,
+			"Excluded folders",
+			"Folders to skip from statistics.",
+			"e.g. Templates",
+			() => this.plugin.settings.excludedFolders,
+			(items) => { this.plugin.settings.excludedFolders = items; },
+			() => this.plugin.restartCollector(),
+		);
 
-		this.addTagListSetting(
+		this.addEditableStringList(
 			containerEl,
 			"Own tags",
-			"Tags marking your own thinking. One per line. Leading # is optional.",
-			"thought\nsynthesis\nfleeting",
+			"Tags marking your own thinking. Leading # is optional.",
+			"e.g. thought",
 			() => this.plugin.settings.ownTags,
-			(tags) => { this.plugin.settings.ownTags = tags; },
+			(items) => { this.plugin.settings.ownTags = items; },
+			() => this.plugin.restartCollector(),
 		);
 
-		this.addTagListSetting(
+		this.addEditableStringList(
 			containerEl,
 			"Source tags",
-			"Tags marking notes about external material. One per line.",
-			"book\narticle\nvideo\nlecture\nliterature\nliterature-note",
+			"Tags marking notes about external material.",
+			"e.g. book",
 			() => this.plugin.settings.sourceTags,
-			(tags) => { this.plugin.settings.sourceTags = tags; },
+			(items) => { this.plugin.settings.sourceTags = items; },
+			() => this.plugin.restartCollector(),
 		);
 
-		this.addTagListSetting(
+		this.addEditableStringList(
 			containerEl,
 			"Concept tags",
-			"Tags marking concept notes (the grey zone). One per line.",
-			"concept",
+			"Tags marking concept notes (the grey zone).",
+			"e.g. concept",
 			() => this.plugin.settings.conceptTags,
-			(tags) => { this.plugin.settings.conceptTags = tags; },
+			(items) => { this.plugin.settings.conceptTags = items; },
+			() => this.plugin.restartCollector(),
 		);
 
 		new Setting(containerEl)
-			.setName("Folder groups (PARA)")
-			.setDesc("Group folders for per-section breakdown in the statistics view. " +
-				"One group per line as `Name = path1, path2`. Leave empty to hide the section.")
-			.addTextArea((text) => {
-				text
-					.setPlaceholder("Projects = 01. Проекты\nAreas = 02. Сферы\nResources = 03. Ресурсы\nArchive = 04. Архив\nInbox = 00. Входящие")
-					.setValue(serializeFolderGroups(this.plugin.settings.folderGroups))
-					.onChange(async (value) => {
-						this.plugin.settings.folderGroups = parseFolderGroups(value);
+			.setName("Show folder breakdown")
+			.setDesc("Per-folder section in the statistics view (PARA-style).")
+			.addToggle((value) => {
+				value
+					.setValue(this.plugin.settings.showFolderBreakdown)
+					.onChange(async (v) => {
+						this.plugin.settings.showFolderBreakdown = v;
 						await this.plugin.saveSettings();
 					});
-				text.inputEl.rows = 8;
-				text.inputEl.style.width = "100%";
-				text.inputEl.style.fontFamily = "monospace";
 			});
+
+		this.addFolderGroupsEditor(containerEl);
 	}
 
-	private addTagListSetting(
+	/**
+	 * Renders an editable list of strings: one row per item with a text
+	 * input and a trash icon, plus a "+ Add" button at the bottom. Saves
+	 * on every change. Empty items are kept while editing so the user can
+	 * type a fresh entry; they are filtered on `set` only when committed.
+	 */
+	private addEditableStringList(
 		containerEl: HTMLElement,
 		name: string,
 		desc: string,
 		placeholder: string,
 		get: () => string[],
-		set: (tags: string[]) => void,
+		set: (items: string[]) => void,
+		onChange?: () => void,
 	) {
-		new Setting(containerEl)
-			.setName(name)
-			.setDesc(desc)
-			.addTextArea((text) => {
-				text
-					.setPlaceholder(placeholder)
-					.setValue(get().join("\n"))
-					.onChange(async (value) => {
-						const tags = value
-							.split("\n")
-							.map(t => t.trim())
-							.filter(t => t.length > 0);
-						set(tags);
+		new Setting(containerEl).setName(name).setDesc(desc).setHeading();
+
+		const listEl = containerEl.createDiv({ cls: "vfs-settings-list" });
+
+		const render = () => {
+			listEl.empty();
+			const items = get();
+
+			items.forEach((value, idx) => {
+				const row = new Setting(listEl);
+				row.addText((text) => {
+					text.setValue(value).setPlaceholder(placeholder)
+						.onChange(async (newVal) => {
+							const arr = [...get()];
+							arr[idx] = newVal.trim();
+							set(arr);
+							await this.plugin.saveSettings();
+							if (onChange) onChange();
+						});
+					text.inputEl.style.width = "100%";
+				});
+				row.addExtraButton((btn) => {
+					btn.setIcon("trash").setTooltip("Remove").onClick(async () => {
+						const arr = [...get()];
+						arr.splice(idx, 1);
+						set(arr);
 						await this.plugin.saveSettings();
-						this.plugin.restartCollector();
+						render();
+						if (onChange) onChange();
 					});
-				text.inputEl.rows = 6;
-				text.inputEl.style.width = "100%";
-				text.inputEl.style.fontFamily = "monospace";
+				});
 			});
+
+			new Setting(listEl).addButton((btn) => {
+				btn.setButtonText("+ Add").setCta().onClick(async () => {
+					set([...get(), ""]);
+					await this.plugin.saveSettings();
+					render();
+				});
+			});
+		};
+		render();
+	}
+
+	/**
+	 * Folder groups have nested structure (name + list of paths) so each
+	 * group is rendered as a small card: editable name with a delete
+	 * button on the header row, then per-path rows with their own delete
+	 * buttons, plus "+ Add path" inside the card and "+ Add group" at the
+	 * bottom of the section.
+	 */
+	private addFolderGroupsEditor(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName("Folder groups (PARA)")
+			.setDesc("Each group is shown as a row in the folder breakdown section.")
+			.setHeading();
+
+		const wrap = containerEl.createDiv({ cls: "vfs-settings-fg" });
+
+		const render = () => {
+			wrap.empty();
+			const groups = this.plugin.settings.folderGroups;
+
+			groups.forEach((group, gi) => {
+				const card = wrap.createDiv({ cls: "vfs-settings-fg-card" });
+
+				new Setting(card)
+					.setClass("vfs-settings-fg-head")
+					.addText((text) => {
+						text.setValue(group.name).setPlaceholder("Group name (e.g. Projects)")
+							.onChange(async (v) => {
+								this.plugin.settings.folderGroups[gi].name = v.trim();
+								await this.plugin.saveSettings();
+							});
+						text.inputEl.style.width = "100%";
+					})
+					.addExtraButton((btn) => {
+						btn.setIcon("trash").setTooltip("Remove group").onClick(async () => {
+							this.plugin.settings.folderGroups.splice(gi, 1);
+							await this.plugin.saveSettings();
+							render();
+						});
+					});
+
+				const pathsEl = card.createDiv({ cls: "vfs-settings-fg-paths" });
+				group.paths.forEach((path, pi) => {
+					new Setting(pathsEl)
+						.addText((text) => {
+							text.setValue(path).setPlaceholder("e.g. 01. Проекты")
+								.onChange(async (v) => {
+									this.plugin.settings.folderGroups[gi].paths[pi] = v.trim().replace(/\/+$/, "");
+									await this.plugin.saveSettings();
+								});
+							text.inputEl.style.width = "100%";
+						})
+						.addExtraButton((btn) => {
+							btn.setIcon("trash").setTooltip("Remove path").onClick(async () => {
+								this.plugin.settings.folderGroups[gi].paths.splice(pi, 1);
+								await this.plugin.saveSettings();
+								render();
+							});
+						});
+				});
+
+				new Setting(pathsEl).addButton((btn) => {
+					btn.setButtonText("+ Add path").onClick(async () => {
+						this.plugin.settings.folderGroups[gi].paths.push("");
+						await this.plugin.saveSettings();
+						render();
+					});
+				});
+			});
+
+			new Setting(wrap).addButton((btn) => {
+				btn.setButtonText("+ Add group").setCta().onClick(async () => {
+					this.plugin.settings.folderGroups.push({ name: "", paths: [""] });
+					await this.plugin.saveSettings();
+					render();
+				});
+			});
+		};
+		render();
 	}
 }

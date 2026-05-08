@@ -61,7 +61,9 @@ export class VaultStatisticsView extends ItemView {
 	}
 
 	private renderFolders(parent: HTMLElement): void {
-		const groups = this.getSettings().folderGroups;
+		const settings = this.getSettings();
+		if (!settings.showFolderBreakdown) return;
+		const groups = settings.folderGroups;
 		if (!groups || groups.length === 0) return;
 
 		const aggregates = this.collector.aggregateByGroups(groups);
@@ -73,39 +75,44 @@ export class VaultStatisticsView extends ItemView {
 
 		const list = section.createDiv({ cls: 'vfs-folder-list' });
 		for (const a of aggregates) {
-			this.appendFolder(list, a, maxNotes);
+			this.appendFolder(list, a);
 		}
 	}
 
-	private appendFolder(parent: HTMLElement, a: GroupAggregate, maxNotes: number): void {
+	private appendFolder(parent: HTMLElement, a: GroupAggregate): void {
+		// display: contents on .vfs-folder lets each row's children
+		// participate directly in the parent grid — single visual line per
+		// group with aligned columns across all rows.
 		const row = parent.createDiv({ cls: 'vfs-folder' });
-
-		const head = row.createDiv({ cls: 'vfs-folder-head' });
-		head.createSpan({ cls: 'vfs-folder-name', text: a.name });
-		head.createSpan({
+		row.createSpan({ cls: 'vfs-folder-name', text: a.name });
+		row.createSpan({
 			cls: 'vfs-folder-count',
 			text: a.notes.toLocaleString('en-US'),
 		});
 
-		// Notes share — full-width baseline relative to the largest group.
-		const baseline = row.createDiv({ cls: 'vfs-folder-baseline' });
-		const fill = baseline.createDiv({ cls: 'vfs-folder-baseline-fill' });
-		fill.style.width = `${Math.round((a.notes / maxNotes) * 100)}%`;
-
-		// Own/source split inside the group, only when there's something
-		// classified — otherwise the meta line stays clean.
+		const bar = row.createDiv({ cls: 'vfs-folder-bar' });
 		const classified = a.ownNotes + a.sourceNotes;
 		if (classified > 0) {
-			const meta = row.createDiv({ cls: 'vfs-folder-meta' });
-			const ratio = meta.createDiv({ cls: 'vfs-folder-ratio' });
-			const ownSeg = ratio.createDiv({ cls: 'vfs-folder-ratio-own' });
+			const ownSeg = bar.createDiv({ cls: 'vfs-folder-bar-own' });
 			ownSeg.style.flexGrow = String(a.ownNotes);
-			const srcSeg = ratio.createDiv({ cls: 'vfs-folder-ratio-source' });
+			const srcSeg = bar.createDiv({ cls: 'vfs-folder-bar-source' });
 			srcSeg.style.flexGrow = String(a.sourceNotes);
-			meta.createSpan({
+			const remainder = a.notes - classified;
+			if (remainder > 0) {
+				const restSeg = bar.createDiv({ cls: 'vfs-folder-bar-rest' });
+				restSeg.style.flexGrow = String(remainder);
+			}
+			row.createSpan({
 				cls: 'vfs-folder-pct',
-				text: `${pctString(a.ownNotes / classified)} own`,
+				text: pctString(a.ownNotes / classified),
+				title: `${a.ownNotes} own · ${a.sourceNotes} source`,
 			});
+		} else {
+			// Nothing classified — show just the unclassified bar so the
+			// row keeps the same visual weight as classified groups.
+			const restSeg = bar.createDiv({ cls: 'vfs-folder-bar-rest' });
+			restSeg.style.flexGrow = '1';
+			row.createSpan({ cls: 'vfs-folder-pct vfs-folder-pct-empty', text: '—' });
 		}
 	}
 

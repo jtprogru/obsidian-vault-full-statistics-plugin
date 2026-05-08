@@ -12,6 +12,43 @@
 .obsidian-vault-full-statistics--item--active {}
 
 
+/* ===== Settings tab — list / folder-group editors ===== */
+
+.vfs-settings-list .setting-item {
+	border-top: none;
+	padding: 0.35em 0;
+}
+
+.vfs-settings-list .setting-item:last-child {
+	margin-top: 0.2em;
+}
+
+.vfs-settings-fg .setting-item {
+	border-top: none;
+	padding: 0.35em 0;
+}
+
+.vfs-settings-fg-card {
+	margin: 0.5em 0 0.75em;
+	padding: 0.5em 0.75em 0.4em;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.vfs-settings-fg-head {
+	border-top: none !important;
+	padding-top: 0 !important;
+	padding-bottom: 0.25em !important;
+}
+
+.vfs-settings-fg-paths {
+	margin-left: 0.75em;
+	padding-left: 0.5em;
+	border-left: 2px solid var(--background-modifier-border);
+}
+
+
 /* ===== Sidebar view ===== */
 
 .vfs-view {
@@ -191,65 +228,39 @@
 	font-size: 0.8em;
 }
 
-/* Folder breakdown */
+/* Folder breakdown — compact one-line-per-group grid */
 
 .vfs-folder-list {
-	display: flex;
-	flex-direction: column;
-	gap: 0.7em;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(40px, 80px) auto;
+	column-gap: 0.6em;
+	row-gap: 0.35em;
+	align-items: center;
+	font-size: 0.85em;
 }
 
 .vfs-folder {
-	display: flex;
-	flex-direction: column;
-	gap: 0.25em;
-}
-
-.vfs-folder-head {
-	display: flex;
-	justify-content: space-between;
-	align-items: baseline;
-	gap: 0.5em;
+	/* `display: contents` lets each row's children participate in the
+	   parent grid so columns align across all groups. */
+	display: contents;
 }
 
 .vfs-folder-name {
 	color: var(--text-normal);
-	font-weight: 500;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	min-width: 0;
 }
 
 .vfs-folder-count {
 	color: var(--text-muted);
 	font-variant-numeric: tabular-nums;
-	font-size: 0.9em;
-	flex-shrink: 0;
+	text-align: right;
 }
 
-.vfs-folder-baseline {
-	height: 3px;
-	background: var(--background-modifier-border);
-	border-radius: 1.5px;
-	overflow: hidden;
-}
-
-.vfs-folder-baseline-fill {
-	height: 100%;
-	background: var(--text-faint, var(--text-muted));
-	min-width: 2px;
-}
-
-.vfs-folder-meta {
+.vfs-folder-bar {
 	display: flex;
-	align-items: center;
-	gap: 0.5em;
-	font-size: 0.8em;
-}
-
-.vfs-folder-ratio {
-	display: flex;
-	flex: 1 1 0;
 	height: 0.45em;
 	border-radius: 2px;
 	overflow: hidden;
@@ -257,20 +268,31 @@
 	min-width: 0;
 }
 
-.vfs-folder-ratio-own {
+.vfs-folder-bar-own {
 	background: var(--color-green, var(--interactive-accent));
 	min-width: 1px;
 }
 
-.vfs-folder-ratio-source {
+.vfs-folder-bar-source {
 	background: var(--color-blue, var(--text-accent));
+	min-width: 1px;
+}
+
+.vfs-folder-bar-rest {
+	background: var(--background-modifier-border-hover, var(--text-faint));
+	opacity: 0.7;
 	min-width: 1px;
 }
 
 .vfs-folder-pct {
 	color: var(--text-muted);
-	flex-shrink: 0;
 	font-variant-numeric: tabular-nums;
+	text-align: right;
+	min-width: 2.5em;
+}
+
+.vfs-folder-pct-empty {
+	opacity: 0.5;
 }
 
 /* History bars (replaces unicode sparklines for richer rendering at small N) */

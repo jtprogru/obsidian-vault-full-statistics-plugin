@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
 	conceptTags: ["concept"],
 	folderGroups: [],
+	showFolderBreakdown: true,
 };
 
 export default class FullStatisticsPlugin extends Plugin {
