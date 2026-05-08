@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	showOwnPct: true,
 	showSourcePct: true,
 	showConcepts: false,
+	showOrphans: true,
 	excludedFolders: [],
 	ownTags: ["thought", "synthesis", "fleeting"],
 	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
@@ -71,6 +72,11 @@ export default class FullStatisticsPlugin extends Plugin {
 		// History snapshots: hook the metrics-updated event with a long debounce
 		// so we sample after the vault has settled rather than mid-backlog.
 		this.registerEvent(this.vaultMetrics.on('updated', this.maybeSnapshot));
+
+		// Orphan count is O(N + L) so we recompute on a debounce instead of
+		// inline with every file event. setOrphans is a no-op when the
+		// number is unchanged, so this loop is self-quiescent.
+		this.registerEvent(this.vaultMetrics.on('updated', this.refreshOrphans));
 
 		this.registerView(VAULT_STATISTICS_VIEW_TYPE, (leaf: WorkspaceLeaf) =>
 			new VaultStatisticsView(
@@ -132,6 +138,11 @@ export default class FullStatisticsPlugin extends Plugin {
 			this.persist();
 		}
 	}, 10000, false);
+
+	private refreshOrphans = debounce(() => {
+		const n = this.vaultMetricsCollector.computeOrphanCount();
+		this.vaultMetrics?.setOrphans(n);
+	}, 3000, false);
 
 	private async activateStatisticsView() {
 		const { workspace } = this.app;
@@ -281,6 +292,9 @@ class FullStatisticsStatusBarItem {
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("concepts").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("concepts").format(s.conceptNotes) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("orphans").
+			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("orphans").format(s.orphanNotes) }));
 
 		this.statusBarItem.onClickEvent(() => { this.onclick() });
 	}
@@ -306,6 +320,7 @@ class FullStatisticsStatusBarItem {
 			s.showOwnPct,
 			s.showSourcePct,
 			s.showConcepts,
+			s.showOrphans,
 		];
 	}
 

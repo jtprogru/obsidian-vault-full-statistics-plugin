@@ -18,6 +18,7 @@ export interface FullStatisticsPluginSettings {
 	showOwnPct: boolean,
 	showSourcePct: boolean,
 	showConcepts: boolean,
+	showOrphans: boolean,
 	excludedFolders: string[],
 	ownTags: string[],
 	sourceTags: string[],
@@ -174,6 +175,18 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						.setValue(this.plugin.settings.showConcepts)
 						.onChange(async (value) => {
 							this.plugin.settings.showConcepts = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName("Show orphans")
+				.setDesc("Notes with no incoming links — disconnected knowledge.")
+				.addToggle((value) => {
+					value
+						.setValue(this.plugin.settings.showOrphans)
+						.onChange(async (value) => {
+							this.plugin.settings.showOrphans = value;
 							await this.plugin.saveSettings();
 						});
 				});

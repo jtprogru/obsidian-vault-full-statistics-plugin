@@ -190,10 +190,17 @@ export class VaultStatisticsView extends ItemView {
 		this.appendStat(grid, m.links.toLocaleString('en-US'), 'links');
 		this.appendStat(grid, m.tags.toLocaleString('en-US'), 'tags');
 		this.appendStat(grid, m.conceptNotes.toLocaleString('en-US'), 'concepts');
+		this.appendStat(
+			grid,
+			m.orphanNotes.toLocaleString('en-US'),
+			'orphans',
+			'Notes nothing else links to',
+		);
 	}
 
-	private appendStat(parent: HTMLElement, value: string, label: string): void {
+	private appendStat(parent: HTMLElement, value: string, label: string, tooltip?: string): void {
 		const stat = parent.createDiv({ cls: 'vfs-stat' });
+		if (tooltip) stat.setAttribute('title', tooltip);
 		stat.createDiv({ cls: 'vfs-stat-value', text: value });
 		stat.createDiv({ cls: 'vfs-stat-label', text: label });
 	}
@@ -224,6 +231,7 @@ export class VaultStatisticsView extends ItemView {
 		this.appendSparkRow(grid, 'source', snapshots.map(s => s.sourceNotes), 'vfs-bars-source');
 		this.appendSparkRow(grid, 'links', snapshots.map(s => s.links), 'vfs-bars-neutral');
 		this.appendSparkRow(grid, 'tags', snapshots.map(s => s.tags), 'vfs-bars-neutral');
+		this.appendSparkRow(grid, 'orphans', snapshots.map(s => s.orphanNotes ?? 0), 'vfs-bars-warn');
 
 		const first = snapshots[0];
 		const last = snapshots[snapshots.length - 1];

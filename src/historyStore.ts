@@ -8,6 +8,7 @@ export interface Snapshot {
 	ownNotes: number;
 	sourceNotes: number;
 	conceptNotes: number;
+	orphanNotes: number;
 }
 
 const DEFAULT_MAX_SNAPSHOTS = 365;
@@ -42,6 +43,7 @@ export class HistoryStore {
 			ownNotes: metrics.ownNotes,
 			sourceNotes: metrics.sourceNotes,
 			conceptNotes: metrics.conceptNotes,
+			orphanNotes: metrics.orphanNotes,
 		};
 
 		const last = this.snapshots[this.snapshots.length - 1];
@@ -113,5 +115,6 @@ function snapshotEquals(a: Snapshot, b: Snapshot): boolean {
 		&& a.tags === b.tags
 		&& a.ownNotes === b.ownNotes
 		&& a.sourceNotes === b.sourceNotes
-		&& a.conceptNotes === b.conceptNotes;
+		&& a.conceptNotes === b.conceptNotes
+		&& a.orphanNotes === b.orphanNotes;
 }

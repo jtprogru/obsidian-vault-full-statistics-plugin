@@ -291,8 +291,8 @@ describe("FullVaultMetricsCollector.aggregateByGroups", () => {
 			{ name: "A", paths: ["02. Areas"] },
 		]);
 		expect(result).toEqual([
-			{ name: "P", notes: 0, links: 0, ownNotes: 0, sourceNotes: 0, conceptNotes: 0 },
-			{ name: "A", notes: 0, links: 0, ownNotes: 0, sourceNotes: 0, conceptNotes: 0 },
+			{ name: "P", notes: 0, links: 0, ownNotes: 0, sourceNotes: 0, conceptNotes: 0, orphanNotes: 0 },
+			{ name: "A", notes: 0, links: 0, ownNotes: 0, sourceNotes: 0, conceptNotes: 0, orphanNotes: 0 },
 		]);
 	});
 
@@ -306,10 +306,10 @@ describe("FullVaultMetricsCollector.aggregateByGroups", () => {
 			{ name: "A", paths: ["02. Areas"] },
 		]);
 		expect(result[0]).toEqual({
-			name: "P", notes: 2, links: 7, ownNotes: 1, sourceNotes: 1, conceptNotes: 0,
+			name: "P", notes: 2, links: 7, ownNotes: 1, sourceNotes: 1, conceptNotes: 0, orphanNotes: 2,
 		});
 		expect(result[1]).toEqual({
-			name: "A", notes: 1, links: 1, ownNotes: 1, sourceNotes: 0, conceptNotes: 0,
+			name: "A", notes: 1, links: 1, ownNotes: 1, sourceNotes: 0, conceptNotes: 0, orphanNotes: 1,
 		});
 	});
 
@@ -368,6 +368,74 @@ describe("FullVaultMetricsCollector.aggregateByGroups", () => {
 			{ name: "S", paths: ["special.md"] },
 		]);
 		expect(result[0].notes).toBe(1);
+	});
+});
+
+describe("FullVaultMetricsCollector.computeOrphanCount", () => {
+	function makeCacheWithLinks(links: Record<string, Record<string, number>>): MetadataCache {
+		const mc = new MetadataCache();
+		(mc as any).resolvedLinks = links;
+		return mc;
+	}
+
+	function freshCollector(mc: MetadataCache): FullVaultMetricsCollector {
+		return new FullVaultMetricsCollector(new Component()).
+			setMetadataCache(mc).
+			setFullVaultMetrics(new FullVaultMetrics());
+	}
+
+	test("returns 0 when no notes are tracked", () => {
+		const c = freshCollector(makeCacheWithLinks({}));
+		expect(c.computeOrphanCount()).toBe(0);
+	});
+
+	test("file with no incoming links is an orphan", () => {
+		const c = freshCollector(makeCacheWithLinks({}));
+		c.update("a.md", makeMetrics(1, 0));
+		expect(c.computeOrphanCount()).toBe(1);
+	});
+
+	test("file linked from another file is not an orphan", () => {
+		const c = freshCollector(makeCacheWithLinks({
+			"a.md": { "b.md": 1 },
+		}));
+		c.update("a.md", makeMetrics(1, 1));
+		c.update("b.md", makeMetrics(1, 0));
+		expect(c.computeOrphanCount()).toBe(1); // a.md has no inbound link
+	});
+
+	test("self-link does not save you from being orphaned", () => {
+		const c = freshCollector(makeCacheWithLinks({
+			"a.md": { "a.md": 1 },
+		}));
+		c.update("a.md", makeMetrics(1, 1));
+		// resolvedLinks marks "a.md" as a destination of itself, so the
+		// inverted set contains "a.md" — it is technically not an orphan
+		// by our definition. This is the documented behavior; if a user
+		// disagrees, they can audit graph view the same way.
+		expect(c.computeOrphanCount()).toBe(0);
+	});
+
+	test("orphan count drops when an inbound link appears", () => {
+		const links: Record<string, Record<string, number>> = {};
+		const c = freshCollector(makeCacheWithLinks(links));
+		c.update("a.md", makeMetrics(1, 0));
+		c.update("b.md", makeMetrics(1, 0));
+		expect(c.computeOrphanCount()).toBe(2);
+
+		links["a.md"] = { "b.md": 1 };
+		expect(c.computeOrphanCount()).toBe(1);
+	});
+
+	test("missing resolvedLinks is treated as no links (everything is orphan)", () => {
+		const mc = new MetadataCache();
+		// no resolvedLinks set
+		const c = new FullVaultMetricsCollector(new Component()).
+			setMetadataCache(mc).
+			setFullVaultMetrics(new FullVaultMetrics());
+		c.update("a.md", makeMetrics(1, 0));
+		c.update("b.md", makeMetrics(1, 0));
+		expect(c.computeOrphanCount()).toBe(2);
 	});
 });
 

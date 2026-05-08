@@ -7,6 +7,7 @@ export interface FullVaultMetrics {
 	ownNotes: number;
 	sourceNotes: number;
 	conceptNotes: number;
+	orphanNotes: number;
 	quality: number;
 }
 
@@ -18,6 +19,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	ownNotes: number = 0;
 	sourceNotes: number = 0;
 	conceptNotes: number = 0;
+	orphanNotes: number = 0;
 	quality: number = 0.00001;
 
 	public reset() {
@@ -27,6 +29,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 		this.ownNotes = 0;
 		this.sourceNotes = 0;
 		this.conceptNotes = 0;
+		this.orphanNotes = 0;
 		this.quality = 0.00001;
 	}
 
@@ -53,6 +56,12 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	public setTags(n: number) {
 		if (this.tags === n) return;
 		this.tags = n;
+		this.trigger("updated");
+	}
+
+	public setOrphans(n: number) {
+		if (this.orphanNotes === n) return;
+		this.orphanNotes = n;
 		this.trigger("updated");
 	}
 

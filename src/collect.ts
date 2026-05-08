@@ -18,6 +18,7 @@ export interface GroupAggregate {
   ownNotes: number;
   sourceNotes: number;
   conceptNotes: number;
+  orphanNotes: number;
 }
 
 export interface FolderGroupSpec {
@@ -271,10 +272,13 @@ export class FullVaultMetricsCollector {
         name: g.name,
         notes: 0, links: 0,
         ownNotes: 0, sourceNotes: 0, conceptNotes: 0,
+        orphanNotes: 0,
       });
     }
 
+    const linked = this.computeLinkedPaths();
     for (const [path, m] of this.data) {
+      const isOrphan = !linked.has(path);
       for (const g of normalized) {
         if (matchesAnyFolder(path, g.paths)) {
           const acc = accs.get(g.name)!;
@@ -283,11 +287,41 @@ export class FullVaultMetricsCollector {
           acc.ownNotes += m.ownNotes;
           acc.sourceNotes += m.sourceNotes;
           acc.conceptNotes += m.conceptNotes;
+          if (isOrphan) acc.orphanNotes += m.notes;
         }
       }
     }
 
     return normalized.map(g => accs.get(g.name)!);
+  }
+
+  /**
+   * Counts notes in `data` that are not the destination of any resolved
+   * link. metadataCache.resolvedLinks is the canonical Obsidian source —
+   * keys are sources, inner keys are destinations. We invert it once,
+   * then a single pass over data counts paths missing from the linked set.
+   */
+  public computeOrphanCount(): number {
+    const linked = this.computeLinkedPaths();
+    let orphans = 0;
+    for (const path of this.data.keys()) {
+      if (!linked.has(path)) orphans++;
+    }
+    return orphans;
+  }
+
+  private computeLinkedPaths(): Set<string> {
+    const cache = this.metadataCache as any;
+    const resolvedLinks: Record<string, Record<string, number>> | undefined = cache?.resolvedLinks;
+    const out = new Set<string>();
+    if (!resolvedLinks) return out;
+    for (const src in resolvedLinks) {
+      const dests = resolvedLinks[src];
+      for (const dst in dests) {
+        out.add(dst);
+      }
+    }
+    return out;
   }
 
 }

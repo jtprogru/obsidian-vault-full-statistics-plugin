@@ -349,6 +349,10 @@
 	background: var(--text-faint, var(--text-muted));
 }
 
+.vfs-bars-warn .vfs-bar {
+	background: var(--color-orange, var(--text-warning));
+}
+
 .vfs-spark-tail {
 	color: var(--text-normal);
 	font-weight: 500;

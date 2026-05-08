@@ -8,7 +8,7 @@ function makeMetrics(overrides: Partial<FullVaultMetrics> = {}): FullVaultMetric
 }
 
 function snap(date: string, notes: number, ownNotes = 0, sourceNotes = 0): Snapshot {
-	return { date, notes, links: 0, tags: 0, ownNotes, sourceNotes, conceptNotes: 0 };
+	return { date, notes, links: 0, tags: 0, ownNotes, sourceNotes, conceptNotes: 0, orphanNotes: 0 };
 }
 
 describe("HistoryStore.recordIfNeeded", () => {
@@ -69,6 +69,7 @@ describe("HistoryStore.recordIfNeeded", () => {
 			ownNotes: 6,
 			sourceNotes: 3,
 			conceptNotes: 1,
+			orphanNotes: 0,
 		});
 	});
 });
