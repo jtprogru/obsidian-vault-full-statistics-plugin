@@ -193,22 +193,26 @@ export class FullVaultMetricsCollector {
 
 }
 
-class NoteMetricsCollector {
-  private readonly linkCache: Map<string, number> = new Map();
+type NoteSignature = { links: number; tags: number };
+
+export class NoteMetricsCollector {
+  private readonly signatureCache: Map<string, NoteSignature> = new Map();
 
   public async collect(file: TFile, metadata: CachedMetadata): Promise<FullVaultMetrics | null> {
     const linkCount = this.countAllLinks(metadata);
-    const cachedCount = this.linkCache.get(file.path);
+    const tagCount = this.countAllTags(metadata);
+    const cached = this.signatureCache.get(file.path);
 
-    if (cachedCount === linkCount) {
+    if (cached && cached.links === linkCount && cached.tags === tagCount) {
       return null;
     }
 
-    this.linkCache.set(file.path, linkCount);
+    this.signatureCache.set(file.path, { links: linkCount, tags: tagCount });
 
     let metrics = new FullVaultMetrics();
     metrics.notes = 1;
     metrics.links = linkCount;
+    metrics.tags = tagCount;
     metrics.quality = linkCount;
 
     return metrics;
@@ -222,11 +226,25 @@ class NoteMetricsCollector {
     return count;
   }
 
+  public countAllTags(metadata: CachedMetadata): number {
+    let count = 0;
+    if (metadata?.tags) count += metadata.tags.length;
+
+    const fmTags = metadata?.frontmatter?.tags;
+    if (Array.isArray(fmTags)) {
+      count += fmTags.length;
+    } else if (typeof fmTags === "string" && fmTags.trim().length > 0) {
+      count += fmTags.split(/[,\s]+/).filter(t => t.length > 0).length;
+    }
+
+    return count;
+  }
+
   public clearCache() {
-    this.linkCache.clear();
+    this.signatureCache.clear();
   }
 
   public invalidateCache(path: string) {
-    this.linkCache.delete(path);
+    this.signatureCache.delete(path);
   }
 }

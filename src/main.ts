@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	displayIndividualItems: false,
 	showNotes: true,
 	showLinks: true,
+	showTags: true,
 	showQuality: true,
 	excludedFolders: [],
 };
@@ -160,6 +161,9 @@ class FullStatisticsStatusBarItem {
 			setStatisticName("links").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("links").format(s.links) }));
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("tags").
+			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("tags").format(s.tags) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("QoV").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("QoV").format(s.quality) }));
 
@@ -179,7 +183,8 @@ class FullStatisticsStatusBarItem {
 		if (this.owner.settings.displayIndividualItems) {
 			this.statisticViews[0].setActive(this.owner.settings.showNotes).refresh(this.vaultMetrics);
 			this.statisticViews[1].setActive(this.owner.settings.showLinks).refresh(this.vaultMetrics);
-			this.statisticViews[2].setActive(this.owner.settings.showQuality).refresh(this.vaultMetrics);
+			this.statisticViews[2].setActive(this.owner.settings.showTags).refresh(this.vaultMetrics);
+			this.statisticViews[3].setActive(this.owner.settings.showQuality).refresh(this.vaultMetrics);
 		} else {
 			this.statisticViews.forEach((view, i) => {
 				view.setActive(this.displayedStatisticIndex == i).refresh(this.vaultMetrics);

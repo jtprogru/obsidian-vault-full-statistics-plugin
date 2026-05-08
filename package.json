@@ -1,7 +1,7 @@
 {
 	"name": "vault-full-statistics",
-	"version": "1.5.0",
-	"description": "Status bar item with vault statistics: number of notes, links, and QoV (Quality of Vault).",
+	"version": "1.5.1",
+	"description": "Status bar item with vault statistics: number of notes, links, tags, and QoV (Quality of Vault).",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

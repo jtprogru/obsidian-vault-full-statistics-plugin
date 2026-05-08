@@ -6,6 +6,7 @@ export interface FullStatisticsPluginSettings {
 	displayIndividualItems: boolean,
 	showNotes: boolean,
 	showLinks: boolean,
+	showTags: boolean,
 	showQuality: boolean,
 	excludedFolders: string[],
 }
@@ -55,6 +56,17 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						.setValue(this.plugin.settings.showLinks)
 						.onChange(async (value) => {
 							this.plugin.settings.showLinks = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName("Show tags")
+				.addToggle((value) => {
+					value
+						.setValue(this.plugin.settings.showTags)
+						.onChange(async (value) => {
+							this.plugin.settings.showTags = value;
 							await this.plugin.saveSettings();
 						});
 				});
