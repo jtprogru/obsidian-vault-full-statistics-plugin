@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
-import { HistoryStore, sparkline, pctString } from './historyStore';
+import { HistoryStore, pctString } from './historyStore';
 
 export const VAULT_STATISTICS_VIEW_TYPE = 'vault-full-statistics-view';
 
@@ -60,7 +60,8 @@ export class VaultStatisticsView extends ItemView {
 		const m = this.vaultMetrics;
 		const own = m.ownNotes;
 		const source = m.sourceNotes;
-		const total = own + source;
+		const concept = m.conceptNotes;
+		const total = own + source + concept;
 
 		const section = parent.createDiv({ cls: 'vfs-section vfs-ratio' });
 		section.createEl('h4', { text: 'Own vs source', cls: 'vfs-section-title' });
@@ -74,26 +75,32 @@ export class VaultStatisticsView extends ItemView {
 		}
 
 		const bar = section.createDiv({ cls: 'vfs-ratio-bar' });
-		const ownSeg = bar.createDiv({ cls: 'vfs-ratio-own' });
-		ownSeg.style.flexGrow = String(own);
-		const sourceSeg = bar.createDiv({ cls: 'vfs-ratio-source' });
-		sourceSeg.style.flexGrow = String(source);
+		this.appendRatioSegment(bar, 'vfs-ratio-own', own);
+		this.appendRatioSegment(bar, 'vfs-ratio-source', source);
+		this.appendRatioSegment(bar, 'vfs-ratio-concept', concept);
 
 		const legend = section.createDiv({ cls: 'vfs-ratio-legend' });
-		const ownLeg = legend.createDiv({ cls: 'vfs-ratio-leg vfs-ratio-leg-own' });
-		ownLeg.createSpan({ cls: 'vfs-ratio-swatch vfs-ratio-swatch-own' });
-		ownLeg.createSpan({ cls: 'vfs-ratio-leg-text', text: `${pctString(m.ownPct())} own · ${own}` });
-
-		const srcLeg = legend.createDiv({ cls: 'vfs-ratio-leg vfs-ratio-leg-source' });
-		srcLeg.createSpan({ cls: 'vfs-ratio-swatch vfs-ratio-swatch-source' });
-		srcLeg.createSpan({ cls: 'vfs-ratio-leg-text', text: `${pctString(m.sourcePct())} source · ${source}` });
-
-		if (m.conceptNotes > 0) {
-			section.createDiv({
-				cls: 'vfs-ratio-concepts',
-				text: `+${m.conceptNotes} concept note${m.conceptNotes === 1 ? '' : 's'} (grey zone)`,
-			});
+		const classified = own + source;
+		this.appendLegend(legend, 'own', own, classified > 0 ? own / classified : 0, true);
+		this.appendLegend(legend, 'source', source, classified > 0 ? source / classified : 0, true);
+		if (concept > 0) {
+			// Concept share is computed against the full classified set so it
+			// communicates "this much of your tagged corpus is grey zone".
+			this.appendLegend(legend, 'concept', concept, concept / total, false);
 		}
+	}
+
+	private appendRatioSegment(bar: HTMLElement, cls: string, value: number): void {
+		if (value <= 0) return;
+		const seg = bar.createDiv({ cls });
+		seg.style.flexGrow = String(value);
+	}
+
+	private appendLegend(parent: HTMLElement, kind: 'own' | 'source' | 'concept', count: number, share: number, showPct: boolean): void {
+		const item = parent.createSpan({ cls: `vfs-ratio-leg vfs-ratio-leg-${kind}` });
+		item.createSpan({ cls: `vfs-ratio-swatch vfs-ratio-swatch-${kind}` });
+		const label = showPct ? `${pctString(share)} ${kind} · ${count}` : `${count} ${kind}`;
+		item.createSpan({ cls: 'vfs-ratio-leg-text', text: label });
 	}
 
 	private renderSecondaryGrid(parent: HTMLElement): void {
@@ -134,12 +141,12 @@ export class VaultStatisticsView extends ItemView {
 			cls: 'vfs-section-title',
 		});
 
-		const table = section.createEl('table', { cls: 'vfs-spark-table' });
-		this.appendSparkRow(table, 'notes', snapshots.map(s => s.notes));
-		this.appendSparkRow(table, 'own', snapshots.map(s => s.ownNotes));
-		this.appendSparkRow(table, 'source', snapshots.map(s => s.sourceNotes));
-		this.appendSparkRow(table, 'links', snapshots.map(s => s.links));
-		this.appendSparkRow(table, 'tags', snapshots.map(s => s.tags));
+		const grid = section.createDiv({ cls: 'vfs-spark-grid' });
+		this.appendSparkRow(grid, 'notes', snapshots.map(s => s.notes), 'vfs-bars-notes');
+		this.appendSparkRow(grid, 'own', snapshots.map(s => s.ownNotes), 'vfs-bars-own');
+		this.appendSparkRow(grid, 'source', snapshots.map(s => s.sourceNotes), 'vfs-bars-source');
+		this.appendSparkRow(grid, 'links', snapshots.map(s => s.links), 'vfs-bars-neutral');
+		this.appendSparkRow(grid, 'tags', snapshots.map(s => s.tags), 'vfs-bars-neutral');
 
 		const first = snapshots[0];
 		const last = snapshots[snapshots.length - 1];
@@ -151,11 +158,27 @@ export class VaultStatisticsView extends ItemView {
 		footer.createSpan({ cls: 'vfs-history-range', text: ` since ${first.date}` });
 	}
 
-	private appendSparkRow(table: HTMLElement, label: string, values: number[]): void {
-		const row = table.createEl('tr');
-		row.createEl('td', { cls: 'vfs-spark-label', text: label });
-		row.createEl('td', { cls: 'vfs-spark-cell', text: sparkline(values) });
+	private appendSparkRow(parent: HTMLElement, label: string, values: number[], colorCls: string): void {
+		parent.createDiv({ cls: 'vfs-spark-label', text: label });
+
+		const barsEl = parent.createDiv({ cls: `vfs-bars ${colorCls}` });
+		let min = values[0];
+		let max = values[0];
+		for (const v of values) {
+			if (v < min) min = v;
+			if (v > max) max = v;
+		}
+		const range = max - min;
+		for (const v of values) {
+			const bar = barsEl.createDiv({ cls: 'vfs-bar' });
+			// Always show a baseline so flat zero series remain visible;
+			// otherwise scale the bar height across the local range.
+			const ratio = range === 0 ? 0.4 : 0.15 + (0.85 * (v - min) / range);
+			bar.style.height = `${Math.round(ratio * 100)}%`;
+			bar.setAttribute('title', `${v.toLocaleString('en-US')}`);
+		}
+
 		const tail = values[values.length - 1];
-		row.createEl('td', { cls: 'vfs-spark-tail', text: tail.toLocaleString('en-US') });
+		parent.createDiv({ cls: 'vfs-spark-tail', text: tail.toLocaleString('en-US') });
 	}
 }
