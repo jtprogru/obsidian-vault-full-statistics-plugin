@@ -129,4 +129,116 @@ describe("NoteMetricsCollector.collect — tags", () => {
 		const second = await nmc.collect(file, meta);
 		expect(second).toBeNull();
 	});
+
+	test("recollects when tag identity changes even if count is the same", async () => {
+		const first = await nmc.collect(file, {
+			tags: [{ tag: "#thought" }],
+		} as any);
+		expect(first?.tags).toBe(1);
+
+		const second = await nmc.collect(file, {
+			tags: [{ tag: "#book" }],
+		} as any);
+		expect(second).not.toBeNull();
+		expect(second?.tags).toBe(1);
+	});
+});
+
+describe("NoteMetricsCollector.collect — own/source/concept classification", () => {
+	let nmc: NoteMetricsCollector;
+	let file: TFile;
+
+	beforeEach(() => {
+		nmc = new NoteMetricsCollector();
+		nmc.setOwnTags(["thought", "synthesis", "fleeting"]);
+		nmc.setSourceTags(["book", "article", "video"]);
+		nmc.setConceptTags(["concept"]);
+		file = { path: "n.md" } as TFile;
+	});
+
+	test("classifies own when an own tag is present", async () => {
+		const m = await nmc.collect(file, { tags: [{ tag: "#thought" }] } as any);
+		expect(m?.ownNotes).toBe(1);
+		expect(m?.sourceNotes).toBe(0);
+		expect(m?.conceptNotes).toBe(0);
+	});
+
+	test("classifies source when a source tag is present", async () => {
+		const m = await nmc.collect(file, { tags: [{ tag: "#book" }] } as any);
+		expect(m?.ownNotes).toBe(0);
+		expect(m?.sourceNotes).toBe(1);
+	});
+
+	test("classifies concept when a concept tag is present", async () => {
+		const m = await nmc.collect(file, { tags: [{ tag: "#concept" }] } as any);
+		expect(m?.conceptNotes).toBe(1);
+	});
+
+	test("a note with both own and source tags counts in both buckets", async () => {
+		const m = await nmc.collect(file, {
+			tags: [{ tag: "#thought" }, { tag: "#book" }],
+		} as any);
+		expect(m?.ownNotes).toBe(1);
+		expect(m?.sourceNotes).toBe(1);
+	});
+
+	test("classification is case-insensitive and accepts # prefix in config", async () => {
+		nmc.setOwnTags(["#Thought"]);
+		const m = await nmc.collect(file, { tags: [{ tag: "#thought" }] } as any);
+		expect(m?.ownNotes).toBe(1);
+	});
+
+	test("frontmatter tags participate in classification", async () => {
+		const m = await nmc.collect(file, {
+			frontmatter: { tags: ["book"] },
+		} as any);
+		expect(m?.sourceNotes).toBe(1);
+	});
+
+	test("untagged note classifies as none", async () => {
+		const m = await nmc.collect(file, {} as any);
+		expect(m?.ownNotes).toBe(0);
+		expect(m?.sourceNotes).toBe(0);
+		expect(m?.conceptNotes).toBe(0);
+		expect(m?.notes).toBe(1);
+	});
+
+	test("changing own tag list invalidates cache (note re-collected)", async () => {
+		const meta = { tags: [{ tag: "#book" }] } as any;
+		const first = await nmc.collect(file, meta);
+		expect(first?.ownNotes).toBe(0);
+
+		nmc.setOwnTags(["book"]);
+		const second = await nmc.collect(file, meta);
+		expect(second).not.toBeNull();
+		expect(second?.ownNotes).toBe(1);
+	});
+});
+
+describe("FullVaultMetrics — own/source ratio", () => {
+	test("plan scenario: 6 own + 3 source + 1 untagged → 67% own / 33% source", () => {
+		const v = new FullVaultMetrics();
+		const own = new FullVaultMetrics();
+		own.notes = 1; own.ownNotes = 1;
+		const src = new FullVaultMetrics();
+		src.notes = 1; src.sourceNotes = 1;
+		const none = new FullVaultMetrics();
+		none.notes = 1;
+
+		for (let i = 0; i < 6; i++) v.inc(own);
+		for (let i = 0; i < 3; i++) v.inc(src);
+		v.inc(none);
+
+		expect(v.notes).toBe(10);
+		expect(v.ownNotes).toBe(6);
+		expect(v.sourceNotes).toBe(3);
+		expect(v.ownPct()).toBeCloseTo(6 / 9);
+		expect(v.sourcePct()).toBeCloseTo(3 / 9);
+	});
+
+	test("ownPct/sourcePct are zero when nothing classified", () => {
+		const v = new FullVaultMetrics();
+		expect(v.ownPct()).toBe(0);
+		expect(v.sourcePct()).toBe(0);
+	});
 });

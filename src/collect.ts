@@ -47,6 +47,21 @@ export class FullVaultMetricsCollector {
     return this;
   }
 
+  public setOwnTags(tags: string[]) {
+    this.noteMetricsCollector.setOwnTags(tags);
+    return this;
+  }
+
+  public setSourceTags(tags: string[]) {
+    this.noteMetricsCollector.setSourceTags(tags);
+    return this;
+  }
+
+  public setConceptTags(tags: string[]) {
+    this.noteMetricsCollector.setConceptTags(tags);
+    return this;
+  }
+
   private isExcluded(file: TFile): boolean {
     return this.excludedFolders.some(folder =>
       file.path === folder || file.path.startsWith(folder + '/')
@@ -193,26 +208,51 @@ export class FullVaultMetricsCollector {
 
 }
 
-type NoteSignature = { links: number; tags: number };
+type NoteSignature = { links: number; tagKey: string };
 
 export class NoteMetricsCollector {
   private readonly signatureCache: Map<string, NoteSignature> = new Map();
+  private ownTags: Set<string> = new Set();
+  private sourceTags: Set<string> = new Set();
+  private conceptTags: Set<string> = new Set();
+
+  public setOwnTags(tags: string[]) {
+    this.ownTags = normalizeTagSet(tags);
+    this.clearCache();
+    return this;
+  }
+
+  public setSourceTags(tags: string[]) {
+    this.sourceTags = normalizeTagSet(tags);
+    this.clearCache();
+    return this;
+  }
+
+  public setConceptTags(tags: string[]) {
+    this.conceptTags = normalizeTagSet(tags);
+    this.clearCache();
+    return this;
+  }
 
   public async collect(file: TFile, metadata: CachedMetadata): Promise<FullVaultMetrics | null> {
     const linkCount = this.countAllLinks(metadata);
-    const tagCount = this.countAllTags(metadata);
+    const noteTags = this.collectTags(metadata);
+    const tagKey = Array.from(noteTags).sort().join("|");
     const cached = this.signatureCache.get(file.path);
 
-    if (cached && cached.links === linkCount && cached.tags === tagCount) {
+    if (cached && cached.links === linkCount && cached.tagKey === tagKey) {
       return null;
     }
 
-    this.signatureCache.set(file.path, { links: linkCount, tags: tagCount });
+    this.signatureCache.set(file.path, { links: linkCount, tagKey });
 
     let metrics = new FullVaultMetrics();
     metrics.notes = 1;
     metrics.links = linkCount;
-    metrics.tags = tagCount;
+    metrics.tags = noteTags.size;
+    metrics.ownNotes = hasIntersection(noteTags, this.ownTags) ? 1 : 0;
+    metrics.sourceNotes = hasIntersection(noteTags, this.sourceTags) ? 1 : 0;
+    metrics.conceptNotes = hasIntersection(noteTags, this.conceptTags) ? 1 : 0;
     metrics.quality = linkCount;
 
     return metrics;
@@ -226,18 +266,32 @@ export class NoteMetricsCollector {
     return count;
   }
 
-  public countAllTags(metadata: CachedMetadata): number {
-    let count = 0;
-    if (metadata?.tags) count += metadata.tags.length;
+  public collectTags(metadata: CachedMetadata): Set<string> {
+    const out = new Set<string>();
+
+    if (metadata?.tags) {
+      for (const t of metadata.tags) {
+        const norm = normalizeTag(t.tag);
+        if (norm) out.add(norm);
+      }
+    }
 
     const fmTags = metadata?.frontmatter?.tags;
     if (Array.isArray(fmTags)) {
-      count += fmTags.length;
+      for (const t of fmTags) {
+        if (typeof t === "string") {
+          const norm = normalizeTag(t);
+          if (norm) out.add(norm);
+        }
+      }
     } else if (typeof fmTags === "string" && fmTags.trim().length > 0) {
-      count += fmTags.split(/[,\s]+/).filter(t => t.length > 0).length;
+      for (const t of fmTags.split(/[,\s]+/)) {
+        const norm = normalizeTag(t);
+        if (norm) out.add(norm);
+      }
     }
 
-    return count;
+    return out;
   }
 
   public clearCache() {
@@ -247,4 +301,26 @@ export class NoteMetricsCollector {
   public invalidateCache(path: string) {
     this.signatureCache.delete(path);
   }
+}
+
+function normalizeTag(tag: string): string {
+  return tag.trim().replace(/^#/, "").toLowerCase();
+}
+
+function normalizeTagSet(tags: string[]): Set<string> {
+  const out = new Set<string>();
+  for (const t of tags) {
+    const norm = normalizeTag(t);
+    if (norm) out.add(norm);
+  }
+  return out;
+}
+
+function hasIntersection(a: Set<string>, b: Set<string>): boolean {
+  if (a.size === 0 || b.size === 0) return false;
+  const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];
+  for (const v of smaller) {
+    if (larger.has(v)) return true;
+  }
+  return false;
 }

@@ -10,7 +10,15 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	showLinks: true,
 	showTags: true,
 	showQuality: true,
+	showOwn: true,
+	showSource: true,
+	showOwnPct: true,
+	showSourcePct: true,
+	showConcepts: false,
 	excludedFolders: [],
+	ownTags: ["thought", "synthesis", "fleeting"],
+	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
+	conceptTags: ["concept"],
 };
 
 export default class FullStatisticsPlugin extends Plugin {
@@ -34,6 +42,9 @@ export default class FullStatisticsPlugin extends Plugin {
 			setMetadataCache(this.app.metadataCache).
 			setFullVaultMetrics(this.vaultMetrics).
 			setExcludedFolders(this.settings.excludedFolders).
+			setOwnTags(this.settings.ownTags).
+			setSourceTags(this.settings.sourceTags).
+			setConceptTags(this.settings.conceptTags).
 			start();
 
 		this.statusBarItem = new FullStatisticsStatusBarItem(this, this.addStatusBarItem()).
@@ -56,6 +67,9 @@ export default class FullStatisticsPlugin extends Plugin {
 	public restartCollector() {
 		this.vaultMetricsCollector
 			.setExcludedFolders(this.settings.excludedFolders)
+			.setOwnTags(this.settings.ownTags)
+			.setSourceTags(this.settings.sourceTags)
+			.setConceptTags(this.settings.conceptTags)
 			.restart();
 	}
 }
@@ -154,6 +168,8 @@ class FullStatisticsStatusBarItem {
 		this.owner = owner;
 		this.statusBarItem = statusBarItem;
 
+		const pctFmt = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
+
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("notes").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("notes").format(s.notes) }));
@@ -166,6 +182,21 @@ class FullStatisticsStatusBarItem {
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("QoV").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("QoV").format(s.quality) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("own").
+			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("own").format(s.ownNotes) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("source").
+			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("source").format(s.sourceNotes) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("own-pct").
+			setFormatter((s: FullVaultMetrics) => { return `${pctFmt.format(s.ownPct())} own` }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("source-pct").
+			setFormatter((s: FullVaultMetrics) => { return `${pctFmt.format(s.sourcePct())} source` }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("concepts").
+			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("concepts").format(s.conceptNotes) }));
 
 		this.statusBarItem.onClickEvent(() => { this.onclick() });
 	}
@@ -179,13 +210,32 @@ class FullStatisticsStatusBarItem {
 
 	private refreshSoon = debounce(() => { this.refresh(); }, 2000, false);
 
+	private viewEnabledFlags(): boolean[] {
+		const s = this.owner.settings;
+		return [
+			s.showNotes,
+			s.showLinks,
+			s.showTags,
+			s.showQuality,
+			s.showOwn,
+			s.showSource,
+			s.showOwnPct,
+			s.showSourcePct,
+			s.showConcepts,
+		];
+	}
+
 	public refresh() {
+		const enabled = this.viewEnabledFlags();
+
 		if (this.owner.settings.displayIndividualItems) {
-			this.statisticViews[0].setActive(this.owner.settings.showNotes).refresh(this.vaultMetrics);
-			this.statisticViews[1].setActive(this.owner.settings.showLinks).refresh(this.vaultMetrics);
-			this.statisticViews[2].setActive(this.owner.settings.showTags).refresh(this.vaultMetrics);
-			this.statisticViews[3].setActive(this.owner.settings.showQuality).refresh(this.vaultMetrics);
+			this.statisticViews.forEach((view, i) => {
+				view.setActive(enabled[i]).refresh(this.vaultMetrics);
+			});
 		} else {
+			if (!enabled[this.displayedStatisticIndex]) {
+				this.advanceToEnabled(enabled);
+			}
 			this.statisticViews.forEach((view, i) => {
 				view.setActive(this.displayedStatisticIndex == i).refresh(this.vaultMetrics);
 			});
@@ -194,9 +244,20 @@ class FullStatisticsStatusBarItem {
 		this.statusBarItem.title = this.statisticViews.map(view => view.getText()).join("\n");
 	}
 
+	private advanceToEnabled(enabled: boolean[]) {
+		const n = this.statisticViews.length;
+		for (let step = 1; step <= n; step++) {
+			const idx = (this.displayedStatisticIndex + step) % n;
+			if (enabled[idx]) {
+				this.displayedStatisticIndex = idx;
+				return;
+			}
+		}
+	}
+
 	private onclick() {
 		if (!this.owner.settings.displayIndividualItems) {
-			this.displayedStatisticIndex = (this.displayedStatisticIndex + 1) % this.statisticViews.length;
+			this.advanceToEnabled(this.viewEnabledFlags());
 		}
 		this.refresh();
 	}
