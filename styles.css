@@ -1,10 +1,220 @@
+/* ===== Status bar items (existing) ===== */
+
 .obsidian-vault-full-statistics--item {
 	margin-left: 0.2em;
 	margin-right: 0.2em;
 }
 
 .obsidian-vault-full-statistics--item--inactive {
-		display: none;
+	display: none;
 }
 
 .obsidian-vault-full-statistics--item--active {}
+
+
+/* ===== Sidebar view ===== */
+
+.vfs-view {
+	padding: 1.25em 1em 1.5em;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	line-height: 1.4;
+}
+
+/* Hero — the headline number */
+
+.vfs-hero {
+	text-align: center;
+	margin-bottom: 1.5em;
+	padding-bottom: 1.25em;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.vfs-hero-value {
+	font-size: 2.4em;
+	font-weight: 700;
+	color: var(--text-normal);
+	line-height: 1.1;
+	letter-spacing: -0.02em;
+}
+
+.vfs-hero-label {
+	margin-top: 0.25em;
+	color: var(--text-muted);
+	font-size: 0.95em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+/* Sections */
+
+.vfs-section {
+	margin-bottom: 1.5em;
+}
+
+.vfs-section-title {
+	margin: 0 0 0.6em 0;
+	color: var(--text-muted);
+	font-size: 0.85em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.vfs-empty {
+	color: var(--text-muted);
+	font-style: italic;
+	font-size: 0.9em;
+	padding: 0.5em 0;
+}
+
+/* Own / source ratio bar */
+
+.vfs-ratio-bar {
+	display: flex;
+	width: 100%;
+	height: 0.7em;
+	border-radius: 0.35em;
+	overflow: hidden;
+	background: var(--background-modifier-border);
+}
+
+.vfs-ratio-own {
+	background: var(--color-green, var(--interactive-accent));
+	min-width: 2px;
+}
+
+.vfs-ratio-source {
+	background: var(--color-blue, var(--text-accent));
+	min-width: 2px;
+}
+
+.vfs-ratio-legend {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 0.5em;
+	gap: 0.75em;
+	flex-wrap: wrap;
+}
+
+.vfs-ratio-leg {
+	display: flex;
+	align-items: center;
+	gap: 0.4em;
+}
+
+.vfs-ratio-swatch {
+	display: inline-block;
+	width: 0.6em;
+	height: 0.6em;
+	border-radius: 2px;
+}
+
+.vfs-ratio-swatch-own {
+	background: var(--color-green, var(--interactive-accent));
+}
+
+.vfs-ratio-swatch-source {
+	background: var(--color-blue, var(--text-accent));
+}
+
+.vfs-ratio-leg-text {
+	color: var(--text-normal);
+}
+
+.vfs-ratio-concepts {
+	margin-top: 0.5em;
+	color: var(--text-muted);
+	font-size: 0.85em;
+}
+
+/* Secondary metrics grid */
+
+.vfs-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 0.5em;
+}
+
+.vfs-stat {
+	background: var(--background-secondary);
+	border-radius: 6px;
+	padding: 0.6em 0.7em;
+}
+
+.vfs-stat-value {
+	font-size: 1.2em;
+	font-weight: 600;
+	color: var(--text-normal);
+	line-height: 1.1;
+}
+
+.vfs-stat-label {
+	margin-top: 0.15em;
+	color: var(--text-muted);
+	font-size: 0.8em;
+}
+
+/* History sparklines */
+
+.vfs-spark-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9em;
+}
+
+.vfs-spark-table tr + tr td {
+	padding-top: 0.25em;
+}
+
+.vfs-spark-label {
+	color: var(--text-muted);
+	padding-right: 0.6em;
+	width: 1%;
+	white-space: nowrap;
+}
+
+.vfs-spark-cell {
+	font-family: var(--font-monospace);
+	font-size: 1.1em;
+	color: var(--text-normal);
+	letter-spacing: -0.05em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: clip;
+}
+
+.vfs-spark-tail {
+	color: var(--text-muted);
+	padding-left: 0.6em;
+	text-align: right;
+	width: 1%;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.vfs-history-footer {
+	margin-top: 0.75em;
+	font-size: 0.85em;
+}
+
+.vfs-delta {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.vfs-delta-pos {
+	color: var(--color-green, var(--text-success));
+}
+
+.vfs-delta-neg {
+	color: var(--color-red, var(--text-error));
+}
+
+.vfs-delta-flat {
+	color: var(--text-muted);
+}
+
+.vfs-history-range {
+	color: var(--text-muted);
+}
