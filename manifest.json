@@ -1,7 +1,7 @@
 {
 	"id": "vault-full-statistics",
 	"name": "Vault Full Statistics",
-	"version": "1.6.0",
+	"version": "1.6.1",
 	"minAppVersion": "0.15.0",
 	"description": "Status bar item with vault statistics: notes, links, tags, QoV, and the own/source ratio that diagnoses your knowledge-base mode.",
 	"author": "Mikhail Savin",

@@ -6,12 +6,19 @@ enum FileType {
   Note,
 }
 
+export interface CollectResult {
+  metrics: FullVaultMetrics;
+  tags: Set<string>;
+}
+
 export class FullVaultMetricsCollector {
 
   private readonly owner: Component;
   private vault: Vault;
   private metadataCache: MetadataCache;
   private readonly data: Map<string, FullVaultMetrics> = new Map();
+  private readonly fileTags: Map<string, Set<string>> = new Map();
+  private readonly tagRefs: Map<string, number> = new Map();
   private backlog: Set<string> = new Set();
   private vaultMetrics: FullVaultMetrics = new FullVaultMetrics();
   private intervalId: number | null = null;
@@ -88,6 +95,8 @@ export class FullVaultMetricsCollector {
 
   private rescan() {
     this.data.clear();
+    this.fileTags.clear();
+    this.tagRefs.clear();
     this.backlog = new Set();
     this.vaultMetrics?.reset();
     this.vault.getFiles().forEach((file: TFile) => {
@@ -175,35 +184,72 @@ export class FullVaultMetricsCollector {
     }
   }
 
-  public async collect(file: TFile): Promise<FullVaultMetrics | null | undefined> {
+  public async collect(file: TFile): Promise<CollectResult | null | undefined> {
     const metadata = this.metadataCache.getFileCache(file);
     if (metadata === null) {
       return null;
     }
 
-    let metrics: FullVaultMetrics | null | undefined;
+    let result: CollectResult | null | undefined;
     switch (this.getFileType(file)) {
       case FileType.Note:
-        metrics = await this.noteMetricsCollector.collect(file, metadata);
+        result = await this.noteMetricsCollector.collect(file, metadata);
         break;
       default:
-        metrics = null;
+        result = null;
     }
-    return metrics;
+    return result;
   }
 
-  public update(fileOrPath: TFile | string, metrics: FullVaultMetrics | null) {
+  public update(fileOrPath: TFile | string, resultOrMetrics: CollectResult | FullVaultMetrics | null, tags?: Set<string>) {
     let key = (fileOrPath instanceof TFile) ? fileOrPath.path : fileOrPath;
 
+    let metrics: FullVaultMetrics | null;
+    let newTags: Set<string>;
+    if (resultOrMetrics === null) {
+      metrics = null;
+      newTags = new Set();
+    } else if (resultOrMetrics instanceof FullVaultMetrics) {
+      metrics = resultOrMetrics;
+      newTags = tags ?? new Set();
+    } else {
+      metrics = resultOrMetrics.metrics;
+      newTags = resultOrMetrics.tags;
+    }
+
     this.vaultMetrics?.dec(this.data.get(key) ?? new FullVaultMetrics());
+    this.diffTagRefs(this.fileTags.get(key) ?? new Set(), newTags);
 
     if (metrics == null) {
       this.data.delete(key);
+      this.fileTags.delete(key);
     } else {
       this.data.set(key, metrics);
+      this.fileTags.set(key, newTags);
     }
 
     this.vaultMetrics?.inc(metrics);
+    this.vaultMetrics?.setTags(this.tagRefs.size);
+  }
+
+  private diffTagRefs(oldTags: Set<string>, newTags: Set<string>) {
+    for (const t of oldTags) {
+      if (!newTags.has(t)) {
+        const c = (this.tagRefs.get(t) ?? 0) - 1;
+        if (c <= 0) this.tagRefs.delete(t);
+        else this.tagRefs.set(t, c);
+      }
+    }
+    for (const t of newTags) {
+      if (!oldTags.has(t)) {
+        this.tagRefs.set(t, (this.tagRefs.get(t) ?? 0) + 1);
+      }
+    }
+  }
+
+  /** Test/debug accessor: number of distinct tags currently tracked vault-wide. */
+  public distinctTagCount(): number {
+    return this.tagRefs.size;
   }
 
 }
@@ -234,7 +280,7 @@ export class NoteMetricsCollector {
     return this;
   }
 
-  public async collect(file: TFile, metadata: CachedMetadata): Promise<FullVaultMetrics | null> {
+  public async collect(file: TFile, metadata: CachedMetadata): Promise<CollectResult | null> {
     const linkCount = this.countAllLinks(metadata);
     const noteTags = this.collectTags(metadata);
     const tagKey = Array.from(noteTags).sort().join("|");
@@ -255,7 +301,7 @@ export class NoteMetricsCollector {
     metrics.conceptNotes = hasIntersection(noteTags, this.conceptTags) ? 1 : 0;
     metrics.quality = linkCount;
 
-    return metrics;
+    return { metrics, tags: noteTags };
   }
 
   private countAllLinks(metadata: CachedMetadata): number {

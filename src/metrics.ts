@@ -33,7 +33,6 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	public dec(metrics: FullVaultMetrics | null) {
 		this.notes -= metrics?.notes || 0;
 		this.links -= metrics?.links || 0;
-		this.tags -= metrics?.tags || 0;
 		this.ownNotes -= metrics?.ownNotes || 0;
 		this.sourceNotes -= metrics?.sourceNotes || 0;
 		this.conceptNotes -= metrics?.conceptNotes || 0;
@@ -44,11 +43,16 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	public inc(metrics: FullVaultMetrics | null) {
 		this.notes += metrics?.notes || 0;
 		this.links += metrics?.links || 0;
-		this.tags += metrics?.tags || 0;
 		this.ownNotes += metrics?.ownNotes || 0;
 		this.sourceNotes += metrics?.sourceNotes || 0;
 		this.conceptNotes += metrics?.conceptNotes || 0;
 		this.quality = this.links / this.notes || 0.00001;
+		this.trigger("updated");
+	}
+
+	public setTags(n: number) {
+		if (this.tags === n) return;
+		this.tags = n;
 		this.trigger("updated");
 	}
 

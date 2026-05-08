@@ -33,13 +33,10 @@ describe("FullVaultMetricsCollector.update", () => {
 	});
 
 	test("rename does not double-count: set(new) + delete(old) nets to original", () => {
-		// Simulates initial collection of "old.md".
 		collector.update("old.md", makeMetrics(1, 3));
 		expect(vaultMetrics.notes).toBe(1);
 		expect(vaultMetrics.links).toBe(3);
 
-		// Simulates the two events processBacklog produces after a rename:
-		// new path is collected fresh, old path resolves to null (file is gone).
 		collector.update("new.md", makeMetrics(1, 3));
 		collector.update("old.md", null);
 
@@ -50,8 +47,6 @@ describe("FullVaultMetricsCollector.update", () => {
 	test("rename in reverse order also nets to original", () => {
 		collector.update("old.md", makeMetrics(1, 3));
 
-		// Order swapped — Promise.allSettled in processBacklog does not
-		// guarantee ordering, so the result must be invariant.
 		collector.update("old.md", null);
 		collector.update("new.md", makeMetrics(1, 3));
 
@@ -67,6 +62,63 @@ describe("FullVaultMetricsCollector.update", () => {
 	});
 });
 
+describe("FullVaultMetricsCollector — distinct vault-wide tag count", () => {
+	let collector: FullVaultMetricsCollector;
+	let vaultMetrics: FullVaultMetrics;
+
+	beforeEach(() => {
+		vaultMetrics = new FullVaultMetrics();
+		collector = new FullVaultMetricsCollector(new Component()).
+			setFullVaultMetrics(vaultMetrics);
+	});
+
+	test("two notes sharing a tag → distinct count is 1", () => {
+		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["book"]) });
+		collector.update("b.md", { metrics: makeMetrics(1, 0), tags: new Set(["book"]) });
+		expect(vaultMetrics.tags).toBe(1);
+		expect(collector.distinctTagCount()).toBe(1);
+	});
+
+	test("disjoint tag sets are summed", () => {
+		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["book", "concept"]) });
+		collector.update("b.md", { metrics: makeMetrics(1, 0), tags: new Set(["thought"]) });
+		expect(vaultMetrics.tags).toBe(3);
+	});
+
+	test("removing a note unrefs its unique tags but keeps shared ones", () => {
+		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["book", "alpha"]) });
+		collector.update("b.md", { metrics: makeMetrics(1, 0), tags: new Set(["book", "beta"]) });
+		expect(vaultMetrics.tags).toBe(3); // book, alpha, beta
+
+		collector.update("a.md", null);
+		expect(vaultMetrics.tags).toBe(2); // book, beta — alpha gone
+	});
+
+	test("re-update with changed tag set diffs correctly", () => {
+		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["x", "y"]) });
+		expect(vaultMetrics.tags).toBe(2);
+
+		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["y", "z"]) });
+		expect(vaultMetrics.tags).toBe(2); // x dropped, z added
+	});
+
+	test("scenario: 100 notes × 5 tags from a pool of 10 → distinct = 10, not 500", () => {
+		const pool = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"];
+		for (let i = 0; i < 100; i++) {
+			const tags = new Set([
+				pool[i % 10],
+				pool[(i + 1) % 10],
+				pool[(i + 2) % 10],
+				pool[(i + 3) % 10],
+				pool[(i + 4) % 10],
+			]);
+			collector.update(`n${i}.md`, { metrics: makeMetrics(1, 0), tags });
+		}
+		expect(vaultMetrics.tags).toBe(10);
+		expect(vaultMetrics.notes).toBe(100);
+	});
+});
+
 describe("NoteMetricsCollector.collect — tags", () => {
 	let nmc: NoteMetricsCollector;
 	let file: TFile;
@@ -77,50 +129,54 @@ describe("NoteMetricsCollector.collect — tags", () => {
 	});
 
 	test("counts inline hashtags from metadata.tags", async () => {
-		const metrics = await nmc.collect(file, {
+		const result = await nmc.collect(file, {
 			tags: [{ tag: "#thought" }, { tag: "#book" }],
 		} as any);
-		expect(metrics?.tags).toBe(2);
+		expect(result?.metrics.tags).toBe(2);
+		expect(result?.tags).toEqual(new Set(["thought", "book"]));
 	});
 
 	test("counts frontmatter tags array", async () => {
-		const metrics = await nmc.collect(file, {
+		const result = await nmc.collect(file, {
 			frontmatter: { tags: ["thought", "book", "video"] },
 		} as any);
-		expect(metrics?.tags).toBe(3);
+		expect(result?.metrics.tags).toBe(3);
+		expect(result?.tags).toEqual(new Set(["thought", "book", "video"]));
 	});
 
 	test("counts frontmatter tags as comma/space-separated string", async () => {
-		const metrics = await nmc.collect(file, {
+		const result = await nmc.collect(file, {
 			frontmatter: { tags: "thought, book video" },
 		} as any);
-		expect(metrics?.tags).toBe(3);
+		expect(result?.metrics.tags).toBe(3);
 	});
 
-	test("sums inline + frontmatter tags", async () => {
-		const metrics = await nmc.collect(file, {
-			tags: [{ tag: "#fleeting" }],
+	test("dedupes inline + frontmatter tags within a note", async () => {
+		const result = await nmc.collect(file, {
+			tags: [{ tag: "#fleeting" }, { tag: "#book" }],
 			frontmatter: { tags: ["book"] },
 		} as any);
-		expect(metrics?.tags).toBe(2);
+		// inline {fleeting, book} ∪ frontmatter {book} = {fleeting, book}
+		expect(result?.metrics.tags).toBe(2);
+		expect(result?.tags).toEqual(new Set(["fleeting", "book"]));
 	});
 
 	test("returns zero tags when no tag fields present", async () => {
-		const metrics = await nmc.collect(file, {} as any);
-		expect(metrics?.tags).toBe(0);
-		expect(metrics?.notes).toBe(1);
+		const result = await nmc.collect(file, {} as any);
+		expect(result?.metrics.tags).toBe(0);
+		expect(result?.metrics.notes).toBe(1);
 	});
 
 	test("recollects when tags change even if links did not", async () => {
 		const first = await nmc.collect(file, {
 			tags: [{ tag: "#a" }],
 		} as any);
-		expect(first?.tags).toBe(1);
+		expect(first?.metrics.tags).toBe(1);
 
 		const second = await nmc.collect(file, {
 			tags: [{ tag: "#a" }, { tag: "#b" }],
 		} as any);
-		expect(second?.tags).toBe(2);
+		expect(second?.metrics.tags).toBe(2);
 	});
 
 	test("returns null when neither links nor tags changed", async () => {
@@ -134,13 +190,13 @@ describe("NoteMetricsCollector.collect — tags", () => {
 		const first = await nmc.collect(file, {
 			tags: [{ tag: "#thought" }],
 		} as any);
-		expect(first?.tags).toBe(1);
+		expect(first?.metrics.tags).toBe(1);
 
 		const second = await nmc.collect(file, {
 			tags: [{ tag: "#book" }],
 		} as any);
 		expect(second).not.toBeNull();
-		expect(second?.tags).toBe(1);
+		expect(second?.metrics.tags).toBe(1);
 	});
 });
 
@@ -157,61 +213,61 @@ describe("NoteMetricsCollector.collect — own/source/concept classification", (
 	});
 
 	test("classifies own when an own tag is present", async () => {
-		const m = await nmc.collect(file, { tags: [{ tag: "#thought" }] } as any);
-		expect(m?.ownNotes).toBe(1);
-		expect(m?.sourceNotes).toBe(0);
-		expect(m?.conceptNotes).toBe(0);
+		const r = await nmc.collect(file, { tags: [{ tag: "#thought" }] } as any);
+		expect(r?.metrics.ownNotes).toBe(1);
+		expect(r?.metrics.sourceNotes).toBe(0);
+		expect(r?.metrics.conceptNotes).toBe(0);
 	});
 
 	test("classifies source when a source tag is present", async () => {
-		const m = await nmc.collect(file, { tags: [{ tag: "#book" }] } as any);
-		expect(m?.ownNotes).toBe(0);
-		expect(m?.sourceNotes).toBe(1);
+		const r = await nmc.collect(file, { tags: [{ tag: "#book" }] } as any);
+		expect(r?.metrics.ownNotes).toBe(0);
+		expect(r?.metrics.sourceNotes).toBe(1);
 	});
 
 	test("classifies concept when a concept tag is present", async () => {
-		const m = await nmc.collect(file, { tags: [{ tag: "#concept" }] } as any);
-		expect(m?.conceptNotes).toBe(1);
+		const r = await nmc.collect(file, { tags: [{ tag: "#concept" }] } as any);
+		expect(r?.metrics.conceptNotes).toBe(1);
 	});
 
 	test("a note with both own and source tags counts in both buckets", async () => {
-		const m = await nmc.collect(file, {
+		const r = await nmc.collect(file, {
 			tags: [{ tag: "#thought" }, { tag: "#book" }],
 		} as any);
-		expect(m?.ownNotes).toBe(1);
-		expect(m?.sourceNotes).toBe(1);
+		expect(r?.metrics.ownNotes).toBe(1);
+		expect(r?.metrics.sourceNotes).toBe(1);
 	});
 
 	test("classification is case-insensitive and accepts # prefix in config", async () => {
 		nmc.setOwnTags(["#Thought"]);
-		const m = await nmc.collect(file, { tags: [{ tag: "#thought" }] } as any);
-		expect(m?.ownNotes).toBe(1);
+		const r = await nmc.collect(file, { tags: [{ tag: "#thought" }] } as any);
+		expect(r?.metrics.ownNotes).toBe(1);
 	});
 
 	test("frontmatter tags participate in classification", async () => {
-		const m = await nmc.collect(file, {
+		const r = await nmc.collect(file, {
 			frontmatter: { tags: ["book"] },
 		} as any);
-		expect(m?.sourceNotes).toBe(1);
+		expect(r?.metrics.sourceNotes).toBe(1);
 	});
 
 	test("untagged note classifies as none", async () => {
-		const m = await nmc.collect(file, {} as any);
-		expect(m?.ownNotes).toBe(0);
-		expect(m?.sourceNotes).toBe(0);
-		expect(m?.conceptNotes).toBe(0);
-		expect(m?.notes).toBe(1);
+		const r = await nmc.collect(file, {} as any);
+		expect(r?.metrics.ownNotes).toBe(0);
+		expect(r?.metrics.sourceNotes).toBe(0);
+		expect(r?.metrics.conceptNotes).toBe(0);
+		expect(r?.metrics.notes).toBe(1);
 	});
 
 	test("changing own tag list invalidates cache (note re-collected)", async () => {
 		const meta = { tags: [{ tag: "#book" }] } as any;
 		const first = await nmc.collect(file, meta);
-		expect(first?.ownNotes).toBe(0);
+		expect(first?.metrics.ownNotes).toBe(0);
 
 		nmc.setOwnTags(["book"]);
 		const second = await nmc.collect(file, meta);
 		expect(second).not.toBeNull();
-		expect(second?.ownNotes).toBe(1);
+		expect(second?.metrics.ownNotes).toBe(1);
 	});
 });
 
