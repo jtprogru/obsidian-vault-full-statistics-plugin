@@ -1,6 +1,12 @@
-import { Component, TFile } from 'obsidian';
+import { Component, MetadataCache, TFile } from 'obsidian';
 import { FullVaultMetricsCollector, NoteMetricsCollector } from './collect';
 import { FullVaultMetrics } from './metrics';
+
+function makeMetadataCache(tags: Record<string, number>): MetadataCache {
+	const mc = new MetadataCache();
+	(mc as any).getTags = () => tags;
+	return mc;
+}
 
 function makeMetrics(notes: number, links: number): FullVaultMetrics {
 	const m = new FullVaultMetrics();
@@ -62,60 +68,51 @@ describe("FullVaultMetricsCollector.update", () => {
 	});
 });
 
-describe("FullVaultMetricsCollector — distinct vault-wide tag count", () => {
+describe("FullVaultMetricsCollector — vault-wide tag count via metadataCache.getTags()", () => {
 	let collector: FullVaultMetricsCollector;
 	let vaultMetrics: FullVaultMetrics;
+	let cacheTags: Record<string, number>;
+	let mc: MetadataCache;
 
 	beforeEach(() => {
 		vaultMetrics = new FullVaultMetrics();
+		cacheTags = {};
+		mc = makeMetadataCache(cacheTags);
 		collector = new FullVaultMetricsCollector(new Component()).
+			setMetadataCache(mc).
 			setFullVaultMetrics(vaultMetrics);
 	});
 
-	test("two notes sharing a tag → distinct count is 1", () => {
-		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["book"]) });
-		collector.update("b.md", { metrics: makeMetrics(1, 0), tags: new Set(["book"]) });
+	test("reflects size of metadataCache.getTags() after update", () => {
+		cacheTags["#book"] = 5;
+		cacheTags["#thought"] = 3;
+		collector.update("a.md", makeMetrics(1, 0));
+		expect(vaultMetrics.tags).toBe(2);
+	});
+
+	test("zero when getTags returns empty record", () => {
+		collector.update("a.md", makeMetrics(1, 0));
+		expect(vaultMetrics.tags).toBe(0);
+	});
+
+	test("tag count refreshes when underlying record changes between updates", () => {
+		cacheTags["#a"] = 1;
+		collector.update("a.md", makeMetrics(1, 0));
 		expect(vaultMetrics.tags).toBe(1);
-		expect(collector.distinctTagCount()).toBe(1);
-	});
 
-	test("disjoint tag sets are summed", () => {
-		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["book", "concept"]) });
-		collector.update("b.md", { metrics: makeMetrics(1, 0), tags: new Set(["thought"]) });
-		expect(vaultMetrics.tags).toBe(3);
-	});
-
-	test("removing a note unrefs its unique tags but keeps shared ones", () => {
-		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["book", "alpha"]) });
-		collector.update("b.md", { metrics: makeMetrics(1, 0), tags: new Set(["book", "beta"]) });
-		expect(vaultMetrics.tags).toBe(3); // book, alpha, beta
-
-		collector.update("a.md", null);
-		expect(vaultMetrics.tags).toBe(2); // book, beta — alpha gone
-	});
-
-	test("re-update with changed tag set diffs correctly", () => {
-		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["x", "y"]) });
+		cacheTags["#b"] = 1;
+		collector.update("b.md", makeMetrics(1, 0));
 		expect(vaultMetrics.tags).toBe(2);
 
-		collector.update("a.md", { metrics: makeMetrics(1, 0), tags: new Set(["y", "z"]) });
-		expect(vaultMetrics.tags).toBe(2); // x dropped, z added
+		delete cacheTags["#a"];
+		collector.update("c.md", makeMetrics(1, 0));
+		expect(vaultMetrics.tags).toBe(1);
 	});
 
-	test("scenario: 100 notes × 5 tags from a pool of 10 → distinct = 10, not 500", () => {
-		const pool = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"];
-		for (let i = 0; i < 100; i++) {
-			const tags = new Set([
-				pool[i % 10],
-				pool[(i + 1) % 10],
-				pool[(i + 2) % 10],
-				pool[(i + 3) % 10],
-				pool[(i + 4) % 10],
-			]);
-			collector.update(`n${i}.md`, { metrics: makeMetrics(1, 0), tags });
-		}
-		expect(vaultMetrics.tags).toBe(10);
-		expect(vaultMetrics.notes).toBe(100);
+	test("safe when metadataCache is not set (used in unit tests of update)", () => {
+		const bare = new FullVaultMetricsCollector(new Component()).
+			setFullVaultMetrics(new FullVaultMetrics());
+		expect(() => bare.update("a.md", makeMetrics(1, 0))).not.toThrow();
 	});
 });
 
