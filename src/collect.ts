@@ -11,6 +11,20 @@ export interface CollectResult {
   tags: Set<string>;
 }
 
+export interface GroupAggregate {
+  name: string;
+  notes: number;
+  links: number;
+  ownNotes: number;
+  sourceNotes: number;
+  conceptNotes: number;
+}
+
+export interface FolderGroupSpec {
+  name: string;
+  paths: string[];
+}
+
 export class FullVaultMetricsCollector {
 
   private readonly owner: Component;
@@ -239,6 +253,49 @@ export class FullVaultMetricsCollector {
     this.refreshTagCount();
   }
 
+  /**
+   * Aggregates per-file metrics into named folder groups. A note is added
+   * to every group whose paths match its file path (overlap is allowed).
+   * Per-group tag count is omitted because the canonical vault-wide tag
+   * count is delegated to metadataCache.getTags() and is not tracked
+   * per-file in this collector.
+   */
+  public aggregateByGroups(groups: FolderGroupSpec[]): GroupAggregate[] {
+    const normalized = groups.map(g => ({
+      name: g.name,
+      paths: g.paths.map(p => p.replace(/\/+$/, "")).filter(p => p.length > 0),
+    }));
+    const accs = new Map<string, GroupAggregate>();
+    for (const g of normalized) {
+      accs.set(g.name, {
+        name: g.name,
+        notes: 0, links: 0,
+        ownNotes: 0, sourceNotes: 0, conceptNotes: 0,
+      });
+    }
+
+    for (const [path, m] of this.data) {
+      for (const g of normalized) {
+        if (matchesAnyFolder(path, g.paths)) {
+          const acc = accs.get(g.name)!;
+          acc.notes += m.notes;
+          acc.links += m.links;
+          acc.ownNotes += m.ownNotes;
+          acc.sourceNotes += m.sourceNotes;
+          acc.conceptNotes += m.conceptNotes;
+        }
+      }
+    }
+
+    return normalized.map(g => accs.get(g.name)!);
+  }
+
+}
+
+function matchesAnyFolder(path: string, folders: string[]): boolean {
+  return folders.some(folder =>
+    path === folder || path.startsWith(folder + "/")
+  );
 }
 
 type NoteSignature = { links: number; tagKey: string };

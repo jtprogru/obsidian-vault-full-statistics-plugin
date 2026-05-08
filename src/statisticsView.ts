@@ -1,18 +1,30 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
+import { FullVaultMetricsCollector, GroupAggregate } from './collect';
 import { HistoryStore, pctString } from './historyStore';
+import { FullStatisticsPluginSettings } from './settings';
 
 export const VAULT_STATISTICS_VIEW_TYPE = 'vault-full-statistics-view';
 
 export class VaultStatisticsView extends ItemView {
 
 	private readonly vaultMetrics: FullVaultMetrics;
+	private readonly collector: FullVaultMetricsCollector;
 	private readonly historyStore: HistoryStore;
+	private readonly getSettings: () => FullStatisticsPluginSettings;
 
-	constructor(leaf: WorkspaceLeaf, vaultMetrics: FullVaultMetrics, historyStore: HistoryStore) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		vaultMetrics: FullVaultMetrics,
+		collector: FullVaultMetricsCollector,
+		historyStore: HistoryStore,
+		getSettings: () => FullStatisticsPluginSettings,
+	) {
 		super(leaf);
 		this.vaultMetrics = vaultMetrics;
+		this.collector = collector;
 		this.historyStore = historyStore;
+		this.getSettings = getSettings;
 	}
 
 	getViewType(): string {
@@ -44,7 +56,57 @@ export class VaultStatisticsView extends ItemView {
 		this.renderHero(contentEl);
 		this.renderRatio(contentEl);
 		this.renderSecondaryGrid(contentEl);
+		this.renderFolders(contentEl);
 		this.renderHistory(contentEl);
+	}
+
+	private renderFolders(parent: HTMLElement): void {
+		const groups = this.getSettings().folderGroups;
+		if (!groups || groups.length === 0) return;
+
+		const aggregates = this.collector.aggregateByGroups(groups);
+		const maxNotes = aggregates.reduce((acc, a) => Math.max(acc, a.notes), 0);
+		if (maxNotes === 0) return;
+
+		const section = parent.createDiv({ cls: 'vfs-section vfs-folders' });
+		section.createEl('h4', { text: 'Folder breakdown', cls: 'vfs-section-title' });
+
+		const list = section.createDiv({ cls: 'vfs-folder-list' });
+		for (const a of aggregates) {
+			this.appendFolder(list, a, maxNotes);
+		}
+	}
+
+	private appendFolder(parent: HTMLElement, a: GroupAggregate, maxNotes: number): void {
+		const row = parent.createDiv({ cls: 'vfs-folder' });
+
+		const head = row.createDiv({ cls: 'vfs-folder-head' });
+		head.createSpan({ cls: 'vfs-folder-name', text: a.name });
+		head.createSpan({
+			cls: 'vfs-folder-count',
+			text: a.notes.toLocaleString('en-US'),
+		});
+
+		// Notes share — full-width baseline relative to the largest group.
+		const baseline = row.createDiv({ cls: 'vfs-folder-baseline' });
+		const fill = baseline.createDiv({ cls: 'vfs-folder-baseline-fill' });
+		fill.style.width = `${Math.round((a.notes / maxNotes) * 100)}%`;
+
+		// Own/source split inside the group, only when there's something
+		// classified — otherwise the meta line stays clean.
+		const classified = a.ownNotes + a.sourceNotes;
+		if (classified > 0) {
+			const meta = row.createDiv({ cls: 'vfs-folder-meta' });
+			const ratio = meta.createDiv({ cls: 'vfs-folder-ratio' });
+			const ownSeg = ratio.createDiv({ cls: 'vfs-folder-ratio-own' });
+			ownSeg.style.flexGrow = String(a.ownNotes);
+			const srcSeg = ratio.createDiv({ cls: 'vfs-folder-ratio-source' });
+			srcSeg.style.flexGrow = String(a.sourceNotes);
+			meta.createSpan({
+				cls: 'vfs-folder-pct',
+				text: `${pctString(a.ownNotes / classified)} own`,
+			});
+		}
 	}
 
 	private renderHero(parent: HTMLElement): void {

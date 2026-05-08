@@ -2,6 +2,11 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 
 import StatisticsPlugin from "./main";
 
+export interface FolderGroup {
+	name: string;
+	paths: string[];
+}
+
 export interface FullStatisticsPluginSettings {
 	displayIndividualItems: boolean,
 	showNotes: boolean,
@@ -17,6 +22,29 @@ export interface FullStatisticsPluginSettings {
 	ownTags: string[],
 	sourceTags: string[],
 	conceptTags: string[],
+	folderGroups: FolderGroup[],
+}
+
+export function parseFolderGroups(text: string): FolderGroup[] {
+	const groups: FolderGroup[] = [];
+	for (const rawLine of text.split("\n")) {
+		const line = rawLine.trim();
+		if (line.length === 0 || line.startsWith("#")) continue;
+		const eqIdx = line.indexOf("=");
+		if (eqIdx === -1) continue;
+		const name = line.slice(0, eqIdx).trim();
+		const paths = line.slice(eqIdx + 1)
+			.split(",")
+			.map(p => p.trim().replace(/\/+$/, ""))
+			.filter(p => p.length > 0);
+		if (name.length === 0 || paths.length === 0) continue;
+		groups.push({ name, paths });
+	}
+	return groups;
+}
+
+export function serializeFolderGroups(groups: FolderGroup[]): string {
+	return groups.map(g => `${g.name} = ${g.paths.join(", ")}`).join("\n");
 }
 
 export class FullStatisticsPluginSettingTab extends PluginSettingTab {
@@ -197,6 +225,23 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			() => this.plugin.settings.conceptTags,
 			(tags) => { this.plugin.settings.conceptTags = tags; },
 		);
+
+		new Setting(containerEl)
+			.setName("Folder groups (PARA)")
+			.setDesc("Group folders for per-section breakdown in the statistics view. " +
+				"One group per line as `Name = path1, path2`. Leave empty to hide the section.")
+			.addTextArea((text) => {
+				text
+					.setPlaceholder("Projects = 01. Проекты\nAreas = 02. Сферы\nResources = 03. Ресурсы\nArchive = 04. Архив\nInbox = 00. Входящие")
+					.setValue(serializeFolderGroups(this.plugin.settings.folderGroups))
+					.onChange(async (value) => {
+						this.plugin.settings.folderGroups = parseFolderGroups(value);
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.rows = 8;
+				text.inputEl.style.width = "100%";
+				text.inputEl.style.fontFamily = "monospace";
+			});
 	}
 
 	private addTagListSetting(

@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	ownTags: ["thought", "synthesis", "fleeting"],
 	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
 	conceptTags: ["concept"],
+	folderGroups: [],
 };
 
 export default class FullStatisticsPlugin extends Plugin {
@@ -71,7 +72,13 @@ export default class FullStatisticsPlugin extends Plugin {
 		this.registerEvent(this.vaultMetrics.on('updated', this.maybeSnapshot));
 
 		this.registerView(VAULT_STATISTICS_VIEW_TYPE, (leaf: WorkspaceLeaf) =>
-			new VaultStatisticsView(leaf, this.vaultMetrics, this.historyStore));
+			new VaultStatisticsView(
+				leaf,
+				this.vaultMetrics,
+				this.vaultMetricsCollector,
+				this.historyStore,
+				() => this.settings,
+			));
 
 		this.addCommand({
 			id: 'open-vault-statistics-view',
@@ -104,6 +111,10 @@ export default class FullStatisticsPlugin extends Plugin {
 		if (this.statusBarItem) {
 			this.statusBarItem.refresh();
 		}
+		// Re-fire so the sidebar view re-renders after settings (folder
+		// groups, taxonomy toggles) change without waiting for the next
+		// metrics update.
+		this.vaultMetrics?.trigger('updated');
 	}
 
 	private async persist() {

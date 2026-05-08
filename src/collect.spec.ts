@@ -268,6 +268,109 @@ describe("NoteMetricsCollector.collect — own/source/concept classification", (
 	});
 });
 
+describe("FullVaultMetricsCollector.aggregateByGroups", () => {
+	let collector: FullVaultMetricsCollector;
+	let vaultMetrics: FullVaultMetrics;
+
+	function pushNote(path: string, overrides: Partial<FullVaultMetrics> = {}): void {
+		const m = new FullVaultMetrics();
+		m.notes = 1;
+		Object.assign(m, overrides);
+		collector.update(path, m);
+	}
+
+	beforeEach(() => {
+		vaultMetrics = new FullVaultMetrics();
+		collector = new FullVaultMetricsCollector(new Component()).
+			setFullVaultMetrics(vaultMetrics);
+	});
+
+	test("returns one zeroed aggregate per group when vault is empty", () => {
+		const result = collector.aggregateByGroups([
+			{ name: "P", paths: ["01. Projects"] },
+			{ name: "A", paths: ["02. Areas"] },
+		]);
+		expect(result).toEqual([
+			{ name: "P", notes: 0, links: 0, ownNotes: 0, sourceNotes: 0, conceptNotes: 0 },
+			{ name: "A", notes: 0, links: 0, ownNotes: 0, sourceNotes: 0, conceptNotes: 0 },
+		]);
+	});
+
+	test("aggregates notes by folder prefix", () => {
+		pushNote("01. Projects/foo.md", { links: 2, ownNotes: 1 });
+		pushNote("01. Projects/sub/bar.md", { links: 5, sourceNotes: 1 });
+		pushNote("02. Areas/baz.md", { links: 1, ownNotes: 1 });
+
+		const result = collector.aggregateByGroups([
+			{ name: "P", paths: ["01. Projects"] },
+			{ name: "A", paths: ["02. Areas"] },
+		]);
+		expect(result[0]).toEqual({
+			name: "P", notes: 2, links: 7, ownNotes: 1, sourceNotes: 1, conceptNotes: 0,
+		});
+		expect(result[1]).toEqual({
+			name: "A", notes: 1, links: 1, ownNotes: 1, sourceNotes: 0, conceptNotes: 0,
+		});
+	});
+
+	test("a path can match multiple groups (overlap is allowed)", () => {
+		pushNote("Shared/note.md", { ownNotes: 1 });
+
+		const result = collector.aggregateByGroups([
+			{ name: "All", paths: ["Shared"] },
+			{ name: "Also", paths: ["Shared"] },
+		]);
+		expect(result[0].notes).toBe(1);
+		expect(result[1].notes).toBe(1);
+	});
+
+	test("multiple paths per group are summed", () => {
+		pushNote("a/note.md");
+		pushNote("b/note.md");
+		pushNote("c/note.md");
+
+		const result = collector.aggregateByGroups([
+			{ name: "AB", paths: ["a", "b"] },
+		]);
+		expect(result[0].notes).toBe(2);
+	});
+
+	test("trailing slashes in group paths are normalized", () => {
+		pushNote("docs/foo.md");
+		const result = collector.aggregateByGroups([
+			{ name: "Docs", paths: ["docs/", "docs//"] },
+		]);
+		expect(result[0].notes).toBe(1);
+	});
+
+	test("root-level files are not matched by a folder group", () => {
+		pushNote("README.md");
+		const result = collector.aggregateByGroups([
+			{ name: "All", paths: [""] },
+		]);
+		// Empty path is filtered out by normalization → no match.
+		expect(result[0].notes).toBe(0);
+	});
+
+	test("partial folder name does not match (prefix needs trailing slash)", () => {
+		pushNote("Projects/foo.md");
+		pushNote("ProjectsArchive/foo.md");
+		const result = collector.aggregateByGroups([
+			{ name: "P", paths: ["Projects"] },
+		]);
+		// Only `Projects/...` matches, not `ProjectsArchive/...`.
+		expect(result[0].notes).toBe(1);
+	});
+
+	test("exact-path file matches its own group entry", () => {
+		pushNote("special.md");
+		const result = collector.aggregateByGroups([
+			{ name: "S", paths: ["special.md"] },
+		]);
+		expect(result[0].notes).toBe(1);
+	});
+});
+
 describe("isPluginGeneratedNote", () => {
 	test("matches *.excalidraw.md filename", () => {
 		const f = { name: "Architecture.excalidraw.md", path: "drawings/Architecture.excalidraw.md" } as TFile;
