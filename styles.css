@@ -21,27 +21,48 @@
 	line-height: 1.4;
 }
 
-/* Hero — the headline number */
+/* Hero — the headline numbers */
 
 .vfs-hero {
-	text-align: center;
+	display: flex;
+	align-items: stretch;
+	justify-content: space-around;
 	margin-bottom: 1.5em;
 	padding-bottom: 1.25em;
 	border-bottom: 1px solid var(--background-modifier-border);
+	gap: 0.75em;
+}
+
+.vfs-hero-stat {
+	flex: 1 1 0;
+	text-align: center;
+	min-width: 0;
+	position: relative;
+}
+
+.vfs-hero-stat + .vfs-hero-stat::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 15%;
+	bottom: 15%;
+	width: 1px;
+	background: var(--background-modifier-border);
 }
 
 .vfs-hero-value {
-	font-size: 2.4em;
+	font-size: 2.2em;
 	font-weight: 700;
 	color: var(--text-normal);
 	line-height: 1.1;
 	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
 }
 
 .vfs-hero-label {
 	margin-top: 0.25em;
 	color: var(--text-muted);
-	font-size: 0.95em;
+	font-size: 0.85em;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
@@ -147,7 +168,7 @@
 
 .vfs-grid {
 	display: grid;
-	grid-template-columns: repeat(2, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
 	gap: 0.5em;
 }
 

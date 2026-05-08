@@ -49,11 +49,20 @@ export class VaultStatisticsView extends ItemView {
 
 	private renderHero(parent: HTMLElement): void {
 		const hero = parent.createDiv({ cls: 'vfs-hero' });
-		hero.createDiv({
-			cls: 'vfs-hero-value',
-			text: this.vaultMetrics.notes.toLocaleString('en-US'),
-		});
-		hero.createDiv({ cls: 'vfs-hero-label', text: 'notes in vault' });
+		this.appendHeroStat(hero, this.vaultMetrics.notes.toLocaleString('en-US'), 'notes');
+		this.appendHeroStat(
+			hero,
+			this.vaultMetrics.quality.toFixed(2),
+			'QoV',
+			'Quality of Vault — average number of links per note',
+		);
+	}
+
+	private appendHeroStat(parent: HTMLElement, value: string, label: string, tooltip?: string): void {
+		const stat = parent.createDiv({ cls: 'vfs-hero-stat' });
+		if (tooltip) stat.setAttribute('title', tooltip);
+		stat.createDiv({ cls: 'vfs-hero-value', text: value });
+		stat.createDiv({ cls: 'vfs-hero-label', text: label });
 	}
 
 	private renderRatio(parent: HTMLElement): void {
@@ -111,7 +120,6 @@ export class VaultStatisticsView extends ItemView {
 		const m = this.vaultMetrics;
 		this.appendStat(grid, m.links.toLocaleString('en-US'), 'links');
 		this.appendStat(grid, m.tags.toLocaleString('en-US'), 'tags');
-		this.appendStat(grid, m.quality.toFixed(2), 'links/note');
 		this.appendStat(grid, m.conceptNotes.toLocaleString('en-US'), 'concepts');
 	}
 
