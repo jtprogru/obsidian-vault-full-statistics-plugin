@@ -142,7 +142,7 @@ export default class FullStatisticsPlugin extends Plugin {
 	private refreshOrphans = debounce(() => {
 		const n = this.vaultMetricsCollector.computeOrphanCount();
 		this.vaultMetrics?.setOrphans(n);
-	}, 3000, false);
+	}, 1000, false);
 
 	private async activateStatisticsView() {
 		const { workspace } = this.app;

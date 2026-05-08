@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, WorkspaceLeaf, debounce } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector, GroupAggregate } from './collect';
 import { HistoryStore, pctString } from './historyStore';
@@ -40,7 +40,7 @@ export class VaultStatisticsView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		this.registerEvent(this.vaultMetrics.on('updated', () => this.render()));
+		this.registerEvent(this.vaultMetrics.on('updated', this.renderSoon));
 		this.render();
 	}
 
@@ -48,7 +48,17 @@ export class VaultStatisticsView extends ItemView {
 		// nothing to clean up — registerEvent handles unbind on view close.
 	}
 
+	// Mild debounce so a flurry of metric updates during the initial
+	// vault scan does not trigger one re-render per file event.
+	private renderSoon = debounce(() => this.render(), 500, false);
+
 	private render(): void {
+		// Refresh the orphan count synchronously so the view never shows a
+		// number stale from the 1s debounced background pass. setOrphans is
+		// no-op-aware, so propagating the fresh value to status bar/history
+		// does not loop.
+		this.vaultMetrics.setOrphans(this.collector.computeOrphanCount());
+
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass('vfs-view');
