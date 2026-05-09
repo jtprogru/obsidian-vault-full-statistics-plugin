@@ -387,17 +387,16 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	}
 
 	/**
-	 * Folder groups have nested structure (name + list of paths). Layout
-	 * is one card per group with a tight header row (name input plus
-	 * inline add-path/remove-group icons) and one compact row per path
-	 * (input plus remove icon, no Setting wrapper). "+ Add group" sits at
-	 * the bottom. Path-level "+ Add" lives in the header to save a row
-	 * per group.
+	 * One row per group: [name] = [comma-separated paths] [×]. Multiple
+	 * paths inside a group are entered as a comma list in the second
+	 * input — same shape parseFolderGroups already supports. Internal
+	 * model stays {name, paths: string[]}; the UI only flattens the
+	 * paths array on display and splits it on edit.
 	 */
 	private addFolderGroupsEditor(containerEl: HTMLElement) {
 		new Setting(containerEl)
 			.setName("Folder groups (PARA)")
-			.setDesc("Each group is shown as a row in the folder breakdown section.")
+			.setDesc('One row per group. Multiple paths in the same group are comma-separated, e.g. "Areas = 02. Сферы, 02b. Health".')
 			.setHeading();
 
 		const wrap = containerEl.createDiv({ cls: "vfs-settings-fg" });
@@ -407,14 +406,12 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			const groups = this.plugin.settings.folderGroups;
 
 			groups.forEach((group, gi) => {
-				const card = wrap.createDiv({ cls: "vfs-settings-fg-card" });
-				this.renderGroupHeader(card, group, gi, render);
-				this.renderGroupPaths(card, group, gi, render);
+				this.renderGroupRow(wrap, group, gi, render);
 			});
 
 			new Setting(wrap).addButton((btn) => {
 				btn.setButtonText("+ Add group").setCta().onClick(async () => {
-					this.plugin.settings.folderGroups.push({ name: "", paths: [""] });
+					this.plugin.settings.folderGroups.push({ name: "", paths: [] });
 					await this.plugin.saveSettings();
 					render();
 				});
@@ -423,13 +420,13 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		render();
 	}
 
-	private renderGroupHeader(card: HTMLElement, group: FolderGroup, gi: number, rerender: () => void) {
-		const head = card.createDiv({ cls: "vfs-settings-fg-head" });
+	private renderGroupRow(wrap: HTMLElement, group: FolderGroup, gi: number, rerender: () => void) {
+		const row = wrap.createDiv({ cls: "vfs-settings-fg-row" });
 
-		const nameInput = head.createEl("input", {
+		const nameInput = row.createEl("input", {
 			cls: "vfs-settings-fg-name",
 			type: "text",
-			attr: { placeholder: "Group name (e.g. Projects)" },
+			attr: { placeholder: "Projects" },
 		});
 		nameInput.value = group.name;
 		nameInput.addEventListener("change", async () => {
@@ -437,56 +434,31 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			await this.plugin.saveSettings();
 		});
 
-		const addBtn = head.createEl("button", {
-			cls: "clickable-icon vfs-settings-fg-icon",
-			attr: { "aria-label": "Add path" },
+		row.createSpan({ cls: "vfs-settings-fg-eq", text: "=" });
+
+		const pathsInput = row.createEl("input", {
+			cls: "vfs-settings-fg-path-input",
+			type: "text",
+			attr: { placeholder: "01. Проекты, 02. Архив" },
 		});
-		setIcon(addBtn, "plus");
-		addBtn.addEventListener("click", async () => {
-			this.plugin.settings.folderGroups[gi].paths.push("");
+		pathsInput.value = group.paths.join(", ");
+		pathsInput.addEventListener("change", async () => {
+			this.plugin.settings.folderGroups[gi].paths = pathsInput.value
+				.split(",")
+				.map(p => p.trim().replace(/\/+$/, ""))
+				.filter(p => p.length > 0);
 			await this.plugin.saveSettings();
-			rerender();
 		});
 
-		const delBtn = head.createEl("button", {
+		const del = row.createEl("button", {
 			cls: "clickable-icon vfs-settings-fg-icon",
 			attr: { "aria-label": "Remove group" },
 		});
-		setIcon(delBtn, "trash");
-		delBtn.addEventListener("click", async () => {
+		setIcon(del, "x");
+		del.addEventListener("click", async () => {
 			this.plugin.settings.folderGroups.splice(gi, 1);
 			await this.plugin.saveSettings();
 			rerender();
-		});
-	}
-
-	private renderGroupPaths(card: HTMLElement, group: FolderGroup, gi: number, rerender: () => void) {
-		const pathsEl = card.createDiv({ cls: "vfs-settings-fg-paths" });
-
-		group.paths.forEach((path, pi) => {
-			const row = pathsEl.createDiv({ cls: "vfs-settings-fg-path" });
-
-			const input = row.createEl("input", {
-				cls: "vfs-settings-fg-path-input",
-				type: "text",
-				attr: { placeholder: "e.g. 01. Проекты" },
-			});
-			input.value = path;
-			input.addEventListener("change", async () => {
-				this.plugin.settings.folderGroups[gi].paths[pi] = input.value.trim().replace(/\/+$/, "");
-				await this.plugin.saveSettings();
-			});
-
-			const del = row.createEl("button", {
-				cls: "clickable-icon vfs-settings-fg-icon",
-				attr: { "aria-label": "Remove path" },
-			});
-			setIcon(del, "x");
-			del.addEventListener("click", async () => {
-				this.plugin.settings.folderGroups[gi].paths.splice(pi, 1);
-				await this.plugin.saveSettings();
-				rerender();
-			});
 		});
 	}
 }

@@ -28,23 +28,15 @@
 	padding: 0.35em 0;
 }
 
-.vfs-settings-fg-card {
-	margin: 0.4em 0;
-	padding: 0.45em 0.6em 0.5em;
-	background: var(--background-secondary);
-	border-radius: 6px;
-	border: 1px solid var(--background-modifier-border);
-}
-
-.vfs-settings-fg-head {
+.vfs-settings-fg-row {
 	display: flex;
 	align-items: center;
-	gap: 0.35em;
-	margin-bottom: 0.35em;
+	gap: 0.4em;
+	padding: 0.2em 0;
 }
 
 .vfs-settings-fg-name {
-	flex: 1 1 auto;
+	flex: 0 0 30%;
 	min-width: 0;
 	padding: 0.25em 0.5em;
 	background: var(--background-primary);
@@ -52,6 +44,23 @@
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
 	font-weight: 500;
+}
+
+.vfs-settings-fg-eq {
+	flex: 0 0 auto;
+	color: var(--text-muted);
+	font-weight: 600;
+	font-family: var(--font-monospace);
+}
+
+.vfs-settings-fg-path-input {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 0.25em 0.5em;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
 }
 
 .vfs-settings-fg-icon {
@@ -64,32 +73,6 @@
 
 .vfs-settings-fg-icon:hover {
 	color: var(--text-normal);
-}
-
-.vfs-settings-fg-paths {
-	display: flex;
-	flex-direction: column;
-	gap: 0.2em;
-	margin-left: 0.6em;
-	padding-left: 0.5em;
-	border-left: 2px solid var(--background-modifier-border);
-}
-
-.vfs-settings-fg-path {
-	display: flex;
-	align-items: center;
-	gap: 0.35em;
-}
-
-.vfs-settings-fg-path-input {
-	flex: 1 1 auto;
-	min-width: 0;
-	padding: 0.2em 0.5em;
-	background: var(--background-primary);
-	color: var(--text-normal);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 4px;
-	font-size: 0.9em;
 }
 
 
