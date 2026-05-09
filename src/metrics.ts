@@ -4,6 +4,7 @@ export interface FullVaultMetrics {
 	notes: number;
 	links: number;
 	tags: number;
+	words: number;
 	ownNotes: number;
 	sourceNotes: number;
 	conceptNotes: number;
@@ -17,6 +18,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	notes: number = 0;
 	links: number = 0;
 	tags: number = 0;
+	words: number = 0;
 	ownNotes: number = 0;
 	sourceNotes: number = 0;
 	conceptNotes: number = 0;
@@ -28,6 +30,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 		this.notes = 0;
 		this.links = 0;
 		this.tags = 0;
+		this.words = 0;
 		this.ownNotes = 0;
 		this.sourceNotes = 0;
 		this.conceptNotes = 0;
@@ -39,6 +42,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	public dec(metrics: FullVaultMetrics | null) {
 		this.notes -= metrics?.notes || 0;
 		this.links -= metrics?.links || 0;
+		this.words -= metrics?.words || 0;
 		this.ownNotes -= metrics?.ownNotes || 0;
 		this.sourceNotes -= metrics?.sourceNotes || 0;
 		this.conceptNotes -= metrics?.conceptNotes || 0;
@@ -49,6 +53,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	public inc(metrics: FullVaultMetrics | null) {
 		this.notes += metrics?.notes || 0;
 		this.links += metrics?.links || 0;
+		this.words += metrics?.words || 0;
 		this.ownNotes += metrics?.ownNotes || 0;
 		this.sourceNotes += metrics?.sourceNotes || 0;
 		this.conceptNotes += metrics?.conceptNotes || 0;

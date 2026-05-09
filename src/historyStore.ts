@@ -10,6 +10,7 @@ export interface Snapshot {
 	conceptNotes: number;
 	orphanNotes: number;
 	sourcesWithTrace?: number;
+	words?: number;
 }
 
 const DEFAULT_MAX_SNAPSHOTS = 365;
@@ -46,6 +47,7 @@ export class HistoryStore {
 			conceptNotes: metrics.conceptNotes,
 			orphanNotes: metrics.orphanNotes,
 			sourcesWithTrace: metrics.sourcesWithTrace,
+			words: metrics.words,
 		};
 
 		const last = this.snapshots[this.snapshots.length - 1];
@@ -112,7 +114,7 @@ export function pctString(v: number): string {
 }
 
 const CSV_COLUMNS: (keyof Snapshot)[] = [
-	'date', 'notes', 'links', 'tags',
+	'date', 'notes', 'links', 'tags', 'words',
 	'ownNotes', 'sourceNotes', 'conceptNotes', 'orphanNotes', 'sourcesWithTrace',
 ];
 
@@ -136,5 +138,6 @@ function snapshotEquals(a: Snapshot, b: Snapshot): boolean {
 		&& a.sourceNotes === b.sourceNotes
 		&& a.conceptNotes === b.conceptNotes
 		&& a.orphanNotes === b.orphanNotes
-		&& (a.sourcesWithTrace ?? 0) === (b.sourcesWithTrace ?? 0);
+		&& (a.sourcesWithTrace ?? 0) === (b.sourcesWithTrace ?? 0)
+		&& (a.words ?? 0) === (b.words ?? 0);
 }

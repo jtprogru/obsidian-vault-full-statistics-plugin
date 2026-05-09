@@ -71,6 +71,7 @@ describe("HistoryStore.recordIfNeeded", () => {
 			conceptNotes: 1,
 			orphanNotes: 0,
 			sourcesWithTrace: 0,
+			words: 0,
 		});
 	});
 });
@@ -157,7 +158,7 @@ describe("pctString", () => {
 describe("snapshotsToCsv", () => {
 	test("emits header even when there are no snapshots", () => {
 		expect(snapshotsToCsv([])).toBe(
-			"date,notes,links,tags,ownNotes,sourceNotes,conceptNotes,orphanNotes,sourcesWithTrace"
+			"date,notes,links,tags,words,ownNotes,sourceNotes,conceptNotes,orphanNotes,sourcesWithTrace"
 		);
 	});
 
@@ -165,11 +166,11 @@ describe("snapshotsToCsv", () => {
 		const csv = snapshotsToCsv([{
 			date: "2026-05-09", notes: 100, links: 250, tags: 12,
 			ownNotes: 60, sourceNotes: 30, conceptNotes: 10, orphanNotes: 5,
-			sourcesWithTrace: 7,
+			sourcesWithTrace: 7, words: 5000,
 		}]);
 		expect(csv).toBe(
-			"date,notes,links,tags,ownNotes,sourceNotes,conceptNotes,orphanNotes,sourcesWithTrace\n" +
-			"2026-05-09,100,250,12,60,30,10,5,7"
+			"date,notes,links,tags,words,ownNotes,sourceNotes,conceptNotes,orphanNotes,sourcesWithTrace\n" +
+			"2026-05-09,100,250,12,5000,60,30,10,5,7"
 		);
 	});
 
@@ -178,7 +179,7 @@ describe("snapshotsToCsv", () => {
 			date: "2026-05-01", notes: 50, links: 100, tags: 8,
 			ownNotes: 30, sourceNotes: 15, conceptNotes: 5, orphanNotes: 3,
 		}]);
-		expect(csv.split("\n")[1]).toBe("2026-05-01,50,100,8,30,15,5,3,");
+		expect(csv.split("\n")[1]).toBe("2026-05-01,50,100,8,,30,15,5,3,");
 	});
 
 	test("serializes many snapshots in order", () => {

@@ -15,6 +15,19 @@ function basenameOf(path: string): string {
 	return name.endsWith('.md') ? name.slice(0, -3) : name;
 }
 
+// Compact form keeps the hero value short enough to share width with notes
+// and QoV even on million-word vaults: 9,999 stays full; 10,000+ becomes
+// "12K" / "1.2M". Exact value is offered via tooltip.
+const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
+	notation: 'compact',
+	maximumFractionDigits: 1,
+});
+
+function formatCompactNumber(n: number): string {
+	if (Math.abs(n) < 10_000) return n.toLocaleString('en-US');
+	return COMPACT_FORMATTER.format(n);
+}
+
 export const VAULT_STATISTICS_VIEW_TYPE = 'vault-full-statistics-view';
 
 export class VaultStatisticsView extends ItemView {
@@ -366,6 +379,12 @@ export class VaultStatisticsView extends ItemView {
 	private renderHero(parent: HTMLElement): void {
 		const hero = parent.createDiv({ cls: 'vfs-hero' });
 		this.appendHeroStat(hero, this.vaultMetrics.notes.toLocaleString('en-US'), 'notes');
+		this.appendHeroStat(
+			hero,
+			formatCompactNumber(this.vaultMetrics.words),
+			'words',
+			`Total words across the vault: ${this.vaultMetrics.words.toLocaleString('en-US')}`,
+		);
 		this.appendHeroStat(
 			hero,
 			this.vaultMetrics.quality.toFixed(2),

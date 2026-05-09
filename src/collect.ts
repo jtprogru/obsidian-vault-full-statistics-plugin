@@ -1,6 +1,7 @@
 import { Component, Vault, MetadataCache, TFile, TFolder, CachedMetadata } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
 import { addToBucket, DAY_MS, emptyBucket, InboxHealth } from './inbox';
+import { countWords } from './text';
 
 enum FileType {
   Unknown = 0,
@@ -246,7 +247,12 @@ export class FullVaultMetricsCollector {
       return null;
     }
 
-    return this.noteMetricsCollector.collect(file, metadata);
+    // cachedRead returns the in-memory copy Obsidian already keeps for open
+    // files and a disk read for the rest; either way the call is cheap and
+    // throttled by the backlog batch (16 at a time) so the initial scan does
+    // not stall on huge vaults.
+    const content = await this.vault.cachedRead(file);
+    return this.noteMetricsCollector.collect(file, metadata, content);
   }
 
   public update(fileOrPath: TFile | string, resultOrMetrics: CollectResult | FullVaultMetrics | null, _tags?: Set<string>) {
@@ -425,7 +431,7 @@ function matchesAnyFolder(path: string, folders: string[]): boolean {
   );
 }
 
-type NoteSignature = { links: number; tagKey: string };
+type NoteSignature = { links: number; tagKey: string; mtime: number };
 
 export class NoteMetricsCollector {
   private readonly signatureCache: Map<string, NoteSignature> = new Map();
@@ -451,22 +457,26 @@ export class NoteMetricsCollector {
     return this;
   }
 
-  public async collect(file: TFile, metadata: CachedMetadata): Promise<CollectResult | undefined> {
+  public async collect(file: TFile, metadata: CachedMetadata, content?: string): Promise<CollectResult | undefined> {
     const linkCount = this.countAllLinks(metadata);
     const noteTags = this.collectTags(metadata);
     const tagKey = Array.from(noteTags).sort().join("|");
+    const mtime = file.stat?.mtime ?? 0;
     const cached = this.signatureCache.get(file.path);
 
-    if (cached && cached.links === linkCount && cached.tagKey === tagKey) {
+    // mtime is in the signature so a body edit that changes word count but
+    // leaves links/tags untouched still invalidates the cache.
+    if (cached && cached.links === linkCount && cached.tagKey === tagKey && cached.mtime === mtime) {
       return undefined;
     }
 
-    this.signatureCache.set(file.path, { links: linkCount, tagKey });
+    this.signatureCache.set(file.path, { links: linkCount, tagKey, mtime });
 
     let metrics = new FullVaultMetrics();
     metrics.notes = 1;
     metrics.links = linkCount;
     metrics.tags = noteTags.size;
+    metrics.words = content ? countWords(content) : 0;
     metrics.ownNotes = hasIntersection(noteTags, this.ownTags) ? 1 : 0;
     metrics.sourceNotes = hasIntersection(noteTags, this.sourceTags) ? 1 : 0;
     metrics.conceptNotes = hasIntersection(noteTags, this.conceptTags) ? 1 : 0;
