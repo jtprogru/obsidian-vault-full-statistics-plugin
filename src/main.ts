@@ -30,6 +30,8 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	showSourcePct: true,
 	showConcepts: false,
 	showOrphans: true,
+	showTracePct: true,
+	showSourcesTrace: true,
 	excludedFolders: [],
 	ownTags: ["thought", "synthesis", "fleeting"],
 	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
@@ -84,6 +86,9 @@ export default class FullStatisticsPlugin extends Plugin {
 		// inline with every file event. setOrphans is a no-op when the
 		// number is unchanged, so this loop is self-quiescent.
 		this.registerEvent(this.vaultMetrics.on('updated', this.refreshOrphans));
+
+		// Sources-with-trace is also a graph scan — same debounce pattern.
+		this.registerEvent(this.vaultMetrics.on('updated', this.refreshSourcesTrace));
 
 		this.registerView(VAULT_STATISTICS_VIEW_TYPE, (leaf: WorkspaceLeaf) =>
 			new VaultStatisticsView(
@@ -155,6 +160,11 @@ export default class FullStatisticsPlugin extends Plugin {
 	private refreshOrphans = debounce(() => {
 		const n = this.vaultMetricsCollector.computeOrphanCount();
 		this.vaultMetrics?.setOrphans(n);
+	}, 1000, false);
+
+	private refreshSourcesTrace = debounce(() => {
+		const { withTrace } = this.vaultMetricsCollector.computeSourcesTrace();
+		this.vaultMetrics?.setSourcesWithTrace(withTrace);
 	}, 1000, false);
 
 	private async exportHistoryCsv() {
@@ -366,6 +376,9 @@ class FullStatisticsStatusBarItem {
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("orphans").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("orphans").format(s.orphanNotes) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("trace-pct").
+			setFormatter((s: FullVaultMetrics) => { return `${pctFmt.format(s.tracePct())} traced` }));
 
 		this.statusBarItem.onClickEvent(() => { this.onclick() });
 	}
@@ -392,6 +405,7 @@ class FullStatisticsStatusBarItem {
 			s.showSourcePct,
 			s.showConcepts,
 			s.showOrphans,
+			s.showTracePct,
 		];
 	}
 

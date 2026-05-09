@@ -19,6 +19,8 @@ export interface FullStatisticsPluginSettings {
 	showSourcePct: boolean,
 	showConcepts: boolean,
 	showOrphans: boolean,
+	showTracePct: boolean,
+	showSourcesTrace: boolean,
 	excludedFolders: string[],
 	ownTags: string[],
 	sourceTags: string[],
@@ -194,6 +196,18 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						});
 				});
+
+			new Setting(containerEl)
+				.setName("Show trace %")
+				.setDesc("Share of source notes that at least one own note links to.")
+				.addToggle((value) => {
+					value
+						.setValue(this.plugin.settings.showTracePct)
+						.onChange(async (value) => {
+							this.plugin.settings.showTracePct = value;
+							await this.plugin.saveSettings();
+						});
+				});
 		}
 
 		this.addEditableStringList(
@@ -249,6 +263,18 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			});
 
 		this.addFolderGroupsEditor(containerEl);
+
+		new Setting(containerEl)
+			.setName("Show sources-with-trace")
+			.setDesc("Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).")
+			.addToggle((value) => {
+				value
+					.setValue(this.plugin.settings.showSourcesTrace)
+					.onChange(async (v) => {
+						this.plugin.settings.showSourcesTrace = v;
+						await this.plugin.saveSettings();
+					});
+			});
 
 		new Setting(containerEl)
 			.setName("Show taxonomy drift")

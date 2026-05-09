@@ -387,6 +387,83 @@
 	color: var(--text-muted);
 }
 
+/* Sources with trace */
+
+.vfs-trace-bar {
+	display: flex;
+	width: 100%;
+	height: 0.7em;
+	border-radius: 0.35em;
+	overflow: hidden;
+	background: var(--background-modifier-border);
+}
+
+.vfs-trace-bar-good {
+	background: var(--color-blue, var(--text-accent));
+	min-width: 2px;
+}
+
+.vfs-trace-bar-bad {
+	background: var(--color-orange, var(--text-warning));
+	min-width: 2px;
+	opacity: 0.85;
+}
+
+.vfs-trace-legend {
+	display: flex;
+	gap: 0.75em;
+	margin-top: 0.55em;
+	font-size: 0.85em;
+}
+
+.vfs-trace-leg {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35em;
+}
+
+.vfs-trace-swatch {
+	display: inline-block;
+	width: 0.55em;
+	height: 0.55em;
+	border-radius: 2px;
+}
+
+.vfs-trace-swatch-good {
+	background: var(--color-blue, var(--text-accent));
+}
+
+.vfs-trace-swatch-bad {
+	background: var(--color-orange, var(--text-warning));
+}
+
+.vfs-trace-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35em;
+	margin-top: 0.7em;
+	font-size: 0.85em;
+}
+
+.vfs-trace-pill {
+	padding: 0.15em 0.55em;
+	background: var(--background-secondary);
+	border-radius: 999px;
+	color: var(--text-normal);
+	white-space: nowrap;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.vfs-trace-more {
+	display: inline-flex;
+	align-items: center;
+	color: var(--text-muted);
+	font-style: italic;
+	padding: 0.15em 0.3em;
+}
+
 /* Tag taxonomy drift */
 
 .vfs-taxonomy .vfs-tax-group + .vfs-tax-group {

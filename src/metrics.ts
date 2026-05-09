@@ -8,6 +8,7 @@ export interface FullVaultMetrics {
 	sourceNotes: number;
 	conceptNotes: number;
 	orphanNotes: number;
+	sourcesWithTrace: number;
 	quality: number;
 }
 
@@ -20,6 +21,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	sourceNotes: number = 0;
 	conceptNotes: number = 0;
 	orphanNotes: number = 0;
+	sourcesWithTrace: number = 0;
 	quality: number = 0.00001;
 
 	public reset() {
@@ -30,6 +32,7 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 		this.sourceNotes = 0;
 		this.conceptNotes = 0;
 		this.orphanNotes = 0;
+		this.sourcesWithTrace = 0;
 		this.quality = 0.00001;
 	}
 
@@ -63,6 +66,20 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 		if (this.orphanNotes === n) return;
 		this.orphanNotes = n;
 		this.trigger("updated");
+	}
+
+	public setSourcesWithTrace(n: number) {
+		if (this.sourcesWithTrace === n) return;
+		this.sourcesWithTrace = n;
+		this.trigger("updated");
+	}
+
+	public tracePct(): number {
+		return this.sourceNotes > 0 ? this.sourcesWithTrace / this.sourceNotes : 0;
+	}
+
+	public danglingSources(): number {
+		return Math.max(0, this.sourceNotes - this.sourcesWithTrace);
 	}
 
 	public ownPct(): number {

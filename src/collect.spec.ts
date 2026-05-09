@@ -439,6 +439,107 @@ describe("FullVaultMetricsCollector.computeOrphanCount", () => {
 	});
 });
 
+describe("FullVaultMetricsCollector.computeSourcesTrace", () => {
+	function makeCacheWithLinks(links: Record<string, Record<string, number>>): MetadataCache {
+		const mc = new MetadataCache();
+		(mc as any).resolvedLinks = links;
+		return mc;
+	}
+
+	function freshCollector(mc: MetadataCache): FullVaultMetricsCollector {
+		return new FullVaultMetricsCollector(new Component()).
+			setMetadataCache(mc).
+			setFullVaultMetrics(new FullVaultMetrics());
+	}
+
+	function flagged(role: 'own' | 'source'): FullVaultMetrics {
+		const m = new FullVaultMetrics();
+		m.notes = 1;
+		if (role === 'own') m.ownNotes = 1;
+		else m.sourceNotes = 1;
+		return m;
+	}
+
+	test("source linked from own note counts as traced", () => {
+		const c = freshCollector(makeCacheWithLinks({
+			"thought.md": { "book.md": 1 },
+		}));
+		c.update("thought.md", flagged('own'));
+		c.update("book.md", flagged('source'));
+		const r = c.computeSourcesTrace();
+		expect(r.withTrace).toBe(1);
+		expect(r.dangling).toStrictEqual([]);
+	});
+
+	test("source with no incoming own-link is dangling", () => {
+		const c = freshCollector(makeCacheWithLinks({}));
+		c.update("orphan-book.md", flagged('source'));
+		const r = c.computeSourcesTrace();
+		expect(r.withTrace).toBe(0);
+		expect(r.dangling).toStrictEqual(["orphan-book.md"]);
+	});
+
+	test("link from a non-own note does NOT trace the source", () => {
+		const c = freshCollector(makeCacheWithLinks({
+			"random.md": { "book.md": 1 },
+		}));
+		// random.md is just a plain note (no own/source flag).
+		const plain = new FullVaultMetrics();
+		plain.notes = 1;
+		c.update("random.md", plain);
+		c.update("book.md", flagged('source'));
+		const r = c.computeSourcesTrace();
+		expect(r.withTrace).toBe(0);
+		expect(r.dangling).toStrictEqual(["book.md"]);
+	});
+
+	test("multiple own notes linking to same source still count it once", () => {
+		const c = freshCollector(makeCacheWithLinks({
+			"t1.md": { "book.md": 1 },
+			"t2.md": { "book.md": 1 },
+		}));
+		c.update("t1.md", flagged('own'));
+		c.update("t2.md", flagged('own'));
+		c.update("book.md", flagged('source'));
+		const r = c.computeSourcesTrace();
+		expect(r.withTrace).toBe(1);
+		expect(r.dangling).toStrictEqual([]);
+	});
+
+	test("dangling list is sorted alphabetically", () => {
+		const c = freshCollector(makeCacheWithLinks({}));
+		c.update("z.md", flagged('source'));
+		c.update("a.md", flagged('source'));
+		c.update("m.md", flagged('source'));
+		const r = c.computeSourcesTrace();
+		expect(r.dangling).toStrictEqual(["a.md", "m.md", "z.md"]);
+	});
+
+	test("missing resolvedLinks treats everything as dangling", () => {
+		const mc = new MetadataCache(); // no resolvedLinks
+		const c = new FullVaultMetricsCollector(new Component()).
+			setMetadataCache(mc).
+			setFullVaultMetrics(new FullVaultMetrics());
+		c.update("book.md", flagged('source'));
+		c.update("thought.md", flagged('own'));
+		const r = c.computeSourcesTrace();
+		expect(r.withTrace).toBe(0);
+		expect(r.dangling).toStrictEqual(["book.md"]);
+	});
+
+	test("link from own note to non-source destination doesn't add anything", () => {
+		const c = freshCollector(makeCacheWithLinks({
+			"thought.md": { "another-thought.md": 1 },
+		}));
+		c.update("thought.md", flagged('own'));
+		c.update("another-thought.md", flagged('own'));
+		c.update("book.md", flagged('source'));
+		const r = c.computeSourcesTrace();
+		expect(r.withTrace).toBe(0);
+		expect(r.dangling).toStrictEqual(["book.md"]);
+	});
+});
+
 describe("isPluginGeneratedNote", () => {
 	test("matches *.excalidraw.md filename", () => {
 		const f = { name: "Architecture.excalidraw.md", path: "drawings/Architecture.excalidraw.md" } as TFile;

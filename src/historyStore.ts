@@ -9,6 +9,7 @@ export interface Snapshot {
 	sourceNotes: number;
 	conceptNotes: number;
 	orphanNotes: number;
+	sourcesWithTrace?: number;
 }
 
 const DEFAULT_MAX_SNAPSHOTS = 365;
@@ -44,6 +45,7 @@ export class HistoryStore {
 			sourceNotes: metrics.sourceNotes,
 			conceptNotes: metrics.conceptNotes,
 			orphanNotes: metrics.orphanNotes,
+			sourcesWithTrace: metrics.sourcesWithTrace,
 		};
 
 		const last = this.snapshots[this.snapshots.length - 1];
@@ -111,16 +113,16 @@ export function pctString(v: number): string {
 
 const CSV_COLUMNS: (keyof Snapshot)[] = [
 	'date', 'notes', 'links', 'tags',
-	'ownNotes', 'sourceNotes', 'conceptNotes', 'orphanNotes',
+	'ownNotes', 'sourceNotes', 'conceptNotes', 'orphanNotes', 'sourcesWithTrace',
 ];
 
 export function snapshotsToCsv(snapshots: Snapshot[]): string {
 	const header = CSV_COLUMNS.join(',');
 	const rows = snapshots.map(s => CSV_COLUMNS.map(c => {
 		const v = s[c];
-		// Date column needs no quoting (YYYY-MM-DD has no commas); numeric
-		// columns serialize as plain integers. If we ever add a string
-		// column with arbitrary content this needs proper escaping.
+		// Old snapshots may lack newer columns — emit empty so the CSV
+		// stays a strict rectangle without inventing fake zeros.
+		if (v === undefined) return '';
 		return typeof v === 'string' ? v : String(v);
 	}).join(','));
 	return [header, ...rows].join('\n');
@@ -133,5 +135,6 @@ function snapshotEquals(a: Snapshot, b: Snapshot): boolean {
 		&& a.ownNotes === b.ownNotes
 		&& a.sourceNotes === b.sourceNotes
 		&& a.conceptNotes === b.conceptNotes
-		&& a.orphanNotes === b.orphanNotes;
+		&& a.orphanNotes === b.orphanNotes
+		&& (a.sourcesWithTrace ?? 0) === (b.sourcesWithTrace ?? 0);
 }

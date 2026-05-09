@@ -6,6 +6,13 @@ import { FullStatisticsPluginSettings } from './settings';
 import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
 
 const TAXONOMY_TAG_LIMIT = 20;
+const TRACE_LIST_LIMIT = 20;
+
+function basenameOf(path: string): string {
+	const slash = path.lastIndexOf('/');
+	const name = slash === -1 ? path : path.slice(slash + 1);
+	return name.endsWith('.md') ? name.slice(0, -3) : name;
+}
 
 export const VAULT_STATISTICS_VIEW_TYPE = 'vault-full-statistics-view';
 
@@ -69,9 +76,67 @@ export class VaultStatisticsView extends ItemView {
 		this.renderHero(contentEl);
 		this.renderRatio(contentEl);
 		this.renderSecondaryGrid(contentEl);
+		this.renderSourcesTrace(contentEl);
 		this.renderFolders(contentEl);
 		this.renderTaxonomy(contentEl);
 		this.renderHistory(contentEl);
+	}
+
+	private renderSourcesTrace(parent: HTMLElement): void {
+		const settings = this.getSettings();
+		if (!settings.showSourcesTrace) return;
+
+		const total = this.vaultMetrics.sourceNotes;
+		const section = parent.createDiv({ cls: 'vfs-section vfs-trace' });
+		section.createEl('h4', { text: 'Sources with trace', cls: 'vfs-section-title' });
+
+		if (total === 0) {
+			section.createDiv({
+				cls: 'vfs-empty',
+				text: 'No source notes yet — tag notes about external material with a source tag.',
+			});
+			return;
+		}
+
+		// Pull a fresh trace count synchronously so the view never shows a
+		// stale debounced value, the same trick render() uses for orphans.
+		const { withTrace, dangling } = this.collector.computeSourcesTrace();
+		this.vaultMetrics.setSourcesWithTrace(withTrace);
+		const danglingCount = total - withTrace;
+
+		const bar = section.createDiv({ cls: 'vfs-trace-bar' });
+		this.appendTraceSegment(bar, 'vfs-trace-bar-good', withTrace);
+		this.appendTraceSegment(bar, 'vfs-trace-bar-bad', danglingCount);
+
+		const legend = section.createDiv({ cls: 'vfs-trace-legend' });
+		this.appendTraceLegend(legend, 'good', withTrace, total > 0 ? withTrace / total : 0, 'traced');
+		this.appendTraceLegend(legend, 'bad', danglingCount, total > 0 ? danglingCount / total : 0, 'dangling');
+
+		if (dangling.length > 0) {
+			const list = section.createDiv({ cls: 'vfs-trace-list' });
+			const visible = dangling.slice(0, TRACE_LIST_LIMIT);
+			for (const path of visible) {
+				const pill = list.createSpan({ cls: 'vfs-trace-pill' });
+				pill.setAttribute('title', path);
+				pill.setText(basenameOf(path));
+			}
+			const overflow = dangling.length - visible.length;
+			if (overflow > 0) {
+				list.createSpan({ cls: 'vfs-trace-more', text: `+${overflow} more` });
+			}
+		}
+	}
+
+	private appendTraceSegment(bar: HTMLElement, cls: string, value: number): void {
+		if (value <= 0) return;
+		const seg = bar.createDiv({ cls });
+		seg.style.flexGrow = String(value);
+	}
+
+	private appendTraceLegend(parent: HTMLElement, kind: 'good' | 'bad', count: number, share: number, label: string): void {
+		const item = parent.createSpan({ cls: `vfs-trace-leg vfs-trace-leg-${kind}` });
+		item.createSpan({ cls: `vfs-trace-swatch vfs-trace-swatch-${kind}` });
+		item.createSpan({ cls: 'vfs-trace-leg-text', text: `${pctString(share)} ${label} · ${count}` });
 	}
 
 	private renderTaxonomy(parent: HTMLElement): void {
@@ -310,6 +375,7 @@ export class VaultStatisticsView extends ItemView {
 		this.appendSparkRow(grid, 'links', snapshots.map(s => s.links), 'vfs-bars-neutral');
 		this.appendSparkRow(grid, 'tags', snapshots.map(s => s.tags), 'vfs-bars-neutral');
 		this.appendSparkRow(grid, 'orphans', snapshots.map(s => s.orphanNotes ?? 0), 'vfs-bars-warn');
+		this.appendSparkRow(grid, 'traced', snapshots.map(s => s.sourcesWithTrace ?? 0), 'vfs-bars-source');
 
 		const first = snapshots[0];
 		const last = snapshots[snapshots.length - 1];

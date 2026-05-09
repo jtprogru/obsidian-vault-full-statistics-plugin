@@ -300,6 +300,44 @@ export class FullVaultMetricsCollector {
   }
 
   /**
+   * For each source-tagged note, checks whether at least one own-tagged
+   * note links to it (operationalization of "did the source leave a
+   * trace"). Returns the count of traced sources plus the list of
+   * dangling source paths so callers can surface them.
+   *
+   * Both ownNotes and sourceNotes flags come from the per-file metrics
+   * already in `data`, so this is a graph traversal of resolvedLinks
+   * with set lookups — O(L) where L is total resolved links in the
+   * vault.
+   */
+  public computeSourcesTrace(): { withTrace: number; dangling: string[] } {
+    const ownPaths = new Set<string>();
+    const sourcePaths = new Set<string>();
+    for (const [path, m] of this.data) {
+      if (m.ownNotes > 0) ownPaths.add(path);
+      if (m.sourceNotes > 0) sourcePaths.add(path);
+    }
+    const cache = this.metadataCache as any;
+    const resolvedLinks: Record<string, Record<string, number>> | undefined = cache?.resolvedLinks;
+    const traced = new Set<string>();
+    if (resolvedLinks) {
+      for (const src in resolvedLinks) {
+        if (!ownPaths.has(src)) continue;
+        const dests = resolvedLinks[src];
+        for (const dst in dests) {
+          if (sourcePaths.has(dst)) traced.add(dst);
+        }
+      }
+    }
+    const dangling: string[] = [];
+    for (const p of sourcePaths) {
+      if (!traced.has(p)) dangling.push(p);
+    }
+    dangling.sort();
+    return { withTrace: traced.size, dangling };
+  }
+
+  /**
    * Counts notes in `data` that are not the destination of any resolved
    * link. metadataCache.resolvedLinks is the canonical Obsidian source —
    * keys are sources, inner keys are destinations. We invert it once,
