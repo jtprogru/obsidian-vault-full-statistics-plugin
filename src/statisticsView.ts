@@ -4,8 +4,9 @@ import { FullVaultMetricsCollector, GroupAggregate } from './collect';
 import { HistoryStore, pctString } from './historyStore';
 import { FullStatisticsPluginSettings } from './settings';
 import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
+import { InboxBucket } from './inbox';
 
-const TAXONOMY_TAG_LIMIT = 20;
+const TAXONOMY_TAG_LIMIT = 10;
 const TRACE_LIST_LIMIT = 5;
 
 function basenameOf(path: string): string {
@@ -77,9 +78,87 @@ export class VaultStatisticsView extends ItemView {
 		this.renderRatio(contentEl);
 		this.renderSecondaryGrid(contentEl);
 		this.renderSourcesTrace(contentEl);
+		this.renderInbox(contentEl);
 		this.renderFolders(contentEl);
 		this.renderTaxonomy(contentEl);
 		this.renderHistory(contentEl);
+	}
+
+	private renderInbox(parent: HTMLElement): void {
+		const settings = this.getSettings();
+		if (!settings.showInbox) return;
+
+		const section = parent.createDiv({ cls: 'vfs-section vfs-inbox' });
+		section.createEl('h4', { text: 'Inbox health', cls: 'vfs-section-title' });
+
+		const hasFolders = settings.inboxFolders.length > 0;
+		const hasTags = settings.inboxReviewTags.length > 0;
+		if (!hasFolders && !hasTags) {
+			section.createDiv({
+				cls: 'vfs-empty',
+				text: 'Configure inbox folders or review tags in settings to see this section.',
+			});
+			return;
+		}
+
+		const { inFolder, outsideWithTag } = this.collector.computeInboxHealth(new Date());
+
+		if (hasFolders) {
+			const label = settings.inboxFolders.length === 1
+				? settings.inboxFolders[0]
+				: `${settings.inboxFolders.length} inbox folders`;
+			this.appendInboxRow(section, label, inFolder);
+		}
+		if (hasTags) {
+			const label = settings.inboxReviewTags.length === 1
+				? `#${settings.inboxReviewTags[0]} (outside inbox)`
+				: `${settings.inboxReviewTags.length} review tags (outside inbox)`;
+			this.appendInboxRow(section, label, outsideWithTag);
+		}
+	}
+
+	private appendInboxRow(parent: HTMLElement, label: string, bucket: InboxBucket): void {
+		const row = parent.createDiv({ cls: 'vfs-inbox-row' });
+
+		const head = row.createDiv({ cls: 'vfs-inbox-head' });
+		head.createSpan({ cls: 'vfs-inbox-label', text: label });
+		head.createSpan({ cls: 'vfs-inbox-total', text: String(bucket.total) });
+		if (bucket.old > 0) {
+			head.createSpan({
+				cls: 'vfs-inbox-old',
+				text: `${bucket.old} over 30d`,
+				attr: { title: 'Notes older than 30 days — actionable backlog' },
+			});
+		}
+
+		if (bucket.total === 0) {
+			row.createDiv({ cls: 'vfs-empty', text: 'Empty.' });
+			return;
+		}
+
+		const bar = row.createDiv({ cls: 'vfs-inbox-bar' });
+		this.appendInboxSegment(bar, 'fresh', bucket.fresh);
+		this.appendInboxSegment(bar, 'recent', bucket.recent);
+		this.appendInboxSegment(bar, 'stale', bucket.stale);
+		this.appendInboxSegment(bar, 'old', bucket.old);
+
+		const legend = row.createDiv({ cls: 'vfs-inbox-legend' });
+		this.appendInboxLegend(legend, 'fresh', '<1d', bucket.fresh);
+		this.appendInboxLegend(legend, 'recent', '1–7d', bucket.recent);
+		this.appendInboxLegend(legend, 'stale', '7–30d', bucket.stale);
+		this.appendInboxLegend(legend, 'old', '30+d', bucket.old);
+	}
+
+	private appendInboxSegment(bar: HTMLElement, kind: string, value: number): void {
+		if (value <= 0) return;
+		const seg = bar.createDiv({ cls: `vfs-inbox-seg vfs-inbox-seg-${kind}` });
+		seg.style.flexGrow = String(value);
+	}
+
+	private appendInboxLegend(parent: HTMLElement, kind: string, label: string, count: number): void {
+		const item = parent.createSpan({ cls: `vfs-inbox-leg vfs-inbox-leg-${kind}` });
+		item.createSpan({ cls: `vfs-inbox-swatch vfs-inbox-swatch-${kind}` });
+		item.createSpan({ cls: 'vfs-inbox-leg-text', text: `${label} ${count}` });
 	}
 
 	private renderSourcesTrace(parent: HTMLElement): void {

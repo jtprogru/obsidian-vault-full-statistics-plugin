@@ -43,6 +43,9 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	rareTagThreshold: 3,
 	showTaxonomyDrift: false,
 	showHistory: false,
+	showInbox: false,
+	inboxFolders: [],
+	inboxReviewTags: ["inbox/review"],
 };
 
 const HISTORY_CSV_FILENAME = 'Vault Statistics — History.csv';
@@ -72,6 +75,8 @@ export default class FullStatisticsPlugin extends Plugin {
 			setOwnTags(this.settings.ownTags).
 			setSourceTags(this.settings.sourceTags).
 			setConceptTags(this.settings.conceptTags).
+			setInboxFolders(this.settings.inboxFolders).
+			setInboxReviewTags(this.settings.inboxReviewTags).
 			start();
 
 		this.statusBarItem = new FullStatisticsStatusBarItem(this, this.addStatusBarItem()).
@@ -247,6 +252,8 @@ export default class FullStatisticsPlugin extends Plugin {
 			.setOwnTags(this.settings.ownTags)
 			.setSourceTags(this.settings.sourceTags)
 			.setConceptTags(this.settings.conceptTags)
+			.setInboxFolders(this.settings.inboxFolders)
+			.setInboxReviewTags(this.settings.inboxReviewTags)
 			.restart();
 	}
 }

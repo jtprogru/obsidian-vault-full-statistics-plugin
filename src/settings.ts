@@ -32,6 +32,9 @@ export interface FullStatisticsPluginSettings {
 	rareTagThreshold: number,
 	showTaxonomyDrift: boolean,
 	showHistory: boolean,
+	showInbox: boolean,
+	inboxFolders: string[],
+	inboxReviewTags: string[],
 }
 
 export function parseFolderGroups(text: string): FolderGroup[] {
@@ -312,6 +315,38 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			"e.g. thought",
 			() => this.plugin.settings.canonicalTags,
 			(items) => { this.plugin.settings.canonicalTags = items; },
+		);
+
+		new Setting(containerEl)
+			.setName("Show inbox health")
+			.setDesc("Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).")
+			.addToggle((value) => {
+				value
+					.setValue(this.plugin.settings.showInbox)
+					.onChange(async (v) => {
+						this.plugin.settings.showInbox = v;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		this.addEditableStringList(
+			containerEl,
+			"Inbox folders",
+			"Folders treated as inbox (techdebt of unprocessed input).",
+			"e.g. 00. Входящие",
+			() => this.plugin.settings.inboxFolders,
+			(items) => { this.plugin.settings.inboxFolders = items; },
+			() => this.plugin.restartCollector(),
+		);
+
+		this.addEditableStringList(
+			containerEl,
+			"Inbox review tags",
+			"Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
+			"e.g. inbox/review",
+			() => this.plugin.settings.inboxReviewTags,
+			(items) => { this.plugin.settings.inboxReviewTags = items; },
+			() => this.plugin.restartCollector(),
 		);
 
 		new Setting(containerEl)

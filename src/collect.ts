@@ -1,5 +1,6 @@
 import { Component, Vault, MetadataCache, TFile, TFolder, CachedMetadata } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
+import { addToBucket, DAY_MS, emptyBucket, InboxHealth } from './inbox';
 
 enum FileType {
   Unknown = 0,
@@ -39,6 +40,8 @@ export class FullVaultMetricsCollector {
   private intervalMs: number = 100;
   private readonly noteMetricsCollector: NoteMetricsCollector;
   private excludedFolders: string[] = [];
+  private inboxFolders: string[] = [];
+  private inboxReviewTags: Set<string> = new Set();
 
   constructor(owner: Component) {
     this.owner = owner;
@@ -79,6 +82,18 @@ export class FullVaultMetricsCollector {
 
   public setConceptTags(tags: string[]) {
     this.noteMetricsCollector.setConceptTags(tags);
+    return this;
+  }
+
+  public setInboxFolders(folders: string[]) {
+    this.inboxFolders = folders
+      .map(f => f.trim().replace(/\/+$/, ''))
+      .filter(f => f.length > 0);
+    return this;
+  }
+
+  public setInboxReviewTags(tags: string[]) {
+    this.inboxReviewTags = normalizeTagSet(tags);
     return this;
   }
 
@@ -297,6 +312,42 @@ export class FullVaultMetricsCollector {
     }
 
     return normalized.map(g => accs.get(g.name)!);
+  }
+
+  /**
+   * Buckets notes inside `inboxFolders` and notes outside those folders
+   * tagged with one of `inboxReviewTags` by file age (file.stat.ctime).
+   * The two cohorts are reported separately so the user can see both
+   * "physical inbox" pressure (folder) and "tag-marked queue" outside.
+   *
+   * Excluded folders apply: a file in an excluded folder never counts,
+   * even if it would otherwise match. Age boundaries are half-open
+   * (1d, 7d, 30d) — see inbox.ts.
+   */
+  public computeInboxHealth(now: Date): InboxHealth {
+    const inFolder = emptyBucket();
+    const outsideWithTag = emptyBucket();
+    const nowMs = now.getTime();
+    if (this.inboxFolders.length === 0 && this.inboxReviewTags.size === 0) {
+      return { inFolder, outsideWithTag };
+    }
+    for (const file of this.vault.getMarkdownFiles()) {
+      if (this.isExcluded(file)) continue;
+      const ageDays = (nowMs - (file.stat?.ctime ?? nowMs)) / DAY_MS;
+      const inInbox = matchesAnyFolder(file.path, this.inboxFolders);
+      if (inInbox) {
+        addToBucket(inFolder, ageDays);
+        continue;
+      }
+      if (this.inboxReviewTags.size === 0) continue;
+      const metadata = this.metadataCache.getFileCache(file);
+      if (!metadata) continue;
+      const fileTags = this.noteMetricsCollector.collectTags(metadata);
+      if (hasIntersection(fileTags, this.inboxReviewTags)) {
+        addToBucket(outsideWithTag, ageDays);
+      }
+    }
+    return { inFolder, outsideWithTag };
   }
 
   /**
