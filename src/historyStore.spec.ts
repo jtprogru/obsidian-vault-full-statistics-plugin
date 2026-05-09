@@ -1,4 +1,4 @@
-import { HistoryStore, Snapshot, formatDate, sparkline, pctString } from './historyStore';
+import { HistoryStore, Snapshot, formatDate, sparkline, pctString, snapshotsToCsv } from './historyStore';
 import { FullVaultMetrics } from './metrics';
 
 function makeMetrics(overrides: Partial<FullVaultMetrics> = {}): FullVaultMetrics {
@@ -150,5 +150,35 @@ describe("pctString", () => {
 		expect(pctString(0.6667)).toBe("67%");
 		expect(pctString(0)).toBe("0%");
 		expect(pctString(1)).toBe("100%");
+	});
+});
+
+describe("snapshotsToCsv", () => {
+	test("emits header even when there are no snapshots", () => {
+		expect(snapshotsToCsv([])).toBe(
+			"date,notes,links,tags,ownNotes,sourceNotes,conceptNotes,orphanNotes"
+		);
+	});
+
+	test("serializes one snapshot as a single data row", () => {
+		const csv = snapshotsToCsv([{
+			date: "2026-05-09", notes: 100, links: 250, tags: 12,
+			ownNotes: 60, sourceNotes: 30, conceptNotes: 10, orphanNotes: 5,
+		}]);
+		expect(csv).toBe(
+			"date,notes,links,tags,ownNotes,sourceNotes,conceptNotes,orphanNotes\n" +
+			"2026-05-09,100,250,12,60,30,10,5"
+		);
+	});
+
+	test("serializes many snapshots in order", () => {
+		const csv = snapshotsToCsv([
+			{ date: "2026-05-08", notes: 99, links: 200, tags: 10, ownNotes: 50, sourceNotes: 30, conceptNotes: 5, orphanNotes: 4 },
+			{ date: "2026-05-09", notes: 100, links: 210, tags: 11, ownNotes: 51, sourceNotes: 30, conceptNotes: 5, orphanNotes: 4 },
+		]);
+		const lines = csv.split("\n");
+		expect(lines).toHaveLength(3);
+		expect(lines[1]).toMatch(/^2026-05-08,99,/);
+		expect(lines[2]).toMatch(/^2026-05-09,100,/);
 	});
 });

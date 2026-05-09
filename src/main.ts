@@ -1,10 +1,12 @@
-import { Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf } from 'obsidian';
+import { Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf, Notice } from 'obsidian';
 import { BytesFormatter, DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
-import { HistoryStore, Snapshot } from './historyStore';
+import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
+
+const HISTORY_CSV_PATH = 'Vault Statistics — History.csv';
 
 interface PersistedData {
 	settings: Partial<FullStatisticsPluginSettings>;
@@ -93,6 +95,12 @@ export default class FullStatisticsPlugin extends Plugin {
 			callback: () => this.activateStatisticsView(),
 		});
 
+		this.addCommand({
+			id: 'export-vault-statistics-history',
+			name: 'Export statistics history to CSV',
+			callback: () => this.exportHistoryCsv(),
+		});
+
 		this.addRibbonIcon('bar-chart', 'Open vault statistics', () => this.activateStatisticsView());
 	}
 
@@ -143,6 +151,27 @@ export default class FullStatisticsPlugin extends Plugin {
 		const n = this.vaultMetricsCollector.computeOrphanCount();
 		this.vaultMetrics?.setOrphans(n);
 	}, 1000, false);
+
+	private async exportHistoryCsv() {
+		const snapshots = this.historyStore.all();
+		if (snapshots.length === 0) {
+			new Notice('No history snapshots yet — try again after a few daily updates.');
+			return;
+		}
+		const csv = snapshotsToCsv(snapshots);
+		try {
+			const existing = this.app.vault.getAbstractFileByPath(HISTORY_CSV_PATH);
+			if (existing instanceof TFile) {
+				await this.app.vault.modify(existing, csv);
+			} else {
+				await this.app.vault.create(HISTORY_CSV_PATH, csv);
+			}
+			new Notice(`Exported ${snapshots.length} snapshot(s) to ${HISTORY_CSV_PATH}`);
+		} catch (e) {
+			console.error('vault-statistics: csv export failed', e);
+			new Notice(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
+		}
+	}
 
 	private async activateStatisticsView() {
 		const { workspace } = this.app;

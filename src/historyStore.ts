@@ -109,6 +109,23 @@ export function pctString(v: number): string {
 	return `${Math.round(v * 100)}%`;
 }
 
+const CSV_COLUMNS: (keyof Snapshot)[] = [
+	'date', 'notes', 'links', 'tags',
+	'ownNotes', 'sourceNotes', 'conceptNotes', 'orphanNotes',
+];
+
+export function snapshotsToCsv(snapshots: Snapshot[]): string {
+	const header = CSV_COLUMNS.join(',');
+	const rows = snapshots.map(s => CSV_COLUMNS.map(c => {
+		const v = s[c];
+		// Date column needs no quoting (YYYY-MM-DD has no commas); numeric
+		// columns serialize as plain integers. If we ever add a string
+		// column with arbitrary content this needs proper escaping.
+		return typeof v === 'string' ? v : String(v);
+	}).join(','));
+	return [header, ...rows].join('\n');
+}
+
 function snapshotEquals(a: Snapshot, b: Snapshot): boolean {
 	return a.notes === b.notes
 		&& a.links === b.links
