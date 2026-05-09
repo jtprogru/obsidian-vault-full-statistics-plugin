@@ -3,6 +3,9 @@ import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector, GroupAggregate } from './collect';
 import { HistoryStore, pctString } from './historyStore';
 import { FullStatisticsPluginSettings } from './settings';
+import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
+
+const TAXONOMY_TAG_LIMIT = 20;
 
 export const VAULT_STATISTICS_VIEW_TYPE = 'vault-full-statistics-view';
 
@@ -67,7 +70,72 @@ export class VaultStatisticsView extends ItemView {
 		this.renderRatio(contentEl);
 		this.renderSecondaryGrid(contentEl);
 		this.renderFolders(contentEl);
+		this.renderTaxonomy(contentEl);
 		this.renderHistory(contentEl);
+	}
+
+	private renderTaxonomy(parent: HTMLElement): void {
+		const settings = this.getSettings();
+		if (!settings.showTaxonomyDrift) return;
+
+		const occurrences = this.collector.getTagOccurrences();
+		if (Object.keys(occurrences).length === 0) return;
+
+		const canonical = normalizeCanonical(settings.canonicalTags);
+		const rare = findRareTags(occurrences, settings.rareTagThreshold);
+		const unknown = findUnknownTags(occurrences, canonical);
+
+		const section = parent.createDiv({ cls: 'vfs-section vfs-taxonomy' });
+		section.createEl('h4', { text: 'Tag taxonomy', cls: 'vfs-section-title' });
+
+		this.appendTaxonomyGroup(
+			section,
+			`Rare (<${settings.rareTagThreshold})`,
+			rare,
+			'Tags used fewer than the configured threshold — likely typos or abandoned',
+			'Every tag passes the rare-tag threshold.',
+		);
+
+		this.appendTaxonomyGroup(
+			section,
+			'Unknown',
+			unknown,
+			'Tags not present in your canonical set (configure it in settings)',
+			canonical.size === 0
+				? 'Configure canonical tags in settings to flag unknown tags.'
+				: 'Every tag is in your canonical set.',
+		);
+	}
+
+	private appendTaxonomyGroup(
+		parent: HTMLElement,
+		label: string,
+		findings: TagFinding[],
+		tooltip: string,
+		emptyText: string,
+	): void {
+		const group = parent.createDiv({ cls: 'vfs-tax-group' });
+		const header = group.createDiv({ cls: 'vfs-tax-head' });
+		header.setAttribute('title', tooltip);
+		header.createSpan({ cls: 'vfs-tax-label', text: label });
+		header.createSpan({ cls: 'vfs-tax-count', text: String(findings.length) });
+
+		if (findings.length === 0) {
+			group.createDiv({ cls: 'vfs-empty', text: emptyText });
+			return;
+		}
+
+		const list = group.createDiv({ cls: 'vfs-tax-list' });
+		const visible = findings.slice(0, TAXONOMY_TAG_LIMIT);
+		for (const f of visible) {
+			const pill = list.createSpan({ cls: 'vfs-tax-pill' });
+			pill.createSpan({ cls: 'vfs-tax-tag', text: `#${f.tag}` });
+			pill.createSpan({ cls: 'vfs-tax-num', text: String(f.count) });
+		}
+		const overflow = findings.length - visible.length;
+		if (overflow > 0) {
+			list.createSpan({ cls: 'vfs-tax-more', text: `+${overflow} more` });
+		}
 	}
 
 	private renderFolders(parent: HTMLElement): void {

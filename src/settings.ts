@@ -26,6 +26,9 @@ export interface FullStatisticsPluginSettings {
 	folderGroups: FolderGroup[],
 	showFolderBreakdown: boolean,
 	historyExportFolder: string,
+	canonicalTags: string[],
+	rareTagThreshold: number,
+	showTaxonomyDrift: boolean,
 }
 
 export function parseFolderGroups(text: string): FolderGroup[] {
@@ -246,6 +249,43 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			});
 
 		this.addFolderGroupsEditor(containerEl);
+
+		new Setting(containerEl)
+			.setName("Show taxonomy drift")
+			.setDesc("Section in the statistics view that lists rare tags and tags outside your canonical set.")
+			.addToggle((value) => {
+				value
+					.setValue(this.plugin.settings.showTaxonomyDrift)
+					.onChange(async (v) => {
+						this.plugin.settings.showTaxonomyDrift = v;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Rare tag threshold")
+			.setDesc("Tags used fewer than this many times are flagged as rare (likely typos or dead).")
+			.addText((text) => {
+				text.setPlaceholder("3")
+					.setValue(String(this.plugin.settings.rareTagThreshold))
+					.onChange(async (v) => {
+						const n = parseInt(v.trim(), 10);
+						this.plugin.settings.rareTagThreshold = Number.isFinite(n) && n > 0 ? n : 3;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.type = "number";
+				text.inputEl.min = "1";
+				text.inputEl.style.width = "5em";
+			});
+
+		this.addEditableStringList(
+			containerEl,
+			"Canonical tags",
+			"Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
+			"e.g. thought",
+			() => this.plugin.settings.canonicalTags,
+			(items) => { this.plugin.settings.canonicalTags = items; },
+		);
 
 		new Setting(containerEl)
 			.setName("History export folder")

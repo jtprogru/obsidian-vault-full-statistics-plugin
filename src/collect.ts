@@ -120,14 +120,18 @@ export class FullVaultMetricsCollector {
   }
 
   private refreshTagCount() {
-    // metadataCache.getTags() is the canonical Obsidian source for vault-wide
-    // tag identifiers — it powers the Tags pane and matches what obsidian-cli
-    // reports. It is exposed at runtime but absent from the public typings,
-    // hence the cast.
+    const tagsRecord = this.getTagOccurrences();
+    this.vaultMetrics?.setTags(Object.keys(tagsRecord).length);
+  }
+
+  // metadataCache.getTags() is the canonical Obsidian source for vault-wide
+  // tag identifiers — it powers the Tags pane and matches what obsidian-cli
+  // reports. It is exposed at runtime but absent from the public typings,
+  // hence the cast.
+  public getTagOccurrences(): Record<string, number> {
     const getTags = (this.metadataCache as any)?.getTags;
-    if (typeof getTags !== 'function') return;
-    const tagsRecord = getTags.call(this.metadataCache) as Record<string, number>;
-    this.vaultMetrics?.setTags(Object.keys(tagsRecord ?? {}).length);
+    if (typeof getTags !== 'function') return {};
+    return (getTags.call(this.metadataCache) as Record<string, number>) ?? {};
   }
 
   private setAdaptiveInterval() {

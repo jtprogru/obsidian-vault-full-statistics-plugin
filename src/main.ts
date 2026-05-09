@@ -37,6 +37,9 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	folderGroups: [],
 	showFolderBreakdown: true,
 	historyExportFolder: '',
+	canonicalTags: [],
+	rareTagThreshold: 3,
+	showTaxonomyDrift: true,
 };
 
 const HISTORY_CSV_FILENAME = 'Vault Statistics — History.csv';

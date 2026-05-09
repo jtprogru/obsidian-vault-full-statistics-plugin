@@ -386,3 +386,64 @@
 .vfs-history-range {
 	color: var(--text-muted);
 }
+
+/* Tag taxonomy drift */
+
+.vfs-taxonomy .vfs-tax-group + .vfs-tax-group {
+	margin-top: 0.9em;
+}
+
+.vfs-tax-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4em;
+	margin-bottom: 0.4em;
+	font-size: 0.85em;
+}
+
+.vfs-tax-label {
+	color: var(--text-normal);
+	font-weight: 500;
+}
+
+.vfs-tax-count {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.vfs-tax-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35em;
+	font-size: 0.85em;
+}
+
+.vfs-tax-pill {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.3em;
+	padding: 0.15em 0.5em;
+	background: var(--background-secondary);
+	border-radius: 999px;
+	white-space: nowrap;
+}
+
+.vfs-tax-tag {
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: 0.95em;
+}
+
+.vfs-tax-num {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	font-size: 0.85em;
+}
+
+.vfs-tax-more {
+	display: inline-flex;
+	align-items: center;
+	color: var(--text-muted);
+	font-style: italic;
+	padding: 0.15em 0.3em;
+}
