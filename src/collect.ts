@@ -44,9 +44,30 @@ export class FullVaultMetricsCollector {
   private inboxFolders: string[] = [];
   private inboxReviewTags: Set<string> = new Set();
 
+  // Memoization generation: bumped at the end of every backlog batch and
+  // on settings changes so cached graph derivatives (linked paths, orphan
+  // count, sources-with-trace, folder aggregates, inbox health, tag count)
+  // are reused across renders within a single update cycle.
+  private generation = 0;
+  private linkedPathsCache: { gen: number; set: Set<string> } | null = null;
+  private orphanCountCache: { gen: number; count: number } | null = null;
+  private sourcesTraceCache: { gen: number; result: { withTrace: number; dangling: string[] } } | null = null;
+  private tagOccurrencesCache: { gen: number; record: Record<string, number>; size: number } | null = null;
+  private aggregateCache: { gen: number; key: string; result: GroupAggregate[] } | null = null;
+  private inboxHealthCache: { gen: number; hourBucket: number; result: InboxHealth } | null = null;
+
   constructor(owner: Component) {
     this.owner = owner;
     this.noteMetricsCollector = new NoteMetricsCollector();
+  }
+
+  /**
+   * Invalidate every memoized graph derivative. Called automatically after
+   * each backlog batch; callers (settings changes, restart) can call it
+   * directly when external state shifts.
+   */
+  public bumpGeneration() {
+    this.generation++;
   }
 
   public setVault(vault: Vault) {
@@ -68,6 +89,7 @@ export class FullVaultMetricsCollector {
     this.excludedFolders = folders
       .map(f => f.trim().replace(/\/+$/, ''))
       .filter(f => f.length > 0);
+    this.bumpGeneration();
     return this;
   }
 
@@ -90,11 +112,13 @@ export class FullVaultMetricsCollector {
     this.inboxFolders = folders
       .map(f => f.trim().replace(/\/+$/, ''))
       .filter(f => f.length > 0);
+    this.bumpGeneration();
     return this;
   }
 
   public setInboxReviewTags(tags: string[]) {
     this.inboxReviewTags = normalizeTagSet(tags);
+    this.bumpGeneration();
     return this;
   }
 
@@ -111,6 +135,12 @@ export class FullVaultMetricsCollector {
     this.owner.registerEvent(this.vault.on("rename", (file: TFile, oldPath: string) => { this.onfilerenamed(file, oldPath) }));
     this.owner.registerEvent(this.metadataCache.on("changed", (file: TFile) => { this.onfilemodified(file) }));
 
+    // Obsidian fires "resolved" after it rebuilds resolvedLinks (e.g. mass
+    // rename, vault load). Bump our generation so memoized graph
+    // derivatives recompute against the new link map.
+    const resolvedRef = (this.metadataCache as any).on?.("resolved", () => { this.bumpGeneration(); });
+    if (resolvedRef) this.owner.registerEvent(resolvedRef);
+
     this.rescan();
 
     return this;
@@ -118,6 +148,7 @@ export class FullVaultMetricsCollector {
 
   public restart() {
     this.noteMetricsCollector.clearCache();
+    this.bumpGeneration();
     this.rescan();
     return this;
   }
@@ -136,18 +167,30 @@ export class FullVaultMetricsCollector {
   }
 
   private refreshTagCount() {
-    const tagsRecord = this.getTagOccurrences();
-    this.vaultMetrics?.setTags(Object.keys(tagsRecord).length);
+    this.vaultMetrics?.setTags(this.tagOccurrenceSize());
   }
 
   // metadataCache.getTags() is the canonical Obsidian source for vault-wide
   // tag identifiers — it powers the Tags pane and matches what obsidian-cli
   // reports. It is exposed at runtime but absent from the public typings,
-  // hence the cast.
+  // hence the cast. Memoized per generation so refreshTagCount inside a
+  // backlog batch and the taxonomy view render share one call.
   public getTagOccurrences(): Record<string, number> {
+    const cached = this.tagOccurrencesCache;
+    if (cached && cached.gen === this.generation) return cached.record;
     const getTags = (this.metadataCache as any)?.getTags;
-    if (typeof getTags !== 'function') return {};
-    return (getTags.call(this.metadataCache) as Record<string, number>) ?? {};
+    const record: Record<string, number> = (typeof getTags === 'function')
+      ? ((getTags.call(this.metadataCache) as Record<string, number>) ?? {})
+      : {};
+    this.tagOccurrencesCache = { gen: this.generation, record, size: Object.keys(record).length };
+    return record;
+  }
+
+  private tagOccurrenceSize(): number {
+    const cached = this.tagOccurrencesCache;
+    if (cached && cached.gen === this.generation) return cached.size;
+    this.getTagOccurrences();
+    return this.tagOccurrencesCache!.size;
   }
 
   private setAdaptiveInterval() {
@@ -177,33 +220,49 @@ export class FullVaultMetricsCollector {
   private async processBacklog() {
     if (this.backlog.size === 0) return;
     const batch = Array.from(this.backlog).slice(0, this.batchSize);
-    await Promise.allSettled(batch.map(async (path) => {
-      this.backlog.delete(path);
-      const file = this.vault.getAbstractFileByPath(path);
-      if (file instanceof TFile) {
-        if (this.isExcluded(file)) {
-          // file is in excluded folder — remove from count if it was counted
-          this.update(path, null);
-          return;
-        }
-        try {
-          const result = await this.collect(file);
-          // Convention: null = file should not be counted (non-note,
-          // Excalidraw, etc.) — remove if previously counted; undefined
-          // = nothing changed (cache hit) — leave existing entry alone.
-          if (result === null) {
+    this.vaultMetrics?.beginBatch();
+    try {
+      await Promise.allSettled(batch.map(async (path) => {
+        this.backlog.delete(path);
+        const file = this.vault.getAbstractFileByPath(path);
+        if (file instanceof TFile) {
+          if (this.isExcluded(file)) {
+            // file is in excluded folder — remove from count if it was counted
             this.update(path, null);
-          } else if (result !== undefined) {
-            this.update(path, result);
+            return;
           }
-        } catch (e) {
-          console.log(`error processing ${path}: ${e}`);
+          try {
+            const result = await this.collect(file);
+            // Convention: null = file should not be counted (non-note,
+            // Excalidraw, etc.) — remove if previously counted; undefined
+            // = nothing changed (cache hit) — leave existing entry alone.
+            if (result === null) {
+              this.update(path, null);
+            } else if (result !== undefined) {
+              this.update(path, result);
+            }
+          } catch (e) {
+            console.log(`error processing ${path}: ${e}`);
+          }
+        } else {
+          // file was deleted — remove from count
+          this.update(path, null);
         }
-      } else {
-        // file was deleted — remove from count
-        this.update(path, null);
+      }));
+
+      // Compute graph-derived metrics in the batch tail so the single
+      // coalesced 'updated' event carries fresh orphan and trace counts.
+      // Listeners no longer need a separate debounced refresh. update()
+      // already bumped the memoization generation per file, so these
+      // computes run on a fresh gen and their results are cached for the
+      // 500 ms-debounced view render that follows.
+      if (this.metadataCache) {
+        this.vaultMetrics?.setOrphans(this.computeOrphanCount());
+        this.vaultMetrics?.setSourcesWithTrace(this.computeSourcesTrace().withTrace);
       }
-    }));
+    } finally {
+      this.vaultMetrics?.endBatch();
+    }
     this.setAdaptiveInterval();
   }
 
@@ -247,6 +306,14 @@ export class FullVaultMetricsCollector {
       return null;
     }
 
+    // Skip the disk read entirely when nothing relevant changed. A sibling
+    // rename or backlink update fires metadataCache.changed without bumping
+    // this file's mtime; the signature pre-check catches that and avoids
+    // both the cachedRead and the word tokenizer.
+    if (this.noteMetricsCollector.peekSignature(file, metadata)) {
+      return undefined;
+    }
+
     // cachedRead returns the in-memory copy Obsidian already keeps for open
     // files and a disk read for the rest; either way the call is cheap and
     // throttled by the backlog batch (16 at a time) so the initial scan does
@@ -271,9 +338,15 @@ export class FullVaultMetricsCollector {
 
     if (metrics == null) {
       this.data.delete(key);
+      // Drop signature too — otherwise the cache grows unbounded across
+      // long sessions with file churn (deletes + renames).
+      this.noteMetricsCollector.invalidateCache(key);
     } else {
       this.data.set(key, metrics);
     }
+
+    // data changed → all gen-keyed graph derivatives are stale.
+    this.bumpGeneration();
 
     this.vaultMetrics?.inc(metrics);
     this.refreshTagCount();
@@ -287,6 +360,12 @@ export class FullVaultMetricsCollector {
    * per-file in this collector.
    */
   public aggregateByGroups(groups: FolderGroupSpec[]): GroupAggregate[] {
+    const key = JSON.stringify(groups);
+    const cached = this.aggregateCache;
+    if (cached && cached.gen === this.generation && cached.key === key) {
+      return cached.result;
+    }
+
     const normalized = groups.map(g => ({
       name: g.name,
       paths: g.paths.map(p => p.replace(/\/+$/, "")).filter(p => p.length > 0),
@@ -317,7 +396,9 @@ export class FullVaultMetricsCollector {
       }
     }
 
-    return normalized.map(g => accs.get(g.name)!);
+    const result = normalized.map(g => accs.get(g.name)!);
+    this.aggregateCache = { gen: this.generation, key, result };
+    return result;
   }
 
   /**
@@ -331,11 +412,22 @@ export class FullVaultMetricsCollector {
    * (1d, 7d, 30d) — see inbox.ts.
    */
   public computeInboxHealth(now: Date): InboxHealth {
+    // Bucket by hour: age boundaries (1d/7d/30d) shift discretely as time
+    // passes, so within an hour the bucketing is stable. This collapses the
+    // O(N) walk to ≤1 per hour even with constant render activity.
+    const hourBucket = Math.floor(now.getTime() / (60 * 60 * 1000));
+    const cached = this.inboxHealthCache;
+    if (cached && cached.gen === this.generation && cached.hourBucket === hourBucket) {
+      return cached.result;
+    }
+
     const inFolder = emptyBucket();
     const outsideWithTag = emptyBucket();
     const nowMs = now.getTime();
     if (this.inboxFolders.length === 0 && this.inboxReviewTags.size === 0) {
-      return { inFolder, outsideWithTag };
+      const empty = { inFolder, outsideWithTag };
+      this.inboxHealthCache = { gen: this.generation, hourBucket, result: empty };
+      return empty;
     }
     for (const file of this.vault.getMarkdownFiles()) {
       if (this.isExcluded(file)) continue;
@@ -353,7 +445,9 @@ export class FullVaultMetricsCollector {
         addToBucket(outsideWithTag, ageDays);
       }
     }
-    return { inFolder, outsideWithTag };
+    const result = { inFolder, outsideWithTag };
+    this.inboxHealthCache = { gen: this.generation, hourBucket, result };
+    return result;
   }
 
   /**
@@ -368,6 +462,9 @@ export class FullVaultMetricsCollector {
    * vault.
    */
   public computeSourcesTrace(): { withTrace: number; dangling: string[] } {
+    const cached = this.sourcesTraceCache;
+    if (cached && cached.gen === this.generation) return cached.result;
+
     const ownPaths = new Set<string>();
     const sourcePaths = new Set<string>();
     for (const [path, m] of this.data) {
@@ -391,7 +488,9 @@ export class FullVaultMetricsCollector {
       if (!traced.has(p)) dangling.push(p);
     }
     dangling.sort();
-    return { withTrace: traced.size, dangling };
+    const result = { withTrace: traced.size, dangling };
+    this.sourcesTraceCache = { gen: this.generation, result };
+    return result;
   }
 
   /**
@@ -401,25 +500,34 @@ export class FullVaultMetricsCollector {
    * then a single pass over data counts paths missing from the linked set.
    */
   public computeOrphanCount(): number {
+    const cached = this.orphanCountCache;
+    if (cached && cached.gen === this.generation) return cached.count;
+
     const linked = this.computeLinkedPaths();
     let orphans = 0;
     for (const path of this.data.keys()) {
       if (!linked.has(path)) orphans++;
     }
+    this.orphanCountCache = { gen: this.generation, count: orphans };
     return orphans;
   }
 
   private computeLinkedPaths(): Set<string> {
+    const cached = this.linkedPathsCache;
+    if (cached && cached.gen === this.generation) return cached.set;
+
     const cache = this.metadataCache as any;
     const resolvedLinks: Record<string, Record<string, number>> | undefined = cache?.resolvedLinks;
     const out = new Set<string>();
-    if (!resolvedLinks) return out;
-    for (const src in resolvedLinks) {
-      const dests = resolvedLinks[src];
-      for (const dst in dests) {
-        out.add(dst);
+    if (resolvedLinks) {
+      for (const src in resolvedLinks) {
+        const dests = resolvedLinks[src];
+        for (const dst in dests) {
+          out.add(dst);
+        }
       }
     }
+    this.linkedPathsCache = { gen: this.generation, set: out };
     return out;
   }
 
@@ -431,7 +539,7 @@ function matchesAnyFolder(path: string, folders: string[]): boolean {
   );
 }
 
-type NoteSignature = { links: number; tagKey: string; mtime: number };
+type NoteSignature = { links: number; tagKey: string; mtime: number; words: number };
 
 export class NoteMetricsCollector {
   private readonly signatureCache: Map<string, NoteSignature> = new Map();
@@ -470,8 +578,6 @@ export class NoteMetricsCollector {
       return undefined;
     }
 
-    this.signatureCache.set(file.path, { links: linkCount, tagKey, mtime });
-
     let metrics = new FullVaultMetrics();
     metrics.notes = 1;
     metrics.links = linkCount;
@@ -482,7 +588,25 @@ export class NoteMetricsCollector {
     metrics.conceptNotes = hasIntersection(noteTags, this.conceptTags) ? 1 : 0;
     metrics.quality = linkCount;
 
+    this.signatureCache.set(file.path, { links: linkCount, tagKey, mtime, words: metrics.words });
+
     return { metrics, tags: noteTags };
+  }
+
+  /**
+   * Cheap probe used by the outer collector to skip cachedRead when the
+   * file's own metrics cannot have changed. Re-uses the same fields as the
+   * internal cache check in {@link collect}, so the two stay in sync — a
+   * peek-hit guarantees an inner-collect cache hit on the same inputs.
+   */
+  public peekSignature(file: TFile, metadata: CachedMetadata): boolean {
+    const cached = this.signatureCache.get(file.path);
+    if (!cached) return false;
+    const mtime = file.stat?.mtime ?? 0;
+    if (cached.mtime !== mtime) return false;
+    if (cached.links !== this.countAllLinks(metadata)) return false;
+    const tagKey = Array.from(this.collectTags(metadata)).sort().join("|");
+    return cached.tagKey === tagKey;
   }
 
   private countAllLinks(metadata: CachedMetadata): number {

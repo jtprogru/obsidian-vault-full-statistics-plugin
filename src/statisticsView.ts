@@ -77,12 +77,10 @@ export class VaultStatisticsView extends ItemView {
 	private renderSoon = debounce(() => this.render(), 500, false);
 
 	private render(): void {
-		// Refresh the orphan count synchronously so the view never shows a
-		// number stale from the 1s debounced background pass. setOrphans is
-		// no-op-aware, so propagating the fresh value to status bar/history
-		// does not loop.
-		this.vaultMetrics.setOrphans(this.collector.computeOrphanCount());
-
+		// Orphan and sources-with-trace counts are now refreshed at the end
+		// of every backlog batch (see FullVaultMetricsCollector.processBacklog),
+		// so vaultMetrics.orphanNotes / sourcesWithTrace are already current
+		// by the time the 500 ms render debounce fires.
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass('vfs-view');
@@ -190,10 +188,10 @@ export class VaultStatisticsView extends ItemView {
 			return;
 		}
 
-		// Pull a fresh trace count synchronously so the view never shows a
-		// stale debounced value, the same trick render() uses for orphans.
+		// withTrace is kept fresh by the batch-tail refresh; we still need
+		// the `dangling` list (paths) for the UI, which only this call
+		// provides. PR 3 will memoize this so re-renders are cheap.
 		const { withTrace, dangling } = this.collector.computeSourcesTrace();
-		this.vaultMetrics.setSourcesWithTrace(withTrace);
 		const danglingCount = total - withTrace;
 
 		const bar = section.createDiv({ cls: 'vfs-trace-bar' });

@@ -89,14 +89,6 @@ export default class FullStatisticsPlugin extends Plugin {
 		// so we sample after the vault has settled rather than mid-backlog.
 		this.registerEvent(this.vaultMetrics.on('updated', this.maybeSnapshot));
 
-		// Orphan count is O(N + L) so we recompute on a debounce instead of
-		// inline with every file event. setOrphans is a no-op when the
-		// number is unchanged, so this loop is self-quiescent.
-		this.registerEvent(this.vaultMetrics.on('updated', this.refreshOrphans));
-
-		// Sources-with-trace is also a graph scan — same debounce pattern.
-		this.registerEvent(this.vaultMetrics.on('updated', this.refreshSourcesTrace));
-
 		this.registerView(VAULT_STATISTICS_VIEW_TYPE, (leaf: WorkspaceLeaf) =>
 			new VaultStatisticsView(
 				leaf,
@@ -143,9 +135,11 @@ export default class FullStatisticsPlugin extends Plugin {
 		if (this.statusBarItem) {
 			this.statusBarItem.refresh();
 		}
-		// Re-fire so the sidebar view re-renders after settings (folder
-		// groups, taxonomy toggles) change without waiting for the next
-		// metrics update.
+		// Bump generation so memoized aggregates (folder groups, inbox
+		// health) rebuild with the new settings; then re-fire so the
+		// sidebar view re-renders without waiting for the next metrics
+		// update.
+		this.vaultMetricsCollector?.bumpGeneration();
 		this.vaultMetrics?.trigger('updated');
 	}
 
@@ -163,16 +157,6 @@ export default class FullStatisticsPlugin extends Plugin {
 			this.persist();
 		}
 	}, 10000, false);
-
-	private refreshOrphans = debounce(() => {
-		const n = this.vaultMetricsCollector.computeOrphanCount();
-		this.vaultMetrics?.setOrphans(n);
-	}, 1000, false);
-
-	private refreshSourcesTrace = debounce(() => {
-		const { withTrace } = this.vaultMetricsCollector.computeSourcesTrace();
-		this.vaultMetrics?.setSourcesWithTrace(withTrace);
-	}, 1000, false);
 
 	private async exportHistoryCsv() {
 		const snapshots = this.historyStore.all();

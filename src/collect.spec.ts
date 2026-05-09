@@ -183,6 +183,37 @@ describe("NoteMetricsCollector.collect — tags", () => {
 		expect(second).toBeUndefined();
 	});
 
+	test("peekSignature is false before any collect", () => {
+		expect(nmc.peekSignature(file, { tags: [{ tag: "#a" }] } as any)).toBe(false);
+	});
+
+	test("peekSignature is true after a successful collect with same inputs", async () => {
+		const meta = { tags: [{ tag: "#a" }] } as any;
+		await nmc.collect(file, meta);
+		expect(nmc.peekSignature(file, meta)).toBe(true);
+	});
+
+	test("peekSignature flips to false after invalidateCache", async () => {
+		const meta = { tags: [{ tag: "#a" }] } as any;
+		await nmc.collect(file, meta);
+		expect(nmc.peekSignature(file, meta)).toBe(true);
+		nmc.invalidateCache(file.path);
+		expect(nmc.peekSignature(file, meta)).toBe(false);
+	});
+
+	test("peekSignature is false when tags differ", async () => {
+		await nmc.collect(file, { tags: [{ tag: "#a" }] } as any);
+		expect(nmc.peekSignature(file, { tags: [{ tag: "#b" }] } as any)).toBe(false);
+	});
+
+	test("peekSignature is false when mtime differs", async () => {
+		const f1 = { path: "x.md", stat: { mtime: 100 } } as any as TFile;
+		const f2 = { path: "x.md", stat: { mtime: 200 } } as any as TFile;
+		await nmc.collect(f1, { tags: [{ tag: "#a" }] } as any);
+		expect(nmc.peekSignature(f1, { tags: [{ tag: "#a" }] } as any)).toBe(true);
+		expect(nmc.peekSignature(f2, { tags: [{ tag: "#a" }] } as any)).toBe(false);
+	});
+
 	test("recollects when tag identity changes even if count is the same", async () => {
 		const first = await nmc.collect(file, {
 			tags: [{ tag: "#thought" }],
@@ -424,6 +455,10 @@ describe("FullVaultMetricsCollector.computeOrphanCount", () => {
 		expect(c.computeOrphanCount()).toBe(2);
 
 		links["a.md"] = { "b.md": 1 };
+		// Mutating resolvedLinks directly bypasses Obsidian's "resolved"
+		// event, so memoized graph derivatives don't see the change. In
+		// production the event fires automatically; here we simulate it.
+		c.bumpGeneration();
 		expect(c.computeOrphanCount()).toBe(1);
 	});
 
@@ -436,6 +471,21 @@ describe("FullVaultMetricsCollector.computeOrphanCount", () => {
 		c.update("a.md", makeMetrics(1, 0));
 		c.update("b.md", makeMetrics(1, 0));
 		expect(c.computeOrphanCount()).toBe(2);
+	});
+
+	test("orphan count is memoized within a generation", () => {
+		const links: Record<string, Record<string, number>> = {};
+		const c = freshCollector(makeCacheWithLinks(links));
+		c.update("a.md", makeMetrics(1, 0));
+		// First call computes; second hits the cache. We assert this by
+		// mutating resolvedLinks externally (no event) — a non-memoized
+		// implementation would return the new count, the memoized one keeps
+		// the cached value until bumpGeneration().
+		expect(c.computeOrphanCount()).toBe(1);
+		links["x.md"] = { "a.md": 1 };
+		expect(c.computeOrphanCount()).toBe(1); // still cached
+		c.bumpGeneration();
+		expect(c.computeOrphanCount()).toBe(0); // a.md is now linked
 	});
 });
 
