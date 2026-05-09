@@ -29,23 +29,67 @@
 }
 
 .vfs-settings-fg-card {
-	margin: 0.5em 0 0.75em;
-	padding: 0.5em 0.75em 0.4em;
+	margin: 0.4em 0;
+	padding: 0.45em 0.6em 0.5em;
 	background: var(--background-secondary);
 	border-radius: 6px;
 	border: 1px solid var(--background-modifier-border);
 }
 
 .vfs-settings-fg-head {
-	border-top: none !important;
-	padding-top: 0 !important;
-	padding-bottom: 0.25em !important;
+	display: flex;
+	align-items: center;
+	gap: 0.35em;
+	margin-bottom: 0.35em;
+}
+
+.vfs-settings-fg-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 0.25em 0.5em;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	font-weight: 500;
+}
+
+.vfs-settings-fg-icon {
+	flex: 0 0 auto;
+	width: 1.6em;
+	height: 1.6em;
+	padding: 0.25em;
+	color: var(--text-muted);
+}
+
+.vfs-settings-fg-icon:hover {
+	color: var(--text-normal);
 }
 
 .vfs-settings-fg-paths {
-	margin-left: 0.75em;
+	display: flex;
+	flex-direction: column;
+	gap: 0.2em;
+	margin-left: 0.6em;
 	padding-left: 0.5em;
 	border-left: 2px solid var(--background-modifier-border);
+}
+
+.vfs-settings-fg-path {
+	display: flex;
+	align-items: center;
+	gap: 0.35em;
+}
+
+.vfs-settings-fg-path-input {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 0.2em 0.5em;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	font-size: 0.9em;
 }
 
 

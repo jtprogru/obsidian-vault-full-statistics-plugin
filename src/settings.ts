@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
 
 import StatisticsPlugin from "./main";
 
@@ -387,11 +387,12 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	}
 
 	/**
-	 * Folder groups have nested structure (name + list of paths) so each
-	 * group is rendered as a small card: editable name with a delete
-	 * button on the header row, then per-path rows with their own delete
-	 * buttons, plus "+ Add path" inside the card and "+ Add group" at the
-	 * bottom of the section.
+	 * Folder groups have nested structure (name + list of paths). Layout
+	 * is one card per group with a tight header row (name input plus
+	 * inline add-path/remove-group icons) and one compact row per path
+	 * (input plus remove icon, no Setting wrapper). "+ Add group" sits at
+	 * the bottom. Path-level "+ Add" lives in the header to save a row
+	 * per group.
 	 */
 	private addFolderGroupsEditor(containerEl: HTMLElement) {
 		new Setting(containerEl)
@@ -407,52 +408,8 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 
 			groups.forEach((group, gi) => {
 				const card = wrap.createDiv({ cls: "vfs-settings-fg-card" });
-
-				new Setting(card)
-					.setClass("vfs-settings-fg-head")
-					.addText((text) => {
-						text.setValue(group.name).setPlaceholder("Group name (e.g. Projects)")
-							.onChange(async (v) => {
-								this.plugin.settings.folderGroups[gi].name = v.trim();
-								await this.plugin.saveSettings();
-							});
-						text.inputEl.style.width = "100%";
-					})
-					.addExtraButton((btn) => {
-						btn.setIcon("trash").setTooltip("Remove group").onClick(async () => {
-							this.plugin.settings.folderGroups.splice(gi, 1);
-							await this.plugin.saveSettings();
-							render();
-						});
-					});
-
-				const pathsEl = card.createDiv({ cls: "vfs-settings-fg-paths" });
-				group.paths.forEach((path, pi) => {
-					new Setting(pathsEl)
-						.addText((text) => {
-							text.setValue(path).setPlaceholder("e.g. 01. Проекты")
-								.onChange(async (v) => {
-									this.plugin.settings.folderGroups[gi].paths[pi] = v.trim().replace(/\/+$/, "");
-									await this.plugin.saveSettings();
-								});
-							text.inputEl.style.width = "100%";
-						})
-						.addExtraButton((btn) => {
-							btn.setIcon("trash").setTooltip("Remove path").onClick(async () => {
-								this.plugin.settings.folderGroups[gi].paths.splice(pi, 1);
-								await this.plugin.saveSettings();
-								render();
-							});
-						});
-				});
-
-				new Setting(pathsEl).addButton((btn) => {
-					btn.setButtonText("+ Add path").onClick(async () => {
-						this.plugin.settings.folderGroups[gi].paths.push("");
-						await this.plugin.saveSettings();
-						render();
-					});
-				});
+				this.renderGroupHeader(card, group, gi, render);
+				this.renderGroupPaths(card, group, gi, render);
 			});
 
 			new Setting(wrap).addButton((btn) => {
@@ -464,5 +421,72 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			});
 		};
 		render();
+	}
+
+	private renderGroupHeader(card: HTMLElement, group: FolderGroup, gi: number, rerender: () => void) {
+		const head = card.createDiv({ cls: "vfs-settings-fg-head" });
+
+		const nameInput = head.createEl("input", {
+			cls: "vfs-settings-fg-name",
+			type: "text",
+			attr: { placeholder: "Group name (e.g. Projects)" },
+		});
+		nameInput.value = group.name;
+		nameInput.addEventListener("change", async () => {
+			this.plugin.settings.folderGroups[gi].name = nameInput.value.trim();
+			await this.plugin.saveSettings();
+		});
+
+		const addBtn = head.createEl("button", {
+			cls: "clickable-icon vfs-settings-fg-icon",
+			attr: { "aria-label": "Add path" },
+		});
+		setIcon(addBtn, "plus");
+		addBtn.addEventListener("click", async () => {
+			this.plugin.settings.folderGroups[gi].paths.push("");
+			await this.plugin.saveSettings();
+			rerender();
+		});
+
+		const delBtn = head.createEl("button", {
+			cls: "clickable-icon vfs-settings-fg-icon",
+			attr: { "aria-label": "Remove group" },
+		});
+		setIcon(delBtn, "trash");
+		delBtn.addEventListener("click", async () => {
+			this.plugin.settings.folderGroups.splice(gi, 1);
+			await this.plugin.saveSettings();
+			rerender();
+		});
+	}
+
+	private renderGroupPaths(card: HTMLElement, group: FolderGroup, gi: number, rerender: () => void) {
+		const pathsEl = card.createDiv({ cls: "vfs-settings-fg-paths" });
+
+		group.paths.forEach((path, pi) => {
+			const row = pathsEl.createDiv({ cls: "vfs-settings-fg-path" });
+
+			const input = row.createEl("input", {
+				cls: "vfs-settings-fg-path-input",
+				type: "text",
+				attr: { placeholder: "e.g. 01. Проекты" },
+			});
+			input.value = path;
+			input.addEventListener("change", async () => {
+				this.plugin.settings.folderGroups[gi].paths[pi] = input.value.trim().replace(/\/+$/, "");
+				await this.plugin.saveSettings();
+			});
+
+			const del = row.createEl("button", {
+				cls: "clickable-icon vfs-settings-fg-icon",
+				attr: { "aria-label": "Remove path" },
+			});
+			setIcon(del, "x");
+			del.addEventListener("click", async () => {
+				this.plugin.settings.folderGroups[gi].paths.splice(pi, 1);
+				await this.plugin.saveSettings();
+				rerender();
+			});
+		});
 	}
 }
