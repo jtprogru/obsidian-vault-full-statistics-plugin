@@ -31,6 +31,7 @@ export interface FullStatisticsPluginSettings {
 	canonicalTags: string[],
 	rareTagThreshold: number,
 	showTaxonomyDrift: boolean,
+	showHistory: boolean,
 }
 
 export function parseFolderGroups(text: string): FolderGroup[] {
@@ -312,6 +313,18 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			() => this.plugin.settings.canonicalTags,
 			(items) => { this.plugin.settings.canonicalTags = items; },
 		);
+
+		new Setting(containerEl)
+			.setName("Show history")
+			.setDesc("30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.")
+			.addToggle((value) => {
+				value
+					.setValue(this.plugin.settings.showHistory)
+					.onChange(async (v) => {
+						this.plugin.settings.showHistory = v;
+						await this.plugin.saveSettings();
+					});
+			});
 
 		new Setting(containerEl)
 			.setName("History export folder")

@@ -349,6 +349,8 @@ export class VaultStatisticsView extends ItemView {
 	}
 
 	private renderHistory(parent: HTMLElement): void {
+		if (!this.getSettings().showHistory) return;
+
 		const section = parent.createDiv({ cls: 'vfs-section vfs-history' });
 		const snapshots = this.historyStore.recent(30);
 

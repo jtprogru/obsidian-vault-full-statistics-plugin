@@ -31,17 +31,18 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	showConcepts: false,
 	showOrphans: true,
 	showTracePct: true,
-	showSourcesTrace: true,
+	showSourcesTrace: false,
 	excludedFolders: [],
 	ownTags: ["thought", "synthesis", "fleeting"],
 	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
 	conceptTags: ["concept"],
 	folderGroups: [],
-	showFolderBreakdown: true,
+	showFolderBreakdown: false,
 	historyExportFolder: '',
 	canonicalTags: [],
 	rareTagThreshold: 3,
-	showTaxonomyDrift: true,
+	showTaxonomyDrift: false,
+	showHistory: false,
 };
 
 const HISTORY_CSV_FILENAME = 'Vault Statistics — History.csv';
