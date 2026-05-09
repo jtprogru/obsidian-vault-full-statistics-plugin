@@ -191,7 +191,7 @@ export class VaultStatisticsView extends ItemView {
 		this.appendTraceLegend(legend, 'good', withTrace, total > 0 ? withTrace / total : 0, 'traced');
 		this.appendTraceLegend(legend, 'bad', danglingCount, total > 0 ? danglingCount / total : 0, 'dangling');
 
-		if (dangling.length > 0) {
+		if (settings.showDanglingList && dangling.length > 0) {
 			const list = section.createDiv({ cls: 'vfs-trace-list' });
 			const visible = dangling.slice(0, TRACE_LIST_LIMIT);
 			for (const path of visible) {

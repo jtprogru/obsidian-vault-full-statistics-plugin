@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	showOrphans: true,
 	showTracePct: true,
 	showSourcesTrace: false,
+	showDanglingList: true,
 	excludedFolders: [],
 	ownTags: ["thought", "synthesis", "fleeting"],
 	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],

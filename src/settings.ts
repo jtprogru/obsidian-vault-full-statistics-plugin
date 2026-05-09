@@ -21,6 +21,7 @@ export interface FullStatisticsPluginSettings {
 	showOrphans: boolean,
 	showTracePct: boolean,
 	showSourcesTrace: boolean,
+	showDanglingList: boolean,
 	excludedFolders: string[],
 	ownTags: string[],
 	sourceTags: string[],
@@ -276,6 +277,18 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showSourcesTrace)
 					.onChange(async (v) => {
 						this.plugin.settings.showSourcesTrace = v;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Show dangling notes list")
+			.setDesc("Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.")
+			.addToggle((value) => {
+				value
+					.setValue(this.plugin.settings.showDanglingList)
+					.onChange(async (v) => {
+						this.plugin.settings.showDanglingList = v;
 						await this.plugin.saveSettings();
 					});
 			});
