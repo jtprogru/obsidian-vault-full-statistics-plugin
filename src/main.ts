@@ -160,15 +160,42 @@ export default class FullStatisticsPlugin extends Plugin {
 			new Notice('No history snapshots yet — try again after a few daily updates.');
 			return;
 		}
+		const csv = snapshotsToCsv(snapshots);
+
+		// Prefer the native OS save dialog (File System Access API) so the
+		// user can write anywhere on disk, not just inside the vault.
+		// Falls back to the in-vault folder picker on platforms where the
+		// API is unavailable (mobile, sandboxed builds).
+		const nativePicker = (window as any).showSaveFilePicker;
+		if (typeof nativePicker === 'function') {
+			try {
+				const handle = await nativePicker.call(window, {
+					suggestedName: HISTORY_CSV_FILENAME,
+					types: [{
+						description: 'CSV file',
+						accept: { 'text/csv': ['.csv'] },
+					}],
+				});
+				const writable = await handle.createWritable();
+				await writable.write(csv);
+				await writable.close();
+				new Notice(`Exported ${snapshots.length} snapshot(s) to ${handle.name}`);
+				return;
+			} catch (e: any) {
+				if (e?.name === 'AbortError') return; // user cancelled the dialog
+				console.error('vault-statistics: native save dialog failed', e);
+				// Fall through to in-vault fallback
+			}
+		}
+
 		new FolderPickerModal(this.app, async (folder) => {
-			await this.writeHistoryCsv(folder, snapshots);
+			await this.writeVaultCsv(folder, csv, snapshots.length);
 		}).open();
 	}
 
-	private async writeHistoryCsv(folder: TFolder, snapshots: Snapshot[]) {
+	private async writeVaultCsv(folder: TFolder, csv: string, count: number) {
 		const dir = folder.path === '' || folder.path === '/' ? '' : folder.path;
 		const path = dir ? `${dir}/${HISTORY_CSV_FILENAME}` : HISTORY_CSV_FILENAME;
-		const csv = snapshotsToCsv(snapshots);
 		try {
 			const existing = this.app.vault.getAbstractFileByPath(path);
 			if (existing instanceof TFile) {
@@ -178,7 +205,7 @@ export default class FullStatisticsPlugin extends Plugin {
 			}
 			this.settings.historyExportFolder = dir;
 			await this.persist();
-			new Notice(`Exported ${snapshots.length} snapshot(s) to ${path}`);
+			new Notice(`Exported ${count} snapshot(s) to ${path}`);
 		} catch (e) {
 			console.error('vault-statistics: csv export failed', e);
 			new Notice(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
