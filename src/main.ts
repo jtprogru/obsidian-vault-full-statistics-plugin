@@ -1,4 +1,4 @@
-import { Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf, Notice } from 'obsidian';
+import { App, Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf, Notice, FuzzySuggestModal } from 'obsidian';
 import { BytesFormatter, DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
@@ -6,7 +6,6 @@ import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './
 import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
 
-const HISTORY_CSV_PATH = 'Vault Statistics — History.csv';
 
 interface PersistedData {
 	settings: Partial<FullStatisticsPluginSettings>;
@@ -37,7 +36,10 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	conceptTags: ["concept"],
 	folderGroups: [],
 	showFolderBreakdown: true,
+	historyExportFolder: '',
 };
+
+const HISTORY_CSV_FILENAME = 'Vault Statistics — History.csv';
 
 export default class FullStatisticsPlugin extends Plugin {
 
@@ -158,15 +160,25 @@ export default class FullStatisticsPlugin extends Plugin {
 			new Notice('No history snapshots yet — try again after a few daily updates.');
 			return;
 		}
+		new FolderPickerModal(this.app, async (folder) => {
+			await this.writeHistoryCsv(folder, snapshots);
+		}).open();
+	}
+
+	private async writeHistoryCsv(folder: TFolder, snapshots: Snapshot[]) {
+		const dir = folder.path === '' || folder.path === '/' ? '' : folder.path;
+		const path = dir ? `${dir}/${HISTORY_CSV_FILENAME}` : HISTORY_CSV_FILENAME;
 		const csv = snapshotsToCsv(snapshots);
 		try {
-			const existing = this.app.vault.getAbstractFileByPath(HISTORY_CSV_PATH);
+			const existing = this.app.vault.getAbstractFileByPath(path);
 			if (existing instanceof TFile) {
 				await this.app.vault.modify(existing, csv);
 			} else {
-				await this.app.vault.create(HISTORY_CSV_PATH, csv);
+				await this.app.vault.create(path, csv);
 			}
-			new Notice(`Exported ${snapshots.length} snapshot(s) to ${HISTORY_CSV_PATH}`);
+			this.settings.historyExportFolder = dir;
+			await this.persist();
+			new Notice(`Exported ${snapshots.length} snapshot(s) to ${path}`);
 		} catch (e) {
 			console.error('vault-statistics: csv export failed', e);
 			new Notice(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -388,5 +400,42 @@ class FullStatisticsStatusBarItem {
 			this.advanceToEnabled(this.viewEnabledFlags());
 		}
 		this.refresh();
+	}
+}
+
+/**
+ * Fuzzy picker over every folder in the vault, including the root.
+ * Lets the export command write the CSV anywhere the user wants.
+ */
+class FolderPickerModal extends FuzzySuggestModal<TFolder> {
+
+	private readonly onSelect: (folder: TFolder) => void;
+
+	constructor(app: App, onSelect: (folder: TFolder) => void) {
+		super(app);
+		this.onSelect = onSelect;
+		this.setPlaceholder('Choose a folder for the CSV');
+	}
+
+	getItems(): TFolder[] {
+		const out: TFolder[] = [];
+		const walk = (folder: TFolder) => {
+			out.push(folder);
+			for (const child of folder.children) {
+				if (child instanceof TFolder) walk(child);
+			}
+		};
+		walk(this.app.vault.getRoot());
+		return out;
+	}
+
+	getItemText(folder: TFolder): string {
+		return folder.path === '' || folder.path === '/'
+			? '/ (vault root)'
+			: folder.path;
+	}
+
+	onChooseItem(folder: TFolder): void {
+		this.onSelect(folder);
 	}
 }

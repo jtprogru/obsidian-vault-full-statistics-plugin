@@ -25,6 +25,7 @@ export interface FullStatisticsPluginSettings {
 	conceptTags: string[],
 	folderGroups: FolderGroup[],
 	showFolderBreakdown: boolean,
+	historyExportFolder: string,
 }
 
 export function parseFolderGroups(text: string): FolderGroup[] {
@@ -245,6 +246,19 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			});
 
 		this.addFolderGroupsEditor(containerEl);
+
+		new Setting(containerEl)
+			.setName("History export folder")
+			.setDesc("Last folder used for CSV export. The export command opens a folder picker each time and updates this value.")
+			.addText((text) => {
+				text.setPlaceholder("(vault root)")
+					.setValue(this.plugin.settings.historyExportFolder)
+					.onChange(async (v) => {
+						this.plugin.settings.historyExportFolder = v.trim().replace(/\/+$/, "");
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.style.width = "100%";
+			});
 	}
 
 	/**
