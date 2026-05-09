@@ -483,6 +483,17 @@
 	text-overflow: ellipsis;
 }
 
+a.vfs-trace-pill {
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.1s ease, color 0.1s ease;
+}
+
+a.vfs-trace-pill:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-accent);
+}
+
 .vfs-trace-more {
 	display: inline-flex;
 	align-items: center;

@@ -6,7 +6,7 @@ import { FullStatisticsPluginSettings } from './settings';
 import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
 
 const TAXONOMY_TAG_LIMIT = 20;
-const TRACE_LIST_LIMIT = 20;
+const TRACE_LIST_LIMIT = 5;
 
 function basenameOf(path: string): string {
 	const slash = path.lastIndexOf('/');
@@ -116,15 +116,40 @@ export class VaultStatisticsView extends ItemView {
 			const list = section.createDiv({ cls: 'vfs-trace-list' });
 			const visible = dangling.slice(0, TRACE_LIST_LIMIT);
 			for (const path of visible) {
-				const pill = list.createSpan({ cls: 'vfs-trace-pill' });
-				pill.setAttribute('title', path);
-				pill.setText(basenameOf(path));
+				this.appendDanglingLink(list, path);
 			}
 			const overflow = dangling.length - visible.length;
 			if (overflow > 0) {
 				list.createSpan({ cls: 'vfs-trace-more', text: `+${overflow} more` });
 			}
 		}
+	}
+
+	private appendDanglingLink(parent: HTMLElement, path: string): void {
+		// Use `internal-link` so Obsidian's hover preview hooks fire and the
+		// link gets the same affordance as other note links throughout the
+		// app. data-href + href both point at the resolved path; the click
+		// handler defers to openLinkText so cmd/middle-click opens in a new
+		// tab without us re-implementing tab logic.
+		const link = parent.createEl('a', {
+			cls: 'vfs-trace-pill internal-link',
+			text: basenameOf(path),
+			attr: {
+				'data-href': path,
+				href: path,
+				title: path,
+			},
+		});
+		link.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			const newLeaf = evt.metaKey || evt.ctrlKey || evt.button === 1;
+			this.app.workspace.openLinkText(path, '', newLeaf);
+		});
+		link.addEventListener('auxclick', (evt) => {
+			if (evt.button !== 1) return;
+			evt.preventDefault();
+			this.app.workspace.openLinkText(path, '', true);
+		});
 	}
 
 	private appendTraceSegment(bar: HTMLElement, cls: string, value: number): void {
