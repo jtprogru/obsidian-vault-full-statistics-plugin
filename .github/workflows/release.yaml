@@ -1,75 +1,36 @@
 name: Release
 
-"on":
+on:
   push:
     tags:
-    - '*'
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
-      - name: Version
-        id: version
-        run: |
-          echo "::set-output name=tag::$(git describe --exact-match --tags HEAD | head -n1)"
-      - uses: chill-viking/npm-ci@latest
-        name: Install dependencies
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Build
-        run: |
-            npm run build
-      - name: Package
-        run: |
-          mkdir "vault-full-statistics"
-          cp main.js styles.css README.md manifest.json "vault-full-statistics"
-          zip -r "vault-full-statistics.zip" "vault-full-statistics"
-      - name: Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.ref }}
+        run: npm run build
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
-      - name: Upload .zip
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: vault-full-statistics.zip
-          asset_name: vault-full-statistics-${{steps.version.outputs.tag}}.zip
-          asset_content_type: application/zip
-      - name: Upload main.js
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./main.js
-          asset_name: main.js
-          asset_content_type: text/javascript
-      - name: Upload manifest.json
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: manifest.json
-          asset_name: manifest.json
-          asset_content_type: application/json
-      - name: Upload styles.css
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: styles.css
-          asset_name: styles.css
-          asset_content_type: text/css
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: |
+            main.js
+            manifest.json
+            styles.css
