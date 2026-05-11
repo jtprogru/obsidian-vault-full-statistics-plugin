@@ -36,6 +36,11 @@ export interface FullStatisticsPluginSettings {
 	showInbox: boolean,
 	inboxFolders: string[],
 	inboxReviewTags: string[],
+	metricsShowLinks: boolean,
+	metricsShowTags: boolean,
+	metricsShowConcepts: boolean,
+	metricsShowOrphans: boolean,
+	metricsShowAvgWords: boolean,
 }
 
 export function parseFolderGroups(text: string): FolderGroup[] {
@@ -213,6 +218,25 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						});
 				});
+		}
+
+		new Setting(containerEl).setName("Metrics section").setHeading();
+
+		const metricsToggles: Array<[string, keyof FullStatisticsPluginSettings]> = [
+			["Links", "metricsShowLinks"],
+			["Tags", "metricsShowTags"],
+			["Concepts", "metricsShowConcepts"],
+			["Orphans", "metricsShowOrphans"],
+			["Avg words", "metricsShowAvgWords"],
+		];
+		for (const [name, key] of metricsToggles) {
+			new Setting(containerEl).setName(name).addToggle((t) => {
+				t.setValue(this.plugin.settings[key] as boolean)
+					.onChange(async (v) => {
+						(this.plugin.settings[key] as boolean) = v;
+						await this.plugin.saveSettings();
+					});
+			});
 		}
 
 		this.addEditableStringList(

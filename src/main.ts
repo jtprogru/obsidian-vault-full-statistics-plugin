@@ -47,6 +47,11 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	showInbox: false,
 	inboxFolders: [],
 	inboxReviewTags: ["inbox/review"],
+	metricsShowLinks: true,
+	metricsShowTags: true,
+	metricsShowConcepts: true,
+	metricsShowOrphans: true,
+	metricsShowAvgWords: true,
 };
 
 const HISTORY_CSV_FILENAME = 'Vault Statistics — History.csv';

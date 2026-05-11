@@ -446,20 +446,37 @@ export class VaultStatisticsView extends ItemView {
 	}
 
 	private renderSecondaryGrid(parent: HTMLElement): void {
+		const s = this.getSettings();
+		const m = this.vaultMetrics;
+		if (!s.metricsShowLinks && !s.metricsShowTags && !s.metricsShowConcepts
+			&& !s.metricsShowOrphans && !s.metricsShowAvgWords) return;
+
 		const section = parent.createDiv({ cls: 'vfs-section vfs-grid-section' });
 		section.createEl('h4', { text: 'Metrics', cls: 'vfs-section-title' });
-
 		const grid = section.createDiv({ cls: 'vfs-grid' });
-		const m = this.vaultMetrics;
-		this.appendStat(grid, m.links.toLocaleString('en-US'), 'links');
-		this.appendStat(grid, m.tags.toLocaleString('en-US'), 'tags');
-		this.appendStat(grid, m.conceptNotes.toLocaleString('en-US'), 'concepts');
-		this.appendStat(
+
+		if (s.metricsShowLinks) this.appendStat(grid, m.links.toLocaleString('en-US'), 'links');
+		if (s.metricsShowTags) this.appendStat(grid, m.tags.toLocaleString('en-US'), 'tags');
+		if (s.metricsShowConcepts) this.appendStat(grid, m.conceptNotes.toLocaleString('en-US'), 'concepts');
+		if (s.metricsShowOrphans) this.appendStat(
 			grid,
 			m.orphanNotes.toLocaleString('en-US'),
 			'orphans',
 			'Notes nothing else links to',
 		);
+		if (s.metricsShowAvgWords) {
+			if (m.notes > 0) {
+				const exact = m.words / m.notes;
+				this.appendStat(
+					grid,
+					Math.round(exact).toLocaleString('en-US'),
+					'avg words',
+					`Average words per note: ${exact.toFixed(1)} (words ÷ notes)`,
+				);
+			} else {
+				this.appendStat(grid, '—', 'avg words');
+			}
+		}
 	}
 
 	private appendStat(parent: HTMLElement, value: string, label: string, tooltip?: string): void {
