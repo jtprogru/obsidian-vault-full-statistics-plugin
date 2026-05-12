@@ -55,6 +55,7 @@ export class FullVaultMetricsCollector {
   private tagOccurrencesCache: { gen: number; record: Record<string, number>; size: number } | null = null;
   private aggregateCache: { gen: number; key: string; result: GroupAggregate[] } | null = null;
   private inboxHealthCache: { gen: number; hourBucket: number; result: InboxHealth } | null = null;
+  private linkValencyCache: { gen: number; incoming: Map<string, number>; outgoing: Map<string, number> } | null = null;
 
   constructor(owner: Component) {
     this.owner = owner;
@@ -510,6 +511,47 @@ export class FullVaultMetricsCollector {
     }
     this.orphanCountCache = { gen: this.generation, count: orphans };
     return orphans;
+  }
+
+  /**
+   * Returns iteration over every tracked note path. Used by tangle
+   * detection and other consumers that need to enumerate candidates
+   * without exposing the internal per-file metrics map.
+   */
+  public listNotePaths(): IterableIterator<string> {
+    return this.data.keys();
+  }
+
+  /**
+   * Single pass over metadataCache.resolvedLinks that yields both
+   * incoming-degree and outgoing-degree per note (count of distinct
+   * destinations / sources, not edge multiplicity). Memoized by
+   * generation — invalidated by bumpGeneration() the same way as
+   * linkedPathsCache.
+   */
+  public computeLinkValency(): { incoming: Map<string, number>; outgoing: Map<string, number> } {
+    const cached = this.linkValencyCache;
+    if (cached && cached.gen === this.generation) {
+      return { incoming: cached.incoming, outgoing: cached.outgoing };
+    }
+
+    const cache = this.metadataCache as any;
+    const resolvedLinks: Record<string, Record<string, number>> | undefined = cache?.resolvedLinks;
+    const incoming = new Map<string, number>();
+    const outgoing = new Map<string, number>();
+    if (resolvedLinks) {
+      for (const src in resolvedLinks) {
+        const dests = resolvedLinks[src];
+        let outDeg = 0;
+        for (const dst in dests) {
+          outDeg++;
+          incoming.set(dst, (incoming.get(dst) ?? 0) + 1);
+        }
+        if (outDeg > 0) outgoing.set(src, outDeg);
+      }
+    }
+    this.linkValencyCache = { gen: this.generation, incoming, outgoing };
+    return { incoming, outgoing };
   }
 
   private computeLinkedPaths(): Set<string> {

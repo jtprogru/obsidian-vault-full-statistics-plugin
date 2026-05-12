@@ -658,3 +658,142 @@ a.vfs-trace-pill:hover {
 	font-style: italic;
 	padding: 0.15em 0.3em;
 }
+
+/* Tangles side view */
+
+.vfs-tangles-meta {
+	display: flex;
+	align-items: baseline;
+	gap: 0.6em;
+	margin-bottom: 0.5em;
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.vfs-tangles-meta-mode {
+	font-family: var(--font-monospace);
+}
+
+.vfs-tangles-meta-count {
+	margin-left: auto;
+}
+
+.vfs-tangles-legend {
+	display: flex;
+	gap: 0.75em;
+	margin-bottom: 0.6em;
+	font-size: 0.78em;
+	color: var(--text-muted);
+}
+
+.vfs-tangles-leg {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35em;
+}
+
+.vfs-tangles-swatch {
+	display: inline-block;
+	width: 0.55em;
+	height: 0.55em;
+	border-radius: 2px;
+	flex-shrink: 0;
+}
+
+.vfs-tangles-swatch-in {
+	background: var(--color-blue, var(--text-accent));
+}
+
+.vfs-tangles-swatch-out {
+	background: var(--color-green, var(--interactive-accent));
+}
+
+.vfs-tangles-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15em;
+}
+
+.vfs-tangles-row {
+	display: flex;
+	align-items: center;
+	gap: 0.55em;
+	padding: 0.2em 0.3em;
+	border-radius: 4px;
+	font-size: 0.9em;
+	transition: background 0.1s ease;
+}
+
+.vfs-tangles-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.vfs-tangles-badge {
+	display: inline-flex;
+	align-items: stretch;
+	flex: 0 0 auto;
+	font-family: var(--font-monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 0.78em;
+	font-weight: 600;
+	line-height: 1;
+	border-radius: 3px;
+	overflow: hidden;
+	color: var(--text-on-accent, #fff);
+}
+
+.vfs-tangles-badge-in,
+.vfs-tangles-badge-out {
+	padding: 0.3em 0.45em;
+	min-width: 1.6em;
+	text-align: center;
+}
+
+.vfs-tangles-badge-in {
+	background: var(--color-blue, var(--text-accent));
+}
+
+.vfs-tangles-badge-out {
+	background: var(--color-green, var(--interactive-accent));
+}
+
+a.vfs-tangles-link {
+	flex: 1 1 auto;
+	min-width: 0;
+	color: var(--text-normal);
+	text-decoration: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	transition: color 0.1s ease;
+}
+
+a.vfs-tangles-link:hover {
+	color: var(--text-accent);
+}
+
+.vfs-tangles-exclude {
+	flex: 0 0 auto;
+	width: 1.4em;
+	height: 1.4em;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-faint);
+	background: transparent;
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.1s ease, color 0.1s ease, background 0.1s ease;
+}
+
+.vfs-tangles-row:hover .vfs-tangles-exclude {
+	opacity: 1;
+}
+
+.vfs-tangles-exclude:hover {
+	color: var(--text-error, var(--color-red));
+	background: var(--background-modifier-error-hover, transparent);
+}

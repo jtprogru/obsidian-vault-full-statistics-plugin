@@ -1,10 +1,13 @@
-import { App, Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf, Notice, FuzzySuggestModal } from 'obsidian';
+import { App, Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf, Notice } from 'obsidian';
+import { FolderPickerModal } from './pickers';
 import { BytesFormatter, DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
 import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
+import { TanglesView, TANGLES_VIEW_TYPE } from './tanglesView';
+import { computeTangles, renderTanglesReport, formatDate } from './tangles';
 
 
 interface PersistedData {
@@ -52,6 +55,13 @@ const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	metricsShowConcepts: true,
 	metricsShowOrphans: true,
 	metricsShowAvgWords: true,
+	tanglesMode: 'and',
+	tanglesMinIn: 5,
+	tanglesMinOut: 5,
+	tanglesMinTotal: 10,
+	tanglesTopN: 25,
+	tanglesReportFolder: '',
+	tanglesExclude: [],
 };
 
 const HISTORY_CSV_FILENAME = 'Vault Statistics — History.csv';
@@ -103,6 +113,15 @@ export default class FullStatisticsPlugin extends Plugin {
 				() => this.settings,
 			));
 
+		this.registerView(TANGLES_VIEW_TYPE, (leaf: WorkspaceLeaf) =>
+			new TanglesView(
+				leaf,
+				this.vaultMetrics,
+				this.vaultMetricsCollector,
+				() => this.settings,
+				(path: string) => this.excludeFromTangles(path),
+			));
+
 		this.addCommand({
 			id: 'open-vault-statistics-view',
 			name: 'Open vault statistics',
@@ -113,6 +132,18 @@ export default class FullStatisticsPlugin extends Plugin {
 			id: 'export-vault-statistics-history',
 			name: 'Export statistics history to CSV',
 			callback: () => this.exportHistoryCsv(),
+		});
+
+		this.addCommand({
+			id: 'open-vault-tangles-view',
+			name: 'Open vault tangles',
+			callback: () => this.activateTanglesView(),
+		});
+
+		this.addCommand({
+			id: 'create-vault-tangles-report',
+			name: 'Create tangles report note',
+			callback: () => this.writeTanglesReport(),
 		});
 
 		this.addRibbonIcon('bar-chart', 'Open vault statistics', () => this.activateStatisticsView());
@@ -199,7 +230,7 @@ export default class FullStatisticsPlugin extends Plugin {
 
 		new FolderPickerModal(this.app, async (folder) => {
 			await this.writeVaultCsv(folder, csv, snapshots.length);
-		}).open();
+		}, 'Choose a folder for the CSV').open();
 	}
 
 	private async writeVaultCsv(folder: TFolder, csv: string, count: number) {
@@ -234,6 +265,80 @@ export default class FullStatisticsPlugin extends Plugin {
 			}
 		}
 		if (leaf) workspace.revealLeaf(leaf);
+	}
+
+	private async excludeFromTangles(path: string): Promise<void> {
+		// Settings UI also accepts folder prefixes, so we use an exact-path
+		// match here — adding the full path of the clicked note. Users can
+		// later widen this to a folder prefix in settings if they want.
+		if (this.settings.tanglesExclude.includes(path)) return;
+		this.settings.tanglesExclude = [...this.settings.tanglesExclude, path];
+		await this.saveSettings();
+		new Notice(`Excluded "${path}" from tangles`);
+	}
+
+	private async activateTanglesView() {
+		const { workspace } = this.app;
+		const existing = workspace.getLeavesOfType(TANGLES_VIEW_TYPE);
+		let leaf: WorkspaceLeaf | null;
+		if (existing.length > 0) {
+			leaf = existing[0];
+		} else {
+			leaf = workspace.getRightLeaf(false);
+			if (leaf) {
+				await leaf.setViewState({ type: TANGLES_VIEW_TYPE, active: true });
+			}
+		}
+		if (leaf) workspace.revealLeaf(leaf);
+	}
+
+	private async writeTanglesReport() {
+		const entries = computeTangles(this.vaultMetricsCollector, this.settings);
+		const now = new Date();
+		const body = renderTanglesReport(entries, this.settings, now);
+
+		const folder = this.settings.tanglesReportFolder.trim().replace(/\/+$/, '');
+		if (folder) {
+			const existing = this.app.vault.getAbstractFileByPath(folder);
+			if (!existing) {
+				try {
+					await this.app.vault.createFolder(folder);
+				} catch (e) {
+					console.error('vault-statistics: failed to create tangles report folder', e);
+					new Notice(`Could not create folder "${folder}": ${e instanceof Error ? e.message : String(e)}`);
+					return;
+				}
+			}
+		}
+
+		const filename = `Vault Tangles — ${formatDate(now)}.md`;
+		const targetPath = await this.uniqueReportPath(folder, filename);
+		try {
+			const created = await this.app.vault.create(targetPath, body);
+			new Notice(`Saved ${entries.length} tangle(s) to ${targetPath}`);
+			const leaf = this.app.workspace.getLeaf(true);
+			await leaf.openFile(created);
+		} catch (e) {
+			console.error('vault-statistics: tangles report write failed', e);
+			new Notice(`Tangles report failed: ${e instanceof Error ? e.message : String(e)}`);
+		}
+	}
+
+	// app.vault.create() rejects when the target path already exists, so we
+	// probe and append a counter suffix instead of relying on the user
+	// retrying. Two reports in the same minute would otherwise collide.
+	private async uniqueReportPath(folder: string, filename: string): Promise<string> {
+		const join = (name: string) => folder ? `${folder}/${name}` : name;
+		const dot = filename.lastIndexOf('.');
+		const stem = dot === -1 ? filename : filename.slice(0, dot);
+		const ext = dot === -1 ? '' : filename.slice(dot);
+		let candidate = join(filename);
+		let counter = 2;
+		while (this.app.vault.getAbstractFileByPath(candidate)) {
+			candidate = join(`${stem} (${counter})${ext}`);
+			counter++;
+		}
+		return candidate;
 	}
 
 	public restartCollector() {
@@ -445,39 +550,3 @@ class FullStatisticsStatusBarItem {
 	}
 }
 
-/**
- * Fuzzy picker over every folder in the vault, including the root.
- * Lets the export command write the CSV anywhere the user wants.
- */
-class FolderPickerModal extends FuzzySuggestModal<TFolder> {
-
-	private readonly onSelect: (folder: TFolder) => void;
-
-	constructor(app: App, onSelect: (folder: TFolder) => void) {
-		super(app);
-		this.onSelect = onSelect;
-		this.setPlaceholder('Choose a folder for the CSV');
-	}
-
-	getItems(): TFolder[] {
-		const out: TFolder[] = [];
-		const walk = (folder: TFolder) => {
-			out.push(folder);
-			for (const child of folder.children) {
-				if (child instanceof TFolder) walk(child);
-			}
-		};
-		walk(this.app.vault.getRoot());
-		return out;
-	}
-
-	getItemText(folder: TFolder): string {
-		return folder.path === '' || folder.path === '/'
-			? '/ (vault root)'
-			: folder.path;
-	}
-
-	onChooseItem(folder: TFolder): void {
-		this.onSelect(folder);
-	}
-}

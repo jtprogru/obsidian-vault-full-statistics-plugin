@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
 
 import StatisticsPlugin from "./main";
+import { FolderPickerModal, NoteFuzzyPickerModal } from "./pickers";
 
 export interface FolderGroup {
 	name: string;
@@ -41,6 +42,13 @@ export interface FullStatisticsPluginSettings {
 	metricsShowConcepts: boolean,
 	metricsShowOrphans: boolean,
 	metricsShowAvgWords: boolean,
+	tanglesMode: 'and' | 'or' | 'sum',
+	tanglesMinIn: number,
+	tanglesMinOut: number,
+	tanglesMinTotal: number,
+	tanglesTopN: number,
+	tanglesReportFolder: string,
+	tanglesExclude: string[],
 }
 
 export function parseFolderGroups(text: string): FolderGroup[] {
@@ -410,6 +418,189 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					});
 				text.inputEl.style.width = "100%";
 			});
+
+		this.addTanglesSection(containerEl);
+	}
+
+	private addTanglesSection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Tangles").setHeading();
+
+		new Setting(containerEl)
+			.setName("Selection mode")
+			.setDesc("AND: both thresholds must be met. OR: either threshold is enough. SUM: in + out must be ≥ total threshold.")
+			.addDropdown((dd) => {
+				dd.addOption("and", "AND (both ≥ thresholds)")
+					.addOption("or", "OR (either ≥ threshold)")
+					.addOption("sum", "SUM (in + out ≥ total)")
+					.setValue(this.plugin.settings.tanglesMode)
+					.onChange(async (v) => {
+						this.plugin.settings.tanglesMode = (v as 'and' | 'or' | 'sum');
+						this.display();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		const mode = this.plugin.settings.tanglesMode;
+		if (mode === 'and' || mode === 'or') {
+			new Setting(containerEl)
+				.setName("Min incoming links")
+				.setDesc("Minimum number of distinct notes that link to a tangle.")
+				.addText((text) => {
+					text.setPlaceholder("5")
+						.setValue(String(this.plugin.settings.tanglesMinIn))
+						.onChange(async (v) => {
+							const n = parseInt(v.trim(), 10);
+							this.plugin.settings.tanglesMinIn = Number.isFinite(n) && n >= 0 ? n : 5;
+							await this.plugin.saveSettings();
+						});
+					text.inputEl.type = "number";
+					text.inputEl.min = "0";
+					text.inputEl.style.width = "5em";
+				});
+
+			new Setting(containerEl)
+				.setName("Min outgoing links")
+				.setDesc("Minimum number of distinct notes a tangle links to.")
+				.addText((text) => {
+					text.setPlaceholder("5")
+						.setValue(String(this.plugin.settings.tanglesMinOut))
+						.onChange(async (v) => {
+							const n = parseInt(v.trim(), 10);
+							this.plugin.settings.tanglesMinOut = Number.isFinite(n) && n >= 0 ? n : 5;
+							await this.plugin.saveSettings();
+						});
+					text.inputEl.type = "number";
+					text.inputEl.min = "0";
+					text.inputEl.style.width = "5em";
+				});
+		}
+
+		if (mode === 'sum') {
+			new Setting(containerEl)
+				.setName("Min in + out")
+				.setDesc("Minimum value of (incoming + outgoing) for a note to count as a tangle.")
+				.addText((text) => {
+					text.setPlaceholder("10")
+						.setValue(String(this.plugin.settings.tanglesMinTotal))
+						.onChange(async (v) => {
+							const n = parseInt(v.trim(), 10);
+							this.plugin.settings.tanglesMinTotal = Number.isFinite(n) && n >= 0 ? n : 10;
+							await this.plugin.saveSettings();
+						});
+					text.inputEl.type = "number";
+					text.inputEl.min = "0";
+					text.inputEl.style.width = "5em";
+				});
+		}
+
+		new Setting(containerEl)
+			.setName("Top N")
+			.setDesc("How many tangles to show in the side view and report. 0 means no limit.")
+			.addText((text) => {
+				text.setPlaceholder("25")
+					.setValue(String(this.plugin.settings.tanglesTopN))
+					.onChange(async (v) => {
+						const n = parseInt(v.trim(), 10);
+						this.plugin.settings.tanglesTopN = Number.isFinite(n) && n >= 0 ? n : 25;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.type = "number";
+				text.inputEl.min = "0";
+				text.inputEl.style.width = "5em";
+			});
+
+		new Setting(containerEl)
+			.setName("Tangles report folder")
+			.setDesc("Folder in the vault where the tangles report note will be created. Empty = vault root.")
+			.addText((text) => {
+				text.setPlaceholder("(vault root)")
+					.setValue(this.plugin.settings.tanglesReportFolder)
+					.onChange(async (v) => {
+						this.plugin.settings.tanglesReportFolder = v.trim().replace(/\/+$/, "");
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.style.width = "100%";
+			});
+
+		this.addTanglesExcludeList(containerEl);
+	}
+
+	/**
+	 * Editable list for tangle exclusions. Each existing entry stays
+	 * inline-editable (typos, manual folder prefixes) but new entries
+	 * come from fuzzy pickers — note picker for files, folder picker for
+	 * directory prefixes — so the user does not have to remember where a
+	 * note lives in the vault tree before excluding it.
+	 */
+	private addTanglesExcludeList(containerEl: HTMLElement) {
+		new Setting(containerEl)
+			.setName("Tangles exclude")
+			.setDesc("Notes or folders to skip in tangle detection. Pick a note to exclude one file, or pick a folder to exclude everything under it. Folder match requires a trailing slash boundary — \"Daily\" does NOT match \"DailyArchive\".")
+			.setHeading();
+
+		const listEl = containerEl.createDiv({ cls: "vfs-settings-list" });
+
+		const addEntry = async (value: string) => {
+			const trimmed = value.trim().replace(/\/+$/, "");
+			if (!trimmed) return;
+			if (this.plugin.settings.tanglesExclude.includes(trimmed)) return;
+			this.plugin.settings.tanglesExclude = [...this.plugin.settings.tanglesExclude, trimmed];
+			await this.plugin.saveSettings();
+			render();
+		};
+
+		const render = () => {
+			listEl.empty();
+			const items = this.plugin.settings.tanglesExclude;
+
+			items.forEach((value, idx) => {
+				const row = new Setting(listEl);
+				row.addText((text) => {
+					text.setValue(value).setPlaceholder("e.g. Personal/Me.md")
+						.onChange(async (newVal) => {
+							const arr = [...this.plugin.settings.tanglesExclude];
+							arr[idx] = newVal.trim();
+							this.plugin.settings.tanglesExclude = arr;
+							await this.plugin.saveSettings();
+						});
+					text.inputEl.style.width = "100%";
+				});
+				row.addExtraButton((btn) => {
+					btn.setIcon("trash").setTooltip("Remove").onClick(async () => {
+						const arr = [...this.plugin.settings.tanglesExclude];
+						arr.splice(idx, 1);
+						this.plugin.settings.tanglesExclude = arr;
+						await this.plugin.saveSettings();
+						render();
+					});
+				});
+			});
+
+			new Setting(listEl)
+				.addButton((btn) => {
+					btn.setButtonText("+ Add note...").setCta().onClick(() => {
+						new NoteFuzzyPickerModal(this.app, (file) => {
+							addEntry(file.path);
+						}, 'Pick a note to exclude from tangles').open();
+					});
+				})
+				.addButton((btn) => {
+					btn.setButtonText("+ Add folder...").onClick(() => {
+						new FolderPickerModal(this.app, (folder) => {
+							const path = folder.path === '' || folder.path === '/' ? '' : folder.path;
+							if (!path) {
+								// Excluding the vault root would hide every
+								// tangle — almost always a mis-click. Surface
+								// the no-op rather than silently consuming it.
+								new Setting(listEl); // re-render shows nothing changed
+								return;
+							}
+							addEntry(path);
+						}, 'Pick a folder to exclude (everything below it is skipped)').open();
+					});
+				});
+		};
+		render();
 	}
 
 	/**

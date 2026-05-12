@@ -1,6 +1,6 @@
 {
 	"name": "vault-full-statistics",
-	"version": "1.14.2",
+	"version": "1.15.0",
 	"description": "Vault statistics in the status bar plus a dedicated view with own/source ratio and a 30-day sparkline of how your knowledge base evolves.",
 	"main": "main.js",
 	"scripts": {
