@@ -1,18 +1,34 @@
 {
 	"name": "vault-full-statistics",
-	"version": "1.15.1",
+	"version": "1.15.2",
 	"description": "Vault statistics in the status bar plus a dedicated view with own/source ratio and a 30-day sparkline of how your knowledge base evolves.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
-		"test": "jest --config jest.config.js"
+		"test": "jest --config jest.config.js",
+		"lint": "eslint . --ext .ts"
 	},
-	"keywords": [],
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"statistics",
+		"vault",
+		"metrics",
+		"knowledge-management"
+	],
 	"author": "Mikhail Savin <jtprogru@gmail.com>",
 	"readme": "README.md",
 	"license": "WTFPL",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jtprogru/obsidian-vault-full-statistics-plugin.git"
+	},
+	"homepage": "https://github.com/jtprogru/obsidian-vault-full-statistics-plugin#readme",
+	"bugs": {
+		"url": "https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues"
+	},
 	"devDependencies": {
 		"@types/jest": "^29.5.14",
 		"@types/node": "^16.11.6",
