@@ -2,6 +2,11 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.1] - 2026-05-13
+
+### Changed
+- `minAppVersion` raised to `0.16.0` in manifest per scorecard recommendation.
+
 ## [1.16.0] - 2026-05-13
 
 ### Changed
