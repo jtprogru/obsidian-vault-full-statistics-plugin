@@ -2,6 +2,12 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.3] - 2026-05-13
+
+### Changed
+- `jest.config.js`: `ts-jest` configuration moved from deprecated `globals['ts-jest']` to the `transform` tuple form.
+- `tsconfig.json`: `esModuleInterop` enabled to silence ts-jest TS151001 hints.
+
 ## [1.16.2] - 2026-05-13
 
 ### Fixed
