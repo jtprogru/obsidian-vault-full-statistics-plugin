@@ -1,4 +1,4 @@
-import { Component, Vault, MetadataCache, TFile, TFolder, CachedMetadata } from 'obsidian';
+import { Component, Vault, MetadataCache, TFile, TFolder, TAbstractFile, CachedMetadata } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
 import { addToBucket, DAY_MS, emptyBucket, InboxHealth } from './inbox';
 import { countWords } from './text';
@@ -31,14 +31,14 @@ export interface FolderGroupSpec {
 export class FullVaultMetricsCollector {
 
   private readonly owner: Component;
-  private vault: Vault;
-  private metadataCache: MetadataCache;
+  private vault!: Vault;
+  private metadataCache!: MetadataCache;
   private readonly data: Map<string, FullVaultMetrics> = new Map();
   private backlog: Set<string> = new Set();
   private vaultMetrics: FullVaultMetrics = new FullVaultMetrics();
   private intervalId: number | null = null;
   private readonly batchSize: number = 16;
-  private intervalMs: number = 100;
+  private intervalMs = 100;
   private readonly noteMetricsCollector: NoteMetricsCollector;
   private excludedFolders: string[] = [];
   private inboxFolders: string[] = [];
@@ -130,10 +130,12 @@ export class FullVaultMetricsCollector {
   }
 
   public start() {
-    this.owner.registerEvent(this.vault.on("create", (file: TFile) => { this.onfilecreated(file) }));
-    this.owner.registerEvent(this.vault.on("modify", (file: TFile) => { this.onfilemodified(file) }));
-    this.owner.registerEvent(this.vault.on("delete", (file: TFile) => { this.onfiledeleted(file) }));
-    this.owner.registerEvent(this.vault.on("rename", (file: TFile, oldPath: string) => { this.onfilerenamed(file, oldPath) }));
+    // Obsidian's vault events deliver TAbstractFile; we only care about
+    // TFile (folders enter `data` via push as well but are filtered out).
+    this.owner.registerEvent(this.vault.on("create", (file: TAbstractFile) => { if (file instanceof TFile) this.onfilecreated(file); }));
+    this.owner.registerEvent(this.vault.on("modify", (file: TAbstractFile) => { if (file instanceof TFile) this.onfilemodified(file); }));
+    this.owner.registerEvent(this.vault.on("delete", (file: TAbstractFile) => { if (file instanceof TFile) this.onfiledeleted(file); }));
+    this.owner.registerEvent(this.vault.on("rename", (file: TAbstractFile, oldPath: string) => { if (file instanceof TFile) this.onfilerenamed(file, oldPath); }));
     this.owner.registerEvent(this.metadataCache.on("changed", (file: TFile) => { this.onfilemodified(file) }));
 
     // Obsidian fires "resolved" after it rebuilds resolvedLinks (e.g. mass
@@ -198,7 +200,7 @@ export class FullVaultMetricsCollector {
     if (this.intervalId !== null) {
       clearInterval(this.intervalId);
     }
-    let backlogSize = this.backlog.size;
+    const backlogSize = this.backlog.size;
     if (backlogSize > 100) {
       this.intervalMs = 100;
     } else if (backlogSize < 10) {
@@ -213,7 +215,7 @@ export class FullVaultMetricsCollector {
     if (fileOrPath instanceof TFolder) {
       return;
     }
-    let path = (fileOrPath instanceof TFile) ? fileOrPath.path : fileOrPath;
+    const path = (fileOrPath instanceof TFile) ? fileOrPath.path : fileOrPath;
     this.backlog.add(path);
     this.setAdaptiveInterval();
   }
@@ -326,7 +328,7 @@ export class FullVaultMetricsCollector {
   }
 
   public update(fileOrPath: TFile | string, resultOrMetrics: CollectResult | FullVaultMetrics | null, _tags?: Set<string>) {
-    let key = (fileOrPath instanceof TFile) ? fileOrPath.path : fileOrPath;
+    const key = (fileOrPath instanceof TFile) ? fileOrPath.path : fileOrPath;
 
     let metrics: FullVaultMetrics | null;
     if (resultOrMetrics === null) {
@@ -622,7 +624,7 @@ export class NoteMetricsCollector {
       return undefined;
     }
 
-    let metrics = new FullVaultMetrics();
+    const metrics = new FullVaultMetrics();
     metrics.notes = 1;
     metrics.links = linkCount;
     metrics.tags = noteTags.size;

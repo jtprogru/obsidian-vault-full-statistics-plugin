@@ -54,7 +54,7 @@ export abstract class ScalingUnitFormatter extends Formatter {
 	protected abstract scale(value: number): [number, string];
 
 	public format(value: number): string {
-		let [scaledValue, scaledUnit] = this.scale(value);
+		const [scaledValue, scaledUnit] = this.scale(value);
 		return `${this.numberFormat.format(scaledValue)} ${scaledUnit}`
 	}
 
@@ -75,7 +75,7 @@ export class BytesFormatter extends ScalingUnitFormatter {
 	}
 
 	protected scale(value: number): [number, string] {
-		let units = ["bytes", "KB", "MB", "GB", "TB", "PB"]
+		const units = ["bytes", "KB", "MB", "GB", "TB", "PB"]
 		while (value >= 1024 && units.length > 0) {
 			value = value / 1024
 			units.shift();

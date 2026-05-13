@@ -1,6 +1,6 @@
-import { App, Component, Vault, TFile, Plugin, debounce, MetadataCache, CachedMetadata, TFolder, WorkspaceLeaf, Notice } from 'obsidian';
+import { TFile, Plugin, debounce, TFolder, WorkspaceLeaf, Notice } from 'obsidian';
 import { FolderPickerModal } from './pickers';
-import { BytesFormatter, DecimalUnitFormatter } from './format';
+import { DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
@@ -70,11 +70,11 @@ export default class FullStatisticsPlugin extends Plugin {
 
 	private statusBarItem: FullStatisticsStatusBarItem | null = null;
 
-	public vaultMetricsCollector: FullVaultMetricsCollector;
-	public vaultMetrics: FullVaultMetrics;
-	public historyStore: HistoryStore;
+	public vaultMetricsCollector!: FullVaultMetricsCollector;
+	public vaultMetrics!: FullVaultMetrics;
+	public historyStore!: HistoryStore;
 
-	settings: FullStatisticsPluginSettings;
+	settings!: FullStatisticsPluginSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -364,7 +364,7 @@ class StatisticView {
 	private containerElementsForVaultFullStatistics: HTMLElement;
 
 	/** Formatter that extracts and formats a value from a {@link Statistics} instance. */
-	private formatter: (s: FullVaultMetrics) => string;
+	private formatter!: (s: FullVaultMetrics) => string;
 
 	/**
 	 * Constructor.
@@ -437,7 +437,7 @@ class FullStatisticsStatusBarItem {
 	private statusBarItem: HTMLElement;
 
 	// raw stats
-	private vaultMetrics: FullVaultMetrics;
+	private vaultMetrics!: FullVaultMetrics;
 
 	// index of the currently displayed stat.
 	private displayedStatisticIndex = 0;

@@ -2,6 +2,18 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-05-13
+
+### Changed
+- TypeScript `strict: true` enabled across the codebase (was `strictNullChecks` only).
+- Dependencies bumped: `typescript` 4.7.4 → 5.x, `@types/node` 16 → 20, `@typescript-eslint/*` 5 → 7.
+- ESLint config tightened: `ban-ts-comment` now errors without a description, `no-console` errors on `console.log`/`info`/`debug` (warn/error allowed).
+- CI (`.github/workflows/build.yaml`) now runs lint and tests in addition to build, on Node.js 20.
+
+### Fixed
+- Event listener signatures updated for stricter TypeScript: vault file events now accept `TAbstractFile` and check `instanceof TFile`.
+- Class properties annotated with definite assignment where they are initialized post-construction.
+
 ## [1.15.2] - 2026-05-13
 
 ### Added

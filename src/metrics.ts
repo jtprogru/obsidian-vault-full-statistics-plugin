@@ -15,16 +15,16 @@ export interface FullVaultMetrics {
 
 export class FullVaultMetrics extends Events implements FullVaultMetrics {
 
-	notes: number = 0;
-	links: number = 0;
-	tags: number = 0;
-	words: number = 0;
-	ownNotes: number = 0;
-	sourceNotes: number = 0;
-	conceptNotes: number = 0;
-	orphanNotes: number = 0;
-	sourcesWithTrace: number = 0;
-	quality: number = 0.00001;
+	notes = 0;
+	links = 0;
+	tags = 0;
+	words = 0;
+	ownNotes = 0;
+	sourceNotes = 0;
+	conceptNotes = 0;
+	orphanNotes = 0;
+	sourcesWithTrace = 0;
+	quality = 0.00001;
 
 	private suspendDepth = 0;
 	private dirty = false;
@@ -127,6 +127,8 @@ export class FullVaultMetrics extends Events implements FullVaultMetrics {
 	}
 
 	public on(name: "updated", callback: (vaultMetrics: FullVaultMetrics) => any, ctx?: any): EventRef {
-		return super.on("updated", callback, ctx);
+		// Obsidian's Events.on accepts a generic variadic callback; ours
+		// publishes a narrower payload, hence the cast.
+		return super.on("updated", callback as (...data: unknown[]) => unknown, ctx);
 	}
 }

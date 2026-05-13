@@ -18,7 +18,7 @@ export const UNIT_TOKENIZER = new UnitTokenizer();
 // internal apostrophe or hyphen (so "We're" and "по-русски" are one word).
 // CJK characters are stripped beforehand and counted separately because each
 // glyph is conventionally treated as a single word in word-count tools.
-const WORD_REGEX = /[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu;
+const WORD_REGEX = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
 const CJK_REGEX = /[぀-ゟ゠-ヿ一-鿿가-힯]/gu;
 
 /**

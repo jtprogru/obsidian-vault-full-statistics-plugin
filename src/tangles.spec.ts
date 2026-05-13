@@ -1,7 +1,6 @@
 import { Component, MetadataCache } from 'obsidian';
 import { FullVaultMetricsCollector } from './collect';
 import { FullVaultMetrics } from './metrics';
-import { FullStatisticsPluginSettings } from './settings';
 import {
 	computeTangles,
 	renderTanglesReport,

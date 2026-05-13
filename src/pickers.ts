@@ -10,7 +10,7 @@ export class FolderPickerModal extends FuzzySuggestModal<TFolder> {
 
 	private readonly onSelect: (folder: TFolder) => void;
 
-	constructor(app: App, onSelect: (folder: TFolder) => void, placeholder: string = 'Choose a folder') {
+	constructor(app: App, onSelect: (folder: TFolder) => void, placeholder = 'Choose a folder') {
 		super(app);
 		this.onSelect = onSelect;
 		this.setPlaceholder(placeholder);
@@ -49,7 +49,7 @@ export class NoteFuzzyPickerModal extends FuzzySuggestModal<TFile> {
 
 	private readonly onSelect: (file: TFile) => void;
 
-	constructor(app: App, onSelect: (file: TFile) => void, placeholder: string = 'Type to find a note') {
+	constructor(app: App, onSelect: (file: TFile) => void, placeholder = 'Type to find a note') {
 		super(app);
 		this.onSelect = onSelect;
 		this.setPlaceholder(placeholder);

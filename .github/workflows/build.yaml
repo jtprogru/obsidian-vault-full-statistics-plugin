@@ -3,20 +3,34 @@ name: Build
 "on":
   push:
     branches:
-    - '*' 
+    - '*'
     tags:
+    - '*'
+  pull_request:
+    branches:
     - '*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         name: Checkout
-      
-      - uses: chill-viking/npm-ci@latest
-        name: Install dependencies
-      
+
+      - uses: actions/setup-node@v4
+        name: Setup Node.js
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
       - name: Build
-        run: |
-          npm run build
+        run: npm run build
