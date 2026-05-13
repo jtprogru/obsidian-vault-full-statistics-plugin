@@ -350,7 +350,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					});
 				text.inputEl.type = "number";
 				text.inputEl.min = "1";
-				text.inputEl.style.width = "5em";
+				text.inputEl.classList.add("vfs-input-narrow");
 			});
 
 		this.addEditableStringList(
@@ -416,7 +416,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						this.plugin.settings.historyExportFolder = v.trim().replace(/\/+$/, "");
 						await this.plugin.saveSettings();
 					});
-				text.inputEl.style.width = "100%";
+				text.inputEl.classList.add("vfs-input-wide");
 			});
 
 		this.addTanglesSection(containerEl);
@@ -455,7 +455,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						});
 					text.inputEl.type = "number";
 					text.inputEl.min = "0";
-					text.inputEl.style.width = "5em";
+					text.inputEl.classList.add("vfs-input-narrow");
 				});
 
 			new Setting(containerEl)
@@ -471,7 +471,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						});
 					text.inputEl.type = "number";
 					text.inputEl.min = "0";
-					text.inputEl.style.width = "5em";
+					text.inputEl.classList.add("vfs-input-narrow");
 				});
 		}
 
@@ -489,7 +489,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						});
 					text.inputEl.type = "number";
 					text.inputEl.min = "0";
-					text.inputEl.style.width = "5em";
+					text.inputEl.classList.add("vfs-input-narrow");
 				});
 		}
 
@@ -506,7 +506,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					});
 				text.inputEl.type = "number";
 				text.inputEl.min = "0";
-				text.inputEl.style.width = "5em";
+				text.inputEl.classList.add("vfs-input-narrow");
 			});
 
 		new Setting(containerEl)
@@ -519,7 +519,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						this.plugin.settings.tanglesReportFolder = v.trim().replace(/\/+$/, "");
 						await this.plugin.saveSettings();
 					});
-				text.inputEl.style.width = "100%";
+				text.inputEl.classList.add("vfs-input-wide");
 			});
 
 		this.addTanglesExcludeList(containerEl);
@@ -563,7 +563,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 							this.plugin.settings.tanglesExclude = arr;
 							await this.plugin.saveSettings();
 						});
-					text.inputEl.style.width = "100%";
+					text.inputEl.classList.add("vfs-input-wide");
 				});
 				row.addExtraButton((btn) => {
 					btn.setIcon("trash").setTooltip("Remove").onClick(async () => {
@@ -637,7 +637,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 							if (onChange) onChange();
 						});
-					text.inputEl.style.width = "100%";
+					text.inputEl.classList.add("vfs-input-wide");
 				});
 				row.addExtraButton((btn) => {
 					btn.setIcon("trash").setTooltip("Remove").onClick(async () => {

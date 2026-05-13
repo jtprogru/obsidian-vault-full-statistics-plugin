@@ -163,7 +163,7 @@ export class VaultStatisticsView extends ItemView {
 	private appendInboxSegment(bar: HTMLElement, kind: string, value: number): void {
 		if (value <= 0) return;
 		const seg = bar.createDiv({ cls: `vfs-inbox-seg vfs-inbox-seg-${kind}` });
-		seg.style.flexGrow = String(value);
+		seg.style.setProperty('--vfs-grow', String(value));
 	}
 
 	private appendInboxLegend(parent: HTMLElement, kind: string, label: string, count: number): void {
@@ -245,7 +245,7 @@ export class VaultStatisticsView extends ItemView {
 	private appendTraceSegment(bar: HTMLElement, cls: string, value: number): void {
 		if (value <= 0) return;
 		const seg = bar.createDiv({ cls });
-		seg.style.flexGrow = String(value);
+		seg.style.setProperty('--vfs-grow', String(value));
 	}
 
 	private appendTraceLegend(parent: HTMLElement, kind: 'good' | 'bad', count: number, share: number, label: string): void {
@@ -352,13 +352,13 @@ export class VaultStatisticsView extends ItemView {
 		const classified = a.ownNotes + a.sourceNotes;
 		if (classified > 0) {
 			const ownSeg = bar.createDiv({ cls: 'vfs-folder-bar-own' });
-			ownSeg.style.flexGrow = String(a.ownNotes);
+			ownSeg.style.setProperty('--vfs-grow', String(a.ownNotes));
 			const srcSeg = bar.createDiv({ cls: 'vfs-folder-bar-source' });
-			srcSeg.style.flexGrow = String(a.sourceNotes);
+			srcSeg.style.setProperty('--vfs-grow', String(a.sourceNotes));
 			const remainder = a.notes - classified;
 			if (remainder > 0) {
 				const restSeg = bar.createDiv({ cls: 'vfs-folder-bar-rest' });
-				restSeg.style.flexGrow = String(remainder);
+				restSeg.style.setProperty('--vfs-grow', String(remainder));
 			}
 			row.createSpan({
 				cls: 'vfs-folder-pct',
@@ -369,7 +369,7 @@ export class VaultStatisticsView extends ItemView {
 			// Nothing classified — show just the unclassified bar so the
 			// row keeps the same visual weight as classified groups.
 			const restSeg = bar.createDiv({ cls: 'vfs-folder-bar-rest' });
-			restSeg.style.flexGrow = '1';
+			restSeg.style.setProperty('--vfs-grow', '1');
 			row.createSpan({ cls: 'vfs-folder-pct vfs-folder-pct-empty', text: '—' });
 		}
 	}
@@ -435,7 +435,7 @@ export class VaultStatisticsView extends ItemView {
 	private appendRatioSegment(bar: HTMLElement, cls: string, value: number): void {
 		if (value <= 0) return;
 		const seg = bar.createDiv({ cls });
-		seg.style.flexGrow = String(value);
+		seg.style.setProperty('--vfs-grow', String(value));
 	}
 
 	private appendLegend(parent: HTMLElement, kind: 'own' | 'source' | 'concept', count: number, share: number, showPct: boolean): void {
@@ -543,7 +543,7 @@ export class VaultStatisticsView extends ItemView {
 			// Always show a baseline so flat zero series remain visible;
 			// otherwise scale the bar height across the local range.
 			const ratio = range === 0 ? 0.4 : 0.15 + (0.85 * (v - min) / range);
-			bar.style.height = `${Math.round(ratio * 100)}%`;
+			bar.style.setProperty('--vfs-bar-height', `${Math.round(ratio * 100)}%`);
 			bar.setAttribute('title', `${v.toLocaleString('en-US')}`);
 		}
 

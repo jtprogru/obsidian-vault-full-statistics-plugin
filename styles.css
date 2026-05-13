@@ -76,6 +76,21 @@
 }
 
 
+/* ===== Utility classes for dynamic values ===== */
+
+/* CSS custom properties replace inline style assignments for runtime
+   values (flex-grow proportional to metrics, bar height from data).
+   Default values keep elements stable until JS sets the real value. */
+
+.vfs-input-narrow {
+	width: 5em;
+}
+
+.vfs-input-wide {
+	width: 100%;
+}
+
+
 /* ===== Sidebar view ===== */
 
 .vfs-view {
@@ -167,17 +182,20 @@
 .vfs-ratio-own {
 	background: var(--color-green, var(--interactive-accent));
 	min-width: 2px;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-ratio-source {
 	background: var(--color-blue, var(--text-accent));
 	min-width: 2px;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-ratio-concept {
 	background: var(--background-modifier-border-hover, var(--text-faint));
 	min-width: 2px;
 	opacity: 0.85;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-ratio-legend {
@@ -298,17 +316,20 @@
 .vfs-folder-bar-own {
 	background: var(--color-green, var(--interactive-accent));
 	min-width: 1px;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-folder-bar-source {
 	background: var(--color-blue, var(--text-accent));
 	min-width: 1px;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-folder-bar-rest {
 	background: var(--background-modifier-border-hover, var(--text-faint));
 	opacity: 0.7;
 	min-width: 1px;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-folder-pct {
@@ -354,6 +375,7 @@
 	border-radius: 1.5px 1.5px 0 0;
 	background: var(--text-muted);
 	transition: opacity 0.15s ease;
+	height: var(--vfs-bar-height, 100%);
 }
 
 .vfs-bar:hover {
@@ -428,12 +450,14 @@
 .vfs-trace-bar-good {
 	background: var(--color-blue, var(--text-accent));
 	min-width: 2px;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-trace-bar-bad {
 	background: var(--color-orange, var(--text-warning));
 	min-width: 2px;
 	opacity: 0.85;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-trace-legend {
@@ -550,6 +574,7 @@ a.vfs-trace-pill:hover {
 
 .vfs-inbox-seg {
 	min-width: 2px;
+	flex-grow: var(--vfs-grow, 0);
 }
 
 .vfs-inbox-seg-fresh,

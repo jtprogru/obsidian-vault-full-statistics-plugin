@@ -242,8 +242,10 @@ export class FullVaultMetricsCollector {
             } else if (result !== undefined) {
               this.update(path, result);
             }
-          } catch (e) {
-            console.log(`error processing ${path}: ${e}`);
+          } catch {
+            // Silently swallow per-file processing errors so a single
+            // bad file does not stall the backlog; the file stays in
+            // `data` with its previous value (or remains absent).
           }
         } else {
           // file was deleted — remove from count

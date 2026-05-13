@@ -77,8 +77,6 @@ export default class FullStatisticsPlugin extends Plugin {
 	settings: FullStatisticsPluginSettings;
 
 	async onload() {
-		console.log('Loading vault-statistics Plugin');
-
 		await this.loadSettings();
 
 		this.vaultMetrics = new FullVaultMetrics();
@@ -239,7 +237,10 @@ export default class FullStatisticsPlugin extends Plugin {
 		try {
 			const existing = this.app.vault.getAbstractFileByPath(path);
 			if (existing instanceof TFile) {
-				await this.app.vault.modify(existing, csv);
+				// Vault.process is the atomic read-modify-write per Obsidian
+				// guidelines — safer than `modify` when other writers may
+				// touch the file mid-export.
+				await this.app.vault.process(existing, () => csv);
 			} else {
 				await this.app.vault.create(path, csv);
 			}
