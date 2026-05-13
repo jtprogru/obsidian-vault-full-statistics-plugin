@@ -2,6 +2,11 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.2] - 2026-05-13
+
+### Fixed
+- CI test job: `src/__mocks__/obsidian.ts` is now tracked in git so jest can resolve the `obsidian` module mock on fresh clones.
+
 ## [1.16.1] - 2026-05-13
 
 ### Changed
