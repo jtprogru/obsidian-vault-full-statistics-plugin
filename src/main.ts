@@ -17,7 +17,7 @@ interface PersistedData {
 
 function isPersistedData(raw: unknown): raw is PersistedData {
 	return !!raw && typeof raw === 'object'
-		&& 'settings' in (raw as object)
+		&& 'settings' in raw
 		&& Array.isArray((raw as PersistedData).history);
 }
 
@@ -188,7 +188,7 @@ export default class FullStatisticsPlugin extends Plugin {
 	private maybeSnapshot = debounce(() => {
 		const changed = this.historyStore.recordIfNeeded(new Date(), this.vaultMetrics);
 		if (changed) {
-			this.persist();
+			void this.persist();
 		}
 	}, 10000, false);
 
@@ -204,7 +204,14 @@ export default class FullStatisticsPlugin extends Plugin {
 		// user can write anywhere on disk, not just inside the vault.
 		// Falls back to the in-vault folder picker on platforms where the
 		// API is unavailable (mobile, sandboxed builds).
-		const nativePicker = (window as any).showSaveFilePicker;
+		type SaveFilePickerOptions = {
+			suggestedName?: string;
+			types?: Array<{ description?: string; accept: Record<string, string[]> }>;
+		};
+		type FileSystemWritableStream = { write(data: string): Promise<void>; close(): Promise<void> };
+		type FileSystemFileHandle = { name: string; createWritable(): Promise<FileSystemWritableStream> };
+		type ShowSaveFilePicker = (opts: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
+		const nativePicker = (window as Window & { showSaveFilePicker?: ShowSaveFilePicker }).showSaveFilePicker;
 		if (typeof nativePicker === 'function') {
 			try {
 				const handle = await nativePicker.call(window, {
@@ -219,15 +226,15 @@ export default class FullStatisticsPlugin extends Plugin {
 				await writable.close();
 				new Notice(`Exported ${snapshots.length} snapshot(s) to ${handle.name}`);
 				return;
-			} catch (e: any) {
-				if (e?.name === 'AbortError') return; // user cancelled the dialog
+			} catch (e) {
+				if (e instanceof DOMException && e.name === 'AbortError') return; // user cancelled
 				console.error('vault-statistics: native save dialog failed', e);
 				// Fall through to in-vault fallback
 			}
 		}
 
-		new FolderPickerModal(this.app, async (folder) => {
-			await this.writeVaultCsv(folder, csv, snapshots.length);
+		new FolderPickerModal(this.app, (folder) => {
+			void this.writeVaultCsv(folder, csv, snapshots.length);
 		}, 'Choose a folder for the CSV').open();
 	}
 
@@ -265,7 +272,7 @@ export default class FullStatisticsPlugin extends Plugin {
 				await leaf.setViewState({ type: VAULT_STATISTICS_VIEW_TYPE, active: true });
 			}
 		}
-		if (leaf) workspace.revealLeaf(leaf);
+		if (leaf) await workspace.revealLeaf(leaf);
 	}
 
 	private async excludeFromTangles(path: string): Promise<void> {
@@ -290,7 +297,7 @@ export default class FullStatisticsPlugin extends Plugin {
 				await leaf.setViewState({ type: TANGLES_VIEW_TYPE, active: true });
 			}
 		}
-		if (leaf) workspace.revealLeaf(leaf);
+		if (leaf) await workspace.revealLeaf(leaf);
 	}
 
 	private async writeTanglesReport() {

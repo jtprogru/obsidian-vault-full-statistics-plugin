@@ -233,12 +233,12 @@ export class VaultStatisticsView extends ItemView {
 		link.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			const newLeaf = evt.metaKey || evt.ctrlKey || evt.button === 1;
-			this.app.workspace.openLinkText(path, '', newLeaf);
+			void this.app.workspace.openLinkText(path, '', newLeaf);
 		});
 		link.addEventListener('auxclick', (evt) => {
 			if (evt.button !== 1) return;
 			evt.preventDefault();
-			this.app.workspace.openLinkText(path, '', true);
+			void this.app.workspace.openLinkText(path, '', true);
 		});
 	}
 
@@ -368,8 +368,7 @@ export class VaultStatisticsView extends ItemView {
 		} else {
 			// Nothing classified — show just the unclassified bar so the
 			// row keeps the same visual weight as classified groups.
-			const restSeg = bar.createDiv({ cls: 'vfs-folder-bar-rest' });
-			restSeg.style.setProperty('--vfs-grow', '1');
+			bar.createDiv({ cls: 'vfs-folder-bar-rest vfs-folder-bar-rest-full' });
 			row.createSpan({ cls: 'vfs-folder-pct vfs-folder-pct-empty', text: '—' });
 		}
 	}

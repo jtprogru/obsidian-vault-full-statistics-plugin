@@ -200,4 +200,4 @@ See [CHANGELOG.md](CHANGELOG.md) for notable changes per release, or the full li
 
 ## License
 
-[WTFPL](LICENSE)
+[MIT](LICENSE)

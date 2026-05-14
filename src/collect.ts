@@ -141,8 +141,7 @@ export class FullVaultMetricsCollector {
     // Obsidian fires "resolved" after it rebuilds resolvedLinks (e.g. mass
     // rename, vault load). Bump our generation so memoized graph
     // derivatives recompute against the new link map.
-    const resolvedRef = (this.metadataCache as any).on?.("resolved", () => { this.bumpGeneration(); });
-    if (resolvedRef) this.owner.registerEvent(resolvedRef);
+    this.owner.registerEvent(this.metadataCache.on("resolved", () => { this.bumpGeneration(); }));
 
     this.rescan();
 
@@ -181,9 +180,10 @@ export class FullVaultMetricsCollector {
   public getTagOccurrences(): Record<string, number> {
     const cached = this.tagOccurrencesCache;
     if (cached && cached.gen === this.generation) return cached.record;
-    const getTags = (this.metadataCache as any)?.getTags;
+    const cache = this.metadataCache as (MetadataCache & { getTags?: () => Record<string, number> }) | undefined;
+    const getTags = cache?.getTags;
     const record: Record<string, number> = (typeof getTags === 'function')
-      ? ((getTags.call(this.metadataCache) as Record<string, number>) ?? {})
+      ? (getTags.call(cache) ?? {})
       : {};
     this.tagOccurrencesCache = { gen: this.generation, record, size: Object.keys(record).length };
     return record;
@@ -198,7 +198,7 @@ export class FullVaultMetricsCollector {
 
   private setAdaptiveInterval() {
     if (this.intervalId !== null) {
-      clearInterval(this.intervalId);
+      window.clearInterval(this.intervalId);
     }
     const backlogSize = this.backlog.size;
     if (backlogSize > 100) {
@@ -208,7 +208,7 @@ export class FullVaultMetricsCollector {
     } else {
       this.intervalMs = 500;
     }
-    this.intervalId = window.setInterval(() => this.processBacklog(), this.intervalMs);
+    this.intervalId = window.setInterval(() => { void this.processBacklog(); }, this.intervalMs);
   }
 
   private push(fileOrPath: TFile | string) {
@@ -271,19 +271,19 @@ export class FullVaultMetricsCollector {
     this.setAdaptiveInterval();
   }
 
-  private async onfilecreated(file: TFile) {
+  private onfilecreated(file: TFile) {
     this.push(file);
   }
 
-  private async onfilemodified(file: TFile) {
+  private onfilemodified(file: TFile) {
     this.push(file);
   }
 
-  private async onfiledeleted(file: TFile) {
+  private onfiledeleted(file: TFile) {
     this.push(file);
   }
 
-  private async onfilerenamed(file: TFile, oldPath: string) {
+  private onfilerenamed(file: TFile, oldPath: string) {
     this.push(file);
     this.push(oldPath);
   }
@@ -476,8 +476,7 @@ export class FullVaultMetricsCollector {
       if (m.ownNotes > 0) ownPaths.add(path);
       if (m.sourceNotes > 0) sourcePaths.add(path);
     }
-    const cache = this.metadataCache as any;
-    const resolvedLinks: Record<string, Record<string, number>> | undefined = cache?.resolvedLinks;
+    const resolvedLinks = this.metadataCache?.resolvedLinks;
     const traced = new Set<string>();
     if (resolvedLinks) {
       for (const src in resolvedLinks) {
@@ -539,8 +538,7 @@ export class FullVaultMetricsCollector {
       return { incoming: cached.incoming, outgoing: cached.outgoing };
     }
 
-    const cache = this.metadataCache as any;
-    const resolvedLinks: Record<string, Record<string, number>> | undefined = cache?.resolvedLinks;
+    const resolvedLinks = this.metadataCache?.resolvedLinks;
     const incoming = new Map<string, number>();
     const outgoing = new Map<string, number>();
     if (resolvedLinks) {
@@ -562,8 +560,7 @@ export class FullVaultMetricsCollector {
     const cached = this.linkedPathsCache;
     if (cached && cached.gen === this.generation) return cached.set;
 
-    const cache = this.metadataCache as any;
-    const resolvedLinks: Record<string, Record<string, number>> | undefined = cache?.resolvedLinks;
+    const resolvedLinks = this.metadataCache?.resolvedLinks;
     const out = new Set<string>();
     if (resolvedLinks) {
       for (const src in resolvedLinks) {

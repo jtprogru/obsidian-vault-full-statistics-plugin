@@ -580,7 +580,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				.addButton((btn) => {
 					btn.setButtonText("+ Add note...").setCta().onClick(() => {
 						new NoteFuzzyPickerModal(this.app, (file) => {
-							addEntry(file.path);
+							void addEntry(file.path);
 						}, 'Pick a note to exclude from tangles').open();
 					});
 				})
@@ -595,7 +595,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 								new Setting(listEl); // re-render shows nothing changed
 								return;
 							}
-							addEntry(path);
+							void addEntry(path);
 						}, 'Pick a folder to exclude (everything below it is skipped)').open();
 					});
 				});
@@ -705,9 +705,9 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			attr: { placeholder: "Projects" },
 		});
 		nameInput.value = group.name;
-		nameInput.addEventListener("change", async () => {
+		nameInput.addEventListener("change", () => {
 			this.plugin.settings.folderGroups[gi].name = nameInput.value.trim();
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 
 		row.createSpan({ cls: "vfs-settings-fg-eq", text: "=" });
@@ -718,12 +718,12 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			attr: { placeholder: "01. Проекты, 02. Архив" },
 		});
 		pathsInput.value = group.paths.join(", ");
-		pathsInput.addEventListener("change", async () => {
+		pathsInput.addEventListener("change", () => {
 			this.plugin.settings.folderGroups[gi].paths = pathsInput.value
 				.split(",")
 				.map(p => p.trim().replace(/\/+$/, ""))
 				.filter(p => p.length > 0);
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 
 		const del = row.createEl("button", {
@@ -731,10 +731,9 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			attr: { "aria-label": "Remove group" },
 		});
 		setIcon(del, "x");
-		del.addEventListener("click", async () => {
+		del.addEventListener("click", () => {
 			this.plugin.settings.folderGroups.splice(gi, 1);
-			await this.plugin.saveSettings();
-			rerender();
+			void this.plugin.saveSettings().then(rerender);
 		});
 	}
 }

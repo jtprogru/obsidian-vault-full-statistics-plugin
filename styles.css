@@ -332,6 +332,10 @@
 	flex-grow: var(--vfs-grow, 0);
 }
 
+.vfs-folder-bar-rest-full {
+	flex-grow: 1;
+}
+
 .vfs-folder-pct {
 	color: var(--text-muted);
 	font-variant-numeric: tabular-nums;
@@ -764,7 +768,7 @@ a.vfs-trace-pill:hover {
 	line-height: 1;
 	border-radius: 3px;
 	overflow: hidden;
-	color: var(--text-on-accent, #fff);
+	color: var(--text-on-accent, #ffffff);
 }
 
 .vfs-tangles-badge-in,

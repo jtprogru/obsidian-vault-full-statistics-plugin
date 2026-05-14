@@ -134,12 +134,12 @@ export class TanglesView extends ItemView {
 		link.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			const newLeaf = evt.metaKey || evt.ctrlKey || evt.button === 1;
-			this.app.workspace.openLinkText(entry.path, '', newLeaf);
+			void this.app.workspace.openLinkText(entry.path, '', newLeaf);
 		});
 		link.addEventListener('auxclick', (evt) => {
 			if (evt.button !== 1) return;
 			evt.preventDefault();
-			this.app.workspace.openLinkText(entry.path, '', true);
+			void this.app.workspace.openLinkText(entry.path, '', true);
 		});
 
 		const excludeBtn = row.createEl('button', {
@@ -150,10 +150,10 @@ export class TanglesView extends ItemView {
 			},
 		});
 		setIcon(excludeBtn, 'x');
-		excludeBtn.addEventListener('click', async (evt) => {
+		excludeBtn.addEventListener('click', (evt) => {
 			evt.preventDefault();
 			evt.stopPropagation();
-			await this.onExclude(entry.path);
+			void this.onExclude(entry.path);
 		});
 	}
 }
