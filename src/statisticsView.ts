@@ -170,7 +170,7 @@ export class VaultStatisticsView extends ItemView {
 		try {
 			await navigator.clipboard.writeText(md);
 			new Notice('Inbox copied to clipboard');
-		} catch (e) {
+		} catch {
 			new Notice('Failed to copy: clipboard unavailable');
 		}
 	}
