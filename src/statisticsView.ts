@@ -16,16 +16,23 @@ function basenameOf(path: string): string {
 	return name.endsWith('.md') ? name.slice(0, -3) : name;
 }
 
-// Compact form keeps the hero value short enough to share width with notes
-// and QoV even on million-word vaults: 9,999 stays full; 10,000+ becomes
-// "12K" / "1.2M". Exact value is offered via tooltip.
+// Words / QoV share a uniform 3-decimal form so the hero numbers read
+// at similar precision. Words switches to compact notation past 10K to
+// stay readable on million-word vaults ("12.345K" / "1.234M"); the exact
+// value is offered via tooltip.
+const WORDS_FORMATTER = new Intl.NumberFormat('en-US', {
+	minimumFractionDigits: 1,
+	maximumFractionDigits: 2,
+});
+
 const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
 	notation: 'compact',
-	maximumFractionDigits: 1,
+	minimumFractionDigits: 1,
+	maximumFractionDigits: 2,
 });
 
 function formatCompactNumber(n: number): string {
-	if (Math.abs(n) < 10_000) return n.toLocaleString('en-US');
+	if (Math.abs(n) < 10_000) return WORDS_FORMATTER.format(n);
 	return COMPACT_FORMATTER.format(n);
 }
 
@@ -424,7 +431,7 @@ export class VaultStatisticsView extends ItemView {
 		);
 		this.appendHeroStat(
 			hero,
-			this.vaultMetrics.quality.toFixed(2),
+			this.vaultMetrics.quality.toFixed(3),
 			'QoV',
 			'Quality of Vault — average number of links per note',
 		);
