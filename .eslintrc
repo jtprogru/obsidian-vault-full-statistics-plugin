@@ -22,5 +22,13 @@
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unsafe-declaration-merging": "warn",
       "no-console": ["error", { "allow": ["warn", "error"] }]
-    }
+    },
+    "overrides": [
+      {
+        "files": ["**/*.spec.ts", "src/__mocks__/**"],
+        "rules": {
+          "@typescript-eslint/no-explicit-any": "off"
+        }
+      }
+    ]
   }
