@@ -23,6 +23,35 @@
 	margin-top: 0.2em;
 }
 
+/* Each row is built with `Setting` but has no name/description, so the
+   empty `.setting-item-info` would otherwise eat half the row's width and
+   squash the text input into the right-hand control area. Hide the info
+   and let the control span the row, so .vfs-input-wide can actually fill
+   it. */
+.vfs-settings-list .setting-item-info {
+	display: none;
+}
+
+.vfs-settings-list .setting-item-control {
+	flex: 1 1 auto;
+	width: 100%;
+}
+
+/* Non-interactive leading marker, sized like the trash icon on the right
+   so the row is visually symmetric and the input gets a small inset from
+   the left edge of the row. */
+.vfs-settings-list-lead {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.6em;
+	height: 1.6em;
+	padding: 0.25em;
+	color: var(--text-faint);
+	pointer-events: none;
+}
+
 .vfs-settings-fg .setting-item {
 	border-top: none;
 	padding: 0.35em 0;
@@ -82,11 +111,15 @@
    values (flex-grow proportional to metrics, bar height from data).
    Default values keep elements stable until JS sets the real value. */
 
-.vfs-input-narrow {
+/* Specificity-laden selectors so we beat user/theme overrides such as
+   `.setting-item > .setting-item-control input[type=text] { width: 75px }`
+   (specificity 0,0,3,1). We match the structure exactly and add our own
+   class on top, landing at 0,0,4,1. */
+.setting-item > .setting-item-control input[type="text"].vfs-input-narrow {
 	width: 5em;
 }
 
-.vfs-input-wide {
+.setting-item > .setting-item-control input[type="text"].vfs-input-wide {
 	width: 100%;
 }
 

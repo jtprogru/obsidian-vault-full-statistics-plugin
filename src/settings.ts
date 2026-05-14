@@ -574,6 +574,9 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						render();
 					});
 				});
+				const lead = row.controlEl.createSpan({ cls: "vfs-settings-list-lead" });
+				setIcon(lead, "hash");
+				row.controlEl.prepend(lead);
 			});
 
 			new Setting(listEl)
@@ -649,6 +652,9 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						if (onChange) onChange();
 					});
 				});
+				const lead = row.controlEl.createSpan({ cls: "vfs-settings-list-lead" });
+				setIcon(lead, "hash");
+				row.controlEl.prepend(lead);
 			});
 
 			new Setting(listEl).addButton((btn) => {
