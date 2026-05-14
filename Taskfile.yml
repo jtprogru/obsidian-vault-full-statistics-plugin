@@ -5,7 +5,6 @@ version: "3"
 set:
   - pipefail
 
-
 tasks:
   default:
     cmds:
@@ -13,26 +12,31 @@ tasks:
     silent: true
 
   install:
-    desc: 'Install all Node dependencies'
+    desc: "Install all Node dependencies"
     cmds:
       - npm install
 
   build:
-    desc: 'Build the project'
+    desc: "Build the project"
     cmds:
       - npm run build
 
   test:
-    desc: 'Run all tests in project'
+    desc: "Run all tests in project"
     cmds:
       - npm test
 
+  lint:
+    desc: "Run ESLint over the TypeScript sources"
+    cmds:
+      - npm run lint
+
   dev:
-    desc: 'Start the development server'
+    desc: "Start the development server"
     cmds:
       - npm run dev
 
   version:
-    desc: 'Bump current version'
+    desc: "Bump current version"
     cmds:
       - npm run version
