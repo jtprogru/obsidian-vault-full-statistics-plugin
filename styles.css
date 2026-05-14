@@ -194,6 +194,27 @@
 	letter-spacing: 0.06em;
 }
 
+.vfs-section-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 0.6em;
+}
+
+.vfs-section-header .vfs-section-title {
+	margin: 0;
+	flex: 1;
+}
+
+.vfs-section-copy {
+	padding: 2px 4px;
+	opacity: 0.55;
+}
+
+.vfs-section-copy:hover {
+	opacity: 1;
+}
+
 .vfs-empty {
 	color: var(--text-muted);
 	font-style: italic;

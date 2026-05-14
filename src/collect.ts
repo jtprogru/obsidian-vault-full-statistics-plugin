@@ -1,6 +1,14 @@
 import { Component, Vault, MetadataCache, TFile, TFolder, TAbstractFile, CachedMetadata } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
-import { addToBucket, DAY_MS, emptyBucket, InboxHealth } from './inbox';
+import {
+  addNoteToBucket,
+  addToBucket,
+  DAY_MS,
+  emptyBucket,
+  emptyBucketNotes,
+  InboxHealth,
+  InboxHealthNotes,
+} from './inbox';
 import { countWords } from './text';
 
 enum FileType {
@@ -453,6 +461,37 @@ export class FullVaultMetricsCollector {
     const result = { inFolder, outsideWithTag };
     this.inboxHealthCache = { gen: this.generation, hourBucket, result };
     return result;
+  }
+
+  /**
+   * Like `computeInboxHealth` but returns the full note paths per age bucket
+   * instead of counts. Not cached — only called on-demand (e.g. copy click),
+   * so paying the walk is fine and the memory is not retained between renders.
+   */
+  public computeInboxHealthNotes(now: Date): InboxHealthNotes {
+    const inFolder = emptyBucketNotes();
+    const outsideWithTag = emptyBucketNotes();
+    const nowMs = now.getTime();
+    if (this.inboxFolders.length === 0 && this.inboxReviewTags.size === 0) {
+      return { inFolder, outsideWithTag };
+    }
+    for (const file of this.vault.getMarkdownFiles()) {
+      if (this.isExcluded(file)) continue;
+      const ageDays = (nowMs - (file.stat?.ctime ?? nowMs)) / DAY_MS;
+      const inInbox = matchesAnyFolder(file.path, this.inboxFolders);
+      if (inInbox) {
+        addNoteToBucket(inFolder, ageDays, file.path);
+        continue;
+      }
+      if (this.inboxReviewTags.size === 0) continue;
+      const metadata = this.metadataCache.getFileCache(file);
+      if (!metadata) continue;
+      const fileTags = this.noteMetricsCollector.collectTags(metadata);
+      if (hasIntersection(fileTags, this.inboxReviewTags)) {
+        addNoteToBucket(outsideWithTag, ageDays, file.path);
+      }
+    }
+    return { inFolder, outsideWithTag };
   }
 
   /**

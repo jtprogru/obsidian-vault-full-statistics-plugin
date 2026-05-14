@@ -1,10 +1,11 @@
-import { ItemView, WorkspaceLeaf, debounce } from 'obsidian';
+import { ItemView, Notice, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector, GroupAggregate } from './collect';
 import { HistoryStore, pctString } from './historyStore';
 import { FullStatisticsPluginSettings } from './settings';
 import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
 import { InboxBucket } from './inbox';
+import { InboxReportLabels, renderInboxNotesMarkdown } from './inboxReport';
 
 const TAXONOMY_TAG_LIMIT = 10;
 const TRACE_LIST_LIMIT = 5;
@@ -100,11 +101,25 @@ export class VaultStatisticsView extends ItemView {
 		if (!settings.showInbox) return;
 
 		const section = parent.createDiv({ cls: 'vfs-section vfs-inbox' });
-		section.createEl('h4', { text: 'Inbox health', cls: 'vfs-section-title' });
 
-		const hasFolders = settings.inboxFolders.length > 0;
-		const hasTags = settings.inboxReviewTags.length > 0;
-		if (!hasFolders && !hasTags) {
+		const header = section.createDiv({ cls: 'vfs-section-header' });
+		header.createEl('h4', { text: 'Inbox health', cls: 'vfs-section-title' });
+		const copyBtn = header.createEl('button', {
+			cls: 'clickable-icon vfs-section-copy',
+			attr: {
+				'aria-label': 'Copy inbox notes as markdown',
+				title: 'Copy inbox notes as markdown',
+			},
+		});
+		setIcon(copyBtn, 'copy');
+		copyBtn.addEventListener('click', (evt) => {
+			evt.preventDefault();
+			evt.stopPropagation();
+			void this.handleCopyInbox();
+		});
+
+		const labels = this.inboxLabels(settings);
+		if (!labels.hasFolders && !labels.hasTags) {
 			section.createDiv({
 				cls: 'vfs-empty',
 				text: 'Configure inbox folders or review tags in settings to see this section.',
@@ -114,17 +129,42 @@ export class VaultStatisticsView extends ItemView {
 
 		const { inFolder, outsideWithTag } = this.collector.computeInboxHealth(new Date());
 
-		if (hasFolders) {
-			const label = settings.inboxFolders.length === 1
-				? settings.inboxFolders[0]
-				: `${settings.inboxFolders.length} inbox folders`;
-			this.appendInboxRow(section, label, inFolder);
+		if (labels.hasFolders) {
+			this.appendInboxRow(section, labels.inFolderLabel, inFolder);
 		}
-		if (hasTags) {
-			const label = settings.inboxReviewTags.length === 1
-				? `#${settings.inboxReviewTags[0]} (outside inbox)`
-				: `${settings.inboxReviewTags.length} review tags (outside inbox)`;
-			this.appendInboxRow(section, label, outsideWithTag);
+		if (labels.hasTags) {
+			this.appendInboxRow(section, labels.outsideWithTagLabel, outsideWithTag);
+		}
+	}
+
+	private inboxLabels(settings: FullStatisticsPluginSettings): InboxReportLabels {
+		const hasFolders = settings.inboxFolders.length > 0;
+		const hasTags = settings.inboxReviewTags.length > 0;
+		const inFolderLabel = settings.inboxFolders.length === 1
+			? settings.inboxFolders[0]
+			: `${settings.inboxFolders.length} inbox folders`;
+		const outsideWithTagLabel = settings.inboxReviewTags.length === 1
+			? `#${settings.inboxReviewTags[0]} (outside inbox)`
+			: `${settings.inboxReviewTags.length} review tags (outside inbox)`;
+		return { inFolderLabel, outsideWithTagLabel, hasFolders, hasTags };
+	}
+
+	private async handleCopyInbox(): Promise<void> {
+		const settings = this.getSettings();
+		if (!settings.showInbox) return;
+		const labels = this.inboxLabels(settings);
+		if (!labels.hasFolders && !labels.hasTags) {
+			new Notice('Nothing to copy — configure inbox folders or review tags first');
+			return;
+		}
+		const now = new Date();
+		const notes = this.collector.computeInboxHealthNotes(now);
+		const md = renderInboxNotesMarkdown(notes, labels, now);
+		try {
+			await navigator.clipboard.writeText(md);
+			new Notice('Inbox copied to clipboard');
+		} catch (e) {
+			new Notice('Failed to copy: clipboard unavailable');
 		}
 	}
 

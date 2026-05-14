@@ -35,3 +35,18 @@ export function addToBucket(bucket: InboxBucket, ageDays: number): void {
 	bucket[which] += 1;
 	bucket.total += 1;
 }
+
+export type InboxBucketNotes = Record<AgeBucket, string[]>;
+
+export interface InboxHealthNotes {
+	inFolder: InboxBucketNotes;
+	outsideWithTag: InboxBucketNotes;
+}
+
+export function emptyBucketNotes(): InboxBucketNotes {
+	return { fresh: [], recent: [], stale: [], old: [] };
+}
+
+export function addNoteToBucket(bucket: InboxBucketNotes, ageDays: number, path: string): void {
+	bucket[bucketForAge(ageDays)].push(path);
+}
