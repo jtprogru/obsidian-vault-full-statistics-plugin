@@ -72,13 +72,26 @@ export class VaultStatisticsView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		this.registerEvent(this.vaultMetrics.on('updated', this.renderSoon));
+		this.registerEvent(this.vaultMetrics.on('updated', this.onUpdated));
 		this.render();
 	}
 
 	async onClose(): Promise<void> {
 		// nothing to clean up — registerEvent handles unbind on view close.
 	}
+
+	// First updated event after onOpen renders immediately so the sidebar
+	// is never empty for the duration of the debounce window. Subsequent
+	// updates go through the debounced path to coalesce mass-scan churn.
+	private firstUpdateRendered = false;
+	private onUpdated = () => {
+		if (!this.firstUpdateRendered) {
+			this.firstUpdateRendered = true;
+			this.render();
+			return;
+		}
+		this.renderSoon();
+	};
 
 	// Mild debounce so a flurry of metric updates during the initial
 	// vault scan does not trigger one re-render per file event.

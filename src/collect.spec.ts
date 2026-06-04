@@ -83,30 +83,50 @@ describe("FullVaultMetricsCollector — vault-wide tag count via metadataCache.g
 			setFullVaultMetrics(vaultMetrics);
 	});
 
-	test("reflects size of metadataCache.getTags() after update", () => {
+	// Contract: update() no longer refreshes the tag count itself — that
+	// would force a metadataCache.getTags() walk per file during a large
+	// mass-load. Tag count is now refreshed at the batch boundary by
+	// processBacklog (or explicitly via collector.refreshTagCount()).
+
+	test("reflects size of metadataCache.getTags() after refreshTagCount", () => {
 		cacheTags["#book"] = 5;
 		cacheTags["#thought"] = 3;
 		collector.update("a.md", makeMetrics(1, 0));
+		collector.refreshTagCount();
 		expect(vaultMetrics.tags).toBe(2);
 	});
 
 	test("zero when getTags returns empty record", () => {
 		collector.update("a.md", makeMetrics(1, 0));
+		collector.refreshTagCount();
 		expect(vaultMetrics.tags).toBe(0);
 	});
 
-	test("tag count refreshes when underlying record changes between updates", () => {
+	test("tag count refreshes when underlying record changes between batches", () => {
 		cacheTags["#a"] = 1;
 		collector.update("a.md", makeMetrics(1, 0));
+		collector.refreshTagCount();
 		expect(vaultMetrics.tags).toBe(1);
 
 		cacheTags["#b"] = 1;
 		collector.update("b.md", makeMetrics(1, 0));
+		collector.refreshTagCount();
 		expect(vaultMetrics.tags).toBe(2);
 
 		delete cacheTags["#a"];
 		collector.update("c.md", makeMetrics(1, 0));
+		collector.refreshTagCount();
 		expect(vaultMetrics.tags).toBe(1);
+	});
+
+	test("update() alone does not refresh the tag count (batch contract)", () => {
+		cacheTags["#book"] = 5;
+		cacheTags["#thought"] = 3;
+		// Tag count stays at its initial value (0) until refreshTagCount
+		// is invoked explicitly — proving the per-file hot path skips the
+		// expensive getTags() walk.
+		collector.update("a.md", makeMetrics(1, 0));
+		expect(vaultMetrics.tags).toBe(0);
 	});
 
 	test("safe when metadataCache is not set (used in unit tests of update)", () => {

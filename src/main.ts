@@ -80,7 +80,6 @@ export default class FullStatisticsPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.vaultMetrics = new FullVaultMetrics();
-
 		this.vaultMetricsCollector = new FullVaultMetricsCollector(this).
 			setVault(this.app.vault).
 			setMetadataCache(this.app.metadataCache).
@@ -90,8 +89,17 @@ export default class FullStatisticsPlugin extends Plugin {
 			setSourceTags(this.settings.sourceTags).
 			setConceptTags(this.settings.conceptTags).
 			setInboxFolders(this.settings.inboxFolders).
-			setInboxReviewTags(this.settings.inboxReviewTags).
-			start();
+			setInboxReviewTags(this.settings.inboxReviewTags);
+
+		// Defer the initial vault scan until Obsidian has finished laying
+		// out the workspace. start() registers vault/metadata event handlers
+		// AND walks every file in the vault — running it inside onload would
+		// block Obsidian's startup by hundreds of ms on large vaults.
+		// onLayoutReady fires once the UI is interactive, so users see the
+		// workspace sooner and the status-bar number lights up shortly after.
+		this.app.workspace.onLayoutReady(() => {
+			this.vaultMetricsCollector.start();
+		});
 
 		this.statusBarItem = new FullStatisticsStatusBarItem(this, this.addStatusBarItem()).
 			setFullVaultMetrics(this.vaultMetrics);
@@ -496,10 +504,18 @@ class FullStatisticsStatusBarItem {
 
 	public setFullVaultMetrics(vaultMetrics: FullVaultMetrics) {
 		this.vaultMetrics = vaultMetrics;
-		this.owner.registerEvent(this.vaultMetrics?.on("updated", this.refreshSoon));
-		this.refreshSoon();
+		this.owner.registerEvent(this.vaultMetrics?.on("updated", this.onUpdated));
+		// First refresh runs immediately so the status bar is never blank
+		// after startup. Subsequent updates are throttled via refreshSoon.
+		this.refresh();
 		return this;
 	}
+
+	// On every 'updated' event from the collector, refresh through the
+	// debounced path — the very first event already painted via the direct
+	// refresh() in setFullVaultMetrics, so the user is not staring at a
+	// stale status bar for 2 seconds at startup.
+	private onUpdated = () => { this.refreshSoon(); };
 
 	private refreshSoon = debounce(() => { this.refresh(); }, 2000, false);
 
