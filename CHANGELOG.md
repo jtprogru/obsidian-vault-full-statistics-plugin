@@ -2,6 +2,19 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2026-06-04
+
+### Changed
+- Plugin `onload` deferred behind `workspace.onLayoutReady` so Obsidian startup is not blocked by the initial vault scan.
+- Backlog drain rewritten: interval is armed once at the end of `rescan()` instead of being reset per file; `update()` no longer auto-refreshes the tag count — callers refresh once per batch.
+- `computeOrphanCount` and `computeSourcesTrace` (full `resolvedLinks` graph walks) gated behind a backlog-size threshold so they only run as the initial scan converges.
+- Scanner uses `requestIdleCallback` for large backlogs (falls back to `setTimeout` for small live-edit backlogs) with an in-flight guard against re-entrant ticks.
+- `rescan()` now uses `getMarkdownFiles()` instead of `getFiles()` — attachments were being collected and discarded.
+- First refresh of the status bar and sidebar view runs immediately on load instead of waiting for the debounce window.
+
+### Performance
+- Plugin `onload` cut from ~1385 ms to ~2 ms on a 6k-note vault; total Obsidian startup from ~4.5 s to ~2.1 s; no more UI freeze during the initial scan.
+
 ## [1.16.3] - 2026-05-13
 
 ### Changed
