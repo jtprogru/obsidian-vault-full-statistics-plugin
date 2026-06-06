@@ -11,6 +11,7 @@ export interface FolderGroup {
 export interface FullStatisticsPluginSettings {
 	displayIndividualItems: boolean,
 	showNotes: boolean,
+	showWords: boolean,
 	showLinks: boolean,
 	showTags: boolean,
 	showQuality: boolean,
@@ -107,6 +108,18 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						.setValue(this.plugin.settings.showNotes)
 						.onChange(async (value) => {
 							this.plugin.settings.showNotes = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName("Show words")
+				.setDesc("Total word count across the vault.")
+				.addToggle((value) => {
+					value
+						.setValue(this.plugin.settings.showWords)
+						.onChange(async (value) => {
+							this.plugin.settings.showWords = value;
 							await this.plugin.saveSettings();
 						});
 				});
