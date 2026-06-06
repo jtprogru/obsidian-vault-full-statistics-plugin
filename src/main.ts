@@ -24,6 +24,7 @@ function isPersistedData(raw: unknown): raw is PersistedData {
 const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
 	displayIndividualItems: false,
 	showNotes: true,
+	showWords: true,
 	showLinks: true,
 	showTags: true,
 	showQuality: true,
@@ -469,6 +470,9 @@ class FullStatisticsStatusBarItem {
 			setStatisticName("notes").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("notes").format(s.notes) }));
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
+			setStatisticName("words").
+			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("words").format(s.words) }));
+		this.statisticViews.push(new StatisticView(this.statusBarItem).
 			setStatisticName("links").
 			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("links").format(s.links) }));
 		this.statisticViews.push(new StatisticView(this.statusBarItem).
@@ -523,6 +527,7 @@ class FullStatisticsStatusBarItem {
 		const s = this.owner.settings;
 		return [
 			s.showNotes,
+			s.showWords,
 			s.showLinks,
 			s.showTags,
 			s.showQuality,
