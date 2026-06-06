@@ -2,7 +2,7 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.20.0] - 2026-06-06
 
 ### Added
 - Status bar can now display the total word count of the vault. A new "Show words" toggle joins the existing per-metric toggles; it is on by default and shows up alongside notes/links/tags in the rotation. Closes #23.
