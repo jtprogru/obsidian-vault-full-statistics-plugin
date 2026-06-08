@@ -332,8 +332,7 @@
 .vfs-folder-list {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto minmax(40px, 80px) auto;
-	column-gap: 0.6em;
-	row-gap: 0.35em;
+	gap: 0.35em 0.6em;
 	align-items: center;
 	font-size: 0.85em;
 }
@@ -406,8 +405,7 @@
 .vfs-spark-grid {
 	display: grid;
 	grid-template-columns: auto 1fr auto;
-	column-gap: 0.7em;
-	row-gap: 0.55em;
+	gap: 0.55em 0.7em;
 	align-items: center;
 	font-size: 0.85em;
 }
