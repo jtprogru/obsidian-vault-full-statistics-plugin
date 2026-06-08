@@ -2,6 +2,15 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.1] - 2026-06-08
+
+### Changed
+- `styles.css`: `column-gap`/`row-gap` replaced with the `gap` shorthand in `.vfs-folder-list` and `.vfs-spark-grid` to silence the Obsidian plugin validator's multi-column warning.
+
+### CI
+- Release workflow now signs `main.js`, `styles.css`, and `manifest.json` with `actions/attest-build-provenance` so users can cryptographically verify release assets came from this repository.
+- Release notes are auto-extracted from `CHANGELOG.md` for the published tag instead of being empty.
+
 ## [1.20.0] - 2026-06-06
 
 ### Added
