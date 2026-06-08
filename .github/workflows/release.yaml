@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -25,11 +27,41 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        run: |
+          version="${GITHUB_REF_NAME}"
+          notes_file="$(mktemp)"
+          awk -v ver="$version" '
+            BEGIN { in_section = 0 }
+            /^## \[/ {
+              if (in_section) { exit }
+              if ($0 ~ "^## \\[" ver "\\]") { in_section = 1; next }
+            }
+            in_section { print }
+          ' CHANGELOG.md > "$notes_file"
+          # Trim leading/trailing blank lines
+          sed -i -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$notes_file"
+          if [ ! -s "$notes_file" ]; then
+            echo "No CHANGELOG entry found for $version" >&2
+            echo "Release $version" > "$notes_file"
+          fi
+          echo "notes_file=$notes_file" >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            styles.css
+            manifest.json
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          body_path: ${{ steps.notes.outputs.notes_file }}
           files: |
             main.js
             manifest.json
