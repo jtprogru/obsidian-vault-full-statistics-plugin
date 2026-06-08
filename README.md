@@ -43,7 +43,7 @@ A "tangle" is a note that bridges large parts of your graph — many incoming li
 
 ## Installation
 
-**Recommended — Obsidian Community Plugins:** the plugin is published in the official Obsidian community plugin catalog. Open `Settings → Community plugins → Browse`, search for **Vault Full Statistics**, click *Install*, then *Enable*. Updates are delivered through Obsidian itself.
+**Recommended — Obsidian Community Plugins:** the plugin is published in the [official Obsidian community plugin catalog](https://community.obsidian.md/plugins/vault-full-statistics). Open `Settings → Community plugins → Browse`, search for **Vault Full Statistics**, click *Install*, then *Enable*. Updates are delivered through Obsidian itself.
 
 For pre-releases (testing unreleased features), use [BRAT](https://github.com/TfTHacker/obsidian42-brat): add `jtprogru/obsidian-vault-full-statistics-plugin` and enable it.
 
