@@ -139,6 +139,17 @@ No. `isDesktopOnly` is set in the manifest. The metric pipeline (vault scan + me
 **My CSV export saves to vault instead of disk.**
 Native save dialog (File System Access API) is preferred when available; the plugin falls back to an in-vault folder picker on environments without it. Use a recent Obsidian + Electron build to get the OS dialog.
 
+## Privacy
+
+This plugin is designed to be self-contained and respectful of your vault.
+
+- **No network access.** No telemetry, no analytics, no external requests. The plugin makes zero HTTP/HTTPS calls — everything runs locally against your vault.
+- **No note mutation.** Your notes and their frontmatter are never modified. Reads go through `vault.cachedRead`; the only writes are to files you explicitly produce via commands: `Export statistics history to CSV` (writes the CSV you choose to save) and `Create tangles report note` (writes a Markdown report to your configured folder).
+- **Local persistence only.** Settings and the 30-day history snapshot stream are stored via Obsidian's standard plugin data API, inside your vault.
+- **Desktop-only.** `isDesktopOnly: true` — the plugin does not run on iOS/Android.
+
+If you ever see this plugin attempting network access or modifying notes you didn't ask it to, that is a bug — please open an issue.
+
 ## Advanced Usage
 
 ### Showing All Statistics
