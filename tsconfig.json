@@ -1,6 +1,8 @@
 {
 	"compilerOptions": {
+		"rootDir": "./src",
 		"baseUrl": ".",
+		"ignoreDeprecations": "6.0",
 		"inlineSourceMap": true,
 		"inlineSources": true,
 		"module": "ESNext",
@@ -11,6 +13,10 @@
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"strict": true,
+		"types": [
+			"node",
+			"jest"
+		],
 		"lib": [
 			"DOM",
 			"ES5",
