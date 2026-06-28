@@ -2,6 +2,21 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.2] - 2026-06-28
+
+Maintenance release: toolchain, dependency, and CI updates only — no changes to the plugin's runtime behavior.
+
+### Changed
+- Toolchain upgraded to current majors: TypeScript 5.9 → 6.0 (`tsconfig.json` updated with an explicit `rootDir` and `types`, and `ignoreDeprecations: "6.0"` for the `baseUrl`/`node10` module-resolution deprecations), Jest and `@types/jest` → 30, `@types/node` → 26, `esbuild` → 0.28, plus a grouped dev-dependencies bump.
+- ESLint upgraded 8 → 10 and migrated from the legacy `.eslintrc`/`.eslintignore` to a flat `eslint.config.mjs` (built on `typescript-eslint`); all existing rules and the spec/mocks overrides are preserved.
+
+### CI
+- Workflows hardened: explicit least-privilege `permissions`, third-party actions pinned to commit SHAs, and a Dependabot config added for npm and GitHub Actions.
+- GitHub Actions bumped: `actions/checkout` → 7, `softprops/action-gh-release` → 3.0.1.
+
+### Documentation
+- README gains a Privacy section documenting the plugin's no-network and read-only (no file mutation) guarantees.
+
 ## [1.20.1] - 2026-06-08
 
 ### Changed
