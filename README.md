@@ -49,7 +49,7 @@ For pre-releases (testing unreleased features), use [BRAT](https://github.com/Tf
 
 Manual install: grab the latest `main.js`, `manifest.json`, and `styles.css` from the [release section](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/releases) and drop them into `<vault>/.obsidian/plugins/vault-full-statistics/`.
 
-This plugin is desktop-only.
+This plugin is desktop-only and requires Obsidian 1.13.0 or newer. Earlier builds lack the declarative settings API the settings tab is built on; if you are on an older Obsidian, it will keep offering you 1.20.2, which works.
 
 ## Usage
 
@@ -61,7 +61,9 @@ For own/source classification, configure your own/source/concept tags in setting
 
 ## Settings reference
 
-All settings live under `Settings → Community plugins → Vault Full Statistics`. Defaults are sensible — most users only touch own/source tags and the opt-in section toggles.
+All settings live under `Settings → Community plugins → Vault Full Statistics`, and are searchable from the settings search box. Defaults are sensible — most users only touch own/source tags and the opt-in section toggles.
+
+Folder breakdown, Tag taxonomy drift, Inbox health and Tangles are navigable pages: the entry shows the current state (`3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. Every list below supports drag-to-reorder and removal with Delete or Backspace.
 
 ### Status bar
 - **Show individual items** — when on, every enabled statistic is rendered as its own status bar slot; when off (default) the bar shows one statistic at a time and clicking cycles. Below toggles apply when this is on.
@@ -72,7 +74,7 @@ Toggle which secondary metrics appear in the side view's grid below the hero pan
 - **Links**, **Tags**, **Concepts**, **Orphans**, **Avg words** — all on by default.
 
 ### Classification
-- **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Matched as path prefix with a `/` boundary.
+- **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Added through the vault folder picker; matched as path prefix with a `/` boundary.
 - **Own tags** (default: `thought`, `synthesis`, `fleeting`) — mark notes as your own thinking.
 - **Source tags** (default: `book`, `article`, `video`, `lecture`, `literature`, `literature-note`) — mark notes about external material.
 - **Concept tags** (default: `concept`) — the grey zone between own and source.
@@ -87,25 +89,25 @@ Toggle which secondary metrics appear in the side view's grid below the hero pan
 
 ### Tag taxonomy drift
 - **Show taxonomy drift** (default: off) — opt-in section listing rare tags and tags outside your canonical set.
-- **Rare tag threshold** (default: 3) — tags used fewer than this many times are flagged.
+- **Rare tag threshold** (default: 3) — tags used fewer than this many times are flagged. Must be a whole number of 1 or more.
 - **Canonical tags** — your accepted tag set. Anything else is flagged as unknown; a canonical parent (e.g. `journal`) covers descendants (`journal/daily`).
 
 ### Inbox health
 - **Show inbox health** (default: off) — opt-in section bucketing inbox notes by age.
-- **Inbox folders** — folders treated as inbox.
+- **Inbox folders** — folders treated as inbox. Added through the vault folder picker.
 - **Inbox review tags** (default: `inbox/review`) — tags marking notes that need processing outside inbox folders.
 
 ### History
 - **Show history** (default: off) — opt-in 30-day sparkline. Snapshots are recorded daily regardless of this toggle.
-- **History export folder** — last folder used for CSV export. The export command updates this on use.
+- **History export folder** — last folder used for CSV export, with folder autocomplete. The export command updates this on use.
 
 ### Tangles
 - **Selection mode** (default: AND) — `AND` (both directions must meet threshold), `OR` (either direction), `SUM` (in + out must meet a single threshold).
 - **Min incoming links** / **Min outgoing links** (default: 5 each) — thresholds for AND/OR modes.
 - **Min in + out** (default: 10) — threshold for SUM mode.
 - **Top N** (default: 25) — limit how many tangles to show in the view and report. `0` means no limit.
-- **Tangles report folder** — where `Create tangles report note` saves its output. Empty = vault root.
-- **Tangles exclude** — notes (full path) or folder prefixes to skip in tangle detection. Folder match requires a trailing slash boundary.
+- **Tangles report folder** — where `Create tangles report note` saves its output, with folder autocomplete. Empty = vault root.
+- **Tangles exclude** — notes (full path) or folder prefixes to skip in tangle detection. The `+` button picks a note, the folder button next to it picks a folder. Folder match requires a trailing slash boundary.
 
 ## FAQ / Troubleshooting
 

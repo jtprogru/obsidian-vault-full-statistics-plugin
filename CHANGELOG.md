@@ -2,6 +2,29 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.0] - 2026-08-01
+
+Settings are rebuilt on Obsidian 1.13's declarative settings API. The plugin's settings are now searchable from the settings panel, the long sections became navigable pages, and the tag/folder lists gained drag-to-reorder.
+
+### Added
+- Plugin settings appear in Obsidian's settings search. Typing "own tags", "tangles" or "inbox" in `Settings → Search` now finds the plugin's rows — previously the entire tab was invisible to search.
+- Folder breakdown, Taxonomy drift, Inbox health and Tangles became navigable pages. Each shows its current state on the entry (`3 groups`, `AND ≥ 5/5`, `Off`) and flags configurations that silently render nothing: folder breakdown enabled with no groups, taxonomy drift with no canonical tags, inbox health with neither folders nor review tags.
+- Every list (excluded folders, own/source/concept tags, canonical tags, inbox folders and review tags, folder groups, tangle exclusions) supports drag-to-reorder and Delete/Backspace removal.
+- Excluded folders and inbox folders are added through the vault folder picker instead of a blank text row; the history export and tangles report folders use Obsidian's folder suggester.
+- Numeric thresholds reject negatives and fractions with an inline error instead of silently snapping back to the default.
+
+### Changed
+- **`minAppVersion` raised from 1.7.2 to 1.13.0.** The declarative settings API does not exist on older builds. Obsidian withholds plugin updates from users on an older app version, so they stay on 1.20.2, which continues to work.
+- The settings tab migrated from the deprecated `PluginSettingTab.display()` to `getSettingDefinitions()`. Obsidian 1.13.0 deprecated `display()`; it still renders as a fallback, but its rows never reach the settings search index.
+- `DEFAULT_SETTINGS` moved from `main.ts` to `settings.ts` so the definitions can reference it, and `settings.ts` now imports `main.ts` as a type-only import, removing the runtime module cycle between them.
+- `styles.css` dropped the overrides of Obsidian's internal `.setting-item` structure that the hand-rolled list editors needed. Core renders list rows now, so those rules were both dead and fragile against the 1.13 settings redesign.
+
+### Fixed
+- `setControlValue` is overridden rather than inherited. The inherited implementation persists through the plugin's `saveData`, which would have written a bare settings object and dropped the 30-day history snapshots — this plugin stores `{settings, history}` as one payload.
+
+### Tests
+- 23 tests covering the settings tab, which was previously untestable below `parseFolderGroups` because everything lived inside `display()` and needed a DOM. They assert that all 41 settings reach the UI (32 bound controls, 9 list editors), that every control declares the shipped default, that visibility predicates and validators behave, and that list delete/reorder move the right entries and only rescan the vault when the value actually feeds the collector.
+
 ## [1.20.2] - 2026-06-28
 
 Maintenance release: toolchain, dependency, and CI updates only — no changes to the plugin's runtime behavior.
