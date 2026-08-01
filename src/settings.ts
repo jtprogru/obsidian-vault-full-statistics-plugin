@@ -437,6 +437,17 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		};
 	}
 
+	/**
+	 * Rows we render ourselves carry no name or description, so the empty
+	 * info block would eat half the row and squash the input into the
+	 * right-hand control area. Drop it and mark the row so the stylesheet
+	 * can let the control take the freed width.
+	 */
+	private bareRow(setting: Setting): void {
+		setting.settingEl.addClass("vfs-settings-row");
+		setting.infoEl.remove();
+	}
+
 	private tangles(): SettingDefinitionPage<SettingsKey> {
 		const isMode = (...modes: FullStatisticsPluginSettings['tanglesMode'][]) =>
 			() => modes.includes(this.plugin.settings.tanglesMode);
@@ -576,6 +587,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				name: "",
 				searchable: false,
 				render: (setting: Setting) => {
+					this.bareRow(setting);
 					setting.addText((text) => {
 						text.setValue(value)
 							.setPlaceholder(opts.placeholder)
@@ -676,6 +688,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	}
 
 	private renderGroupRow(setting: Setting, group: FolderGroup, gi: number): void {
+		this.bareRow(setting);
 		const row = setting.controlEl;
 		row.addClass("vfs-settings-fg-row");
 
