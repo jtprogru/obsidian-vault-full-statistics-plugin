@@ -5,7 +5,7 @@ export class Events {
 	trigger() {}
   }
   export type EventRef = any;
-  
+
   export class Vault {}
   export class TFile { path = ''; stat = { mtime: 0, size: 0 }; extension = 'md'; }
   export class TFolder {}
@@ -19,17 +19,45 @@ export class Events {
 	registerInterval() {}
   }
   export class App {}
-  export class PluginSettingTab {
+
+  /**
+   * Enough of the 1.13 declarative settings surface to exercise the
+   * definitions without a DOM. The tab under test calls update() after a
+   * structural list change and refreshDomState() after a control change,
+   * so both have to exist as no-ops.
+   */
+  export class SettingTab {
 	app: any;
+	containerEl: any = null;
+	settingItems: any[] = [];
+	getSettingDefinitions(): any[] { return []; }
+	update() {}
+	refreshDomState() {}
+	getControlValue(_key: string): unknown { return undefined; }
+	setControlValue(_key: string, _value: unknown): void {}
+	display() {}
+	hide() {}
+  }
+  export class PluginSettingTab extends SettingTab {
 	plugin: any;
-	constructor(app: any, plugin: any) { this.app = app; this.plugin = plugin; }
+	constructor(app: any, plugin: any) { super(); this.app = app; this.plugin = plugin; }
   }
   export class Setting {
+	settingEl: any = { addClass() {} };
+	infoEl: any = { remove() {} };
+	controlEl: any = null;
 	constructor(_containerEl: any) {}
 	setName(_n: string) { return this; }
 	setDesc(_d: string) { return this; }
 	addToggle(_cb: any) { return this; }
+	addText(_cb: any) { return this; }
 	addTextArea(_cb: any) { return this; }
+	addExtraButton(_cb: any) { return this; }
+  }
+  export class ExtraButtonComponent {
+	setIcon(_i: string) { return this; }
+	setTooltip(_t: string) { return this; }
+	onClick(_cb: any) { return this; }
   }
   export class Modal {
 	app: any;

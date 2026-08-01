@@ -8,7 +8,7 @@ import type {
 	SettingDefinitionPage,
 } from "obsidian";
 
-import StatisticsPlugin from "./main";
+import type StatisticsPlugin from "./main";
 import { FolderPickerModal, NoteFuzzyPickerModal } from "./pickers";
 
 export interface FolderGroup {
