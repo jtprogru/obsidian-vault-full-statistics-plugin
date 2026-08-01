@@ -18,6 +18,7 @@ Settings are rebuilt on Obsidian 1.13's declarative settings API. The plugin's s
 - The settings tab migrated from the deprecated `PluginSettingTab.display()` to `getSettingDefinitions()`. Obsidian 1.13.0 deprecated `display()`; it still renders as a fallback, but its rows never reach the settings search index.
 - `DEFAULT_SETTINGS` moved from `main.ts` to `settings.ts` so the definitions can reference it, and `settings.ts` now imports `main.ts` as a type-only import, removing the runtime module cycle between them.
 - `styles.css` dropped the overrides of Obsidian's internal `.setting-item` structure that the hand-rolled list editors needed. Core renders list rows now, so those rules were both dead and fragile against the 1.13 settings redesign.
+- `tsconfig.json` no longer depends on `ignoreDeprecations`. `baseUrl` was unused — every import in `src/` is either relative or the bare `obsidian` package — so it is simply gone, and `moduleResolution` moves from the removed `node10` to `bundler`, which is what actually describes the esbuild pipeline. The previous config only compiled because `ignoreDeprecations: "6.0"` suppressed two options TypeScript had already removed; it fails outright on TypeScript 7, whereas the new config typechecks clean on both 6.0.3 and 7.0.2.
 
 ### Fixed
 - `setControlValue` is overridden rather than inherited. The inherited implementation persists through the plugin's `saveData`, which would have written a bare settings object and dropped the 30-day history snapshots — this plugin stores `{settings, history}` as one payload.

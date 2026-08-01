@@ -1,14 +1,12 @@
 {
 	"compilerOptions": {
 		"rootDir": "./src",
-		"baseUrl": ".",
-		"ignoreDeprecations": "6.0",
 		"inlineSourceMap": true,
 		"inlineSources": true,
 		"module": "ESNext",
 		"target": "ES6",
 		"allowJs": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"importHelpers": true,
 		"isolatedModules": true,
 		"esModuleInterop": true,
