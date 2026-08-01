@@ -1,4 +1,11 @@
-import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
+import { App, PluginSettingTab } from "obsidian";
+import type {
+	ExtraButtonComponent,
+	Setting,
+	SettingDefinition,
+	SettingDefinitionItem,
+	SettingDefinitionList,
+} from "obsidian";
 
 import StatisticsPlugin from "./main";
 import { FolderPickerModal, NoteFuzzyPickerModal } from "./pickers";
@@ -52,6 +59,76 @@ export interface FullStatisticsPluginSettings {
 	tanglesExclude: string[],
 }
 
+/**
+ * Every settings key, used to bind declarative controls. Typing the
+ * definitions with this makes a typo in a `key` a compile error rather
+ * than a silently dead control.
+ */
+export type SettingsKey = keyof FullStatisticsPluginSettings;
+
+/**
+ * Defaults live next to the interface so the declarative definitions can
+ * reference them for `defaultValue` without importing from main.ts (which
+ * imports this module back).
+ */
+export const DEFAULT_SETTINGS: FullStatisticsPluginSettings = {
+	displayIndividualItems: false,
+	showNotes: true,
+	showWords: true,
+	showLinks: true,
+	showTags: true,
+	showQuality: true,
+	showOwn: true,
+	showSource: true,
+	showOwnPct: true,
+	showSourcePct: true,
+	showConcepts: false,
+	showOrphans: true,
+	showTracePct: true,
+	showSourcesTrace: false,
+	showDanglingList: true,
+	excludedFolders: [],
+	ownTags: ["thought", "synthesis", "fleeting"],
+	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
+	conceptTags: ["concept"],
+	folderGroups: [],
+	showFolderBreakdown: false,
+	historyExportFolder: '',
+	canonicalTags: [],
+	rareTagThreshold: 3,
+	showTaxonomyDrift: false,
+	showHistory: false,
+	showInbox: false,
+	inboxFolders: [],
+	inboxReviewTags: ["inbox/review"],
+	metricsShowLinks: true,
+	metricsShowTags: true,
+	metricsShowConcepts: true,
+	metricsShowOrphans: true,
+	metricsShowAvgWords: true,
+	tanglesMode: 'and',
+	tanglesMinIn: 5,
+	tanglesMinOut: 5,
+	tanglesMinTotal: 10,
+	tanglesTopN: 25,
+	tanglesReportFolder: '',
+	tanglesExclude: [],
+};
+
+/**
+ * Settings whose value feeds the metrics collector. Changing one of these
+ * has to push the new value into the running collector and rescan, not
+ * just persist.
+ */
+const COLLECTOR_KEYS: ReadonlySet<string> = new Set<SettingsKey>([
+	"excludedFolders",
+	"ownTags",
+	"sourceTags",
+	"conceptTags",
+	"inboxFolders",
+	"inboxReviewTags",
+]);
+
 export function parseFolderGroups(text: string): FolderGroup[] {
 	const groups: FolderGroup[] = [];
 	for (const rawLine of text.split("\n")) {
@@ -74,6 +151,22 @@ export function serializeFolderGroups(groups: FolderGroup[]): string {
 	return groups.map(g => `${g.name} = ${g.paths.join(", ")}`).join("\n");
 }
 
+/** Options for {@link FullStatisticsPluginSettingTab.stringList}. */
+interface StringListOptions {
+	name: string;
+	desc: string;
+	placeholder: string;
+	addLabel: string;
+	get: () => string[];
+	set: (items: string[]) => void;
+	/** Whether the value feeds the collector and needs a rescan on change. */
+	affectsCollector?: boolean;
+	/** Opens a picker instead of appending a blank row. */
+	pick?: 'folder' | 'note';
+	/** Extra "add" affordance in the list header, e.g. a second picker. */
+	extraAdd?: { icon: string; tooltip: string; pick: 'folder' | 'note' };
+}
+
 export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	plugin: StatisticsPlugin;
 
@@ -82,646 +175,447 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	display(): void {
-		const { containerEl } = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName("Show individual items")
-			.setDesc("Whether to show multiple items at once or cycle them with a click")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.displayIndividualItems)
-					.onChange(async (value) => {
-						this.plugin.settings.displayIndividualItems = value;
-						this.display();
-						await this.plugin.saveSettings();
-					});
-			});
-
-		if (this.plugin.settings.displayIndividualItems) {
-			new Setting(containerEl)
-				.setName("Show notes")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showNotes)
-						.onChange(async (value) => {
-							this.plugin.settings.showNotes = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show words")
-				.setDesc("Total word count across the vault.")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showWords)
-						.onChange(async (value) => {
-							this.plugin.settings.showWords = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show links")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showLinks)
-						.onChange(async (value) => {
-							this.plugin.settings.showLinks = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show tags")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showTags)
-						.onChange(async (value) => {
-							this.plugin.settings.showTags = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show quality")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showQuality)
-						.onChange(async (value) => {
-							this.plugin.settings.showQuality = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show own notes")
-				.setDesc("Notes tagged as your own thinking (own taxonomy below).")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showOwn)
-						.onChange(async (value) => {
-							this.plugin.settings.showOwn = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show source notes")
-				.setDesc("Notes about external material (source taxonomy below).")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showSource)
-						.onChange(async (value) => {
-							this.plugin.settings.showSource = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show own %")
-				.setDesc("Share of own notes within own+source classified set.")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showOwnPct)
-						.onChange(async (value) => {
-							this.plugin.settings.showOwnPct = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show source %")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showSourcePct)
-						.onChange(async (value) => {
-							this.plugin.settings.showSourcePct = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show concept notes")
-				.setDesc("Concepts are a grey zone — off by default.")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showConcepts)
-						.onChange(async (value) => {
-							this.plugin.settings.showConcepts = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show orphans")
-				.setDesc("Notes with no incoming links — disconnected knowledge.")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showOrphans)
-						.onChange(async (value) => {
-							this.plugin.settings.showOrphans = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			new Setting(containerEl)
-				.setName("Show trace %")
-				.setDesc("Share of source notes that at least one own note links to.")
-				.addToggle((value) => {
-					value
-						.setValue(this.plugin.settings.showTracePct)
-						.onChange(async (value) => {
-							this.plugin.settings.showTracePct = value;
-							await this.plugin.saveSettings();
-						});
-				});
-		}
-
-		new Setting(containerEl).setName("Metrics section").setHeading();
-
-		const metricsToggles: Array<[string, keyof FullStatisticsPluginSettings]> = [
-			["Links", "metricsShowLinks"],
-			["Tags", "metricsShowTags"],
-			["Concepts", "metricsShowConcepts"],
-			["Orphans", "metricsShowOrphans"],
-			["Avg words", "metricsShowAvgWords"],
-		];
-		for (const [name, key] of metricsToggles) {
-			new Setting(containerEl).setName(name).addToggle((t) => {
-				t.setValue(this.plugin.settings[key] as boolean)
-					.onChange(async (v) => {
-						(this.plugin.settings[key] as boolean) = v;
-						await this.plugin.saveSettings();
-					});
-			});
-		}
-
-		this.addEditableStringList(
-			containerEl,
-			"Excluded folders",
-			"Folders to skip from statistics.",
-			"e.g. Templates",
-			() => this.plugin.settings.excludedFolders,
-			(items) => { this.plugin.settings.excludedFolders = items; },
-			() => this.plugin.restartCollector(),
-		);
-
-		this.addEditableStringList(
-			containerEl,
-			"Own tags",
-			"Tags marking your own thinking. Leading # is optional.",
-			"e.g. thought",
-			() => this.plugin.settings.ownTags,
-			(items) => { this.plugin.settings.ownTags = items; },
-			() => this.plugin.restartCollector(),
-		);
-
-		this.addEditableStringList(
-			containerEl,
-			"Source tags",
-			"Tags marking notes about external material.",
-			"e.g. book",
-			() => this.plugin.settings.sourceTags,
-			(items) => { this.plugin.settings.sourceTags = items; },
-			() => this.plugin.restartCollector(),
-		);
-
-		this.addEditableStringList(
-			containerEl,
-			"Concept tags",
-			"Tags marking concept notes (the grey zone).",
-			"e.g. concept",
-			() => this.plugin.settings.conceptTags,
-			(items) => { this.plugin.settings.conceptTags = items; },
-			() => this.plugin.restartCollector(),
-		);
-
-		new Setting(containerEl)
-			.setName("Show folder breakdown")
-			.setDesc("Per-folder section in the statistics view (PARA-style).")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showFolderBreakdown)
-					.onChange(async (v) => {
-						this.plugin.settings.showFolderBreakdown = v;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		this.addFolderGroupsEditor(containerEl);
-
-		new Setting(containerEl)
-			.setName("Show sources-with-trace")
-			.setDesc("Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showSourcesTrace)
-					.onChange(async (v) => {
-						this.plugin.settings.showSourcesTrace = v;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("Show dangling notes list")
-			.setDesc("Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showDanglingList)
-					.onChange(async (v) => {
-						this.plugin.settings.showDanglingList = v;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("Show taxonomy drift")
-			.setDesc("Section in the statistics view that lists rare tags and tags outside your canonical set.")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showTaxonomyDrift)
-					.onChange(async (v) => {
-						this.plugin.settings.showTaxonomyDrift = v;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("Rare tag threshold")
-			.setDesc("Tags used fewer than this many times are flagged as rare (likely typos or dead).")
-			.addText((text) => {
-				text.setPlaceholder("3")
-					.setValue(String(this.plugin.settings.rareTagThreshold))
-					.onChange(async (v) => {
-						const n = parseInt(v.trim(), 10);
-						this.plugin.settings.rareTagThreshold = Number.isFinite(n) && n > 0 ? n : 3;
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.type = "number";
-				text.inputEl.min = "1";
-				text.inputEl.classList.add("vfs-input-narrow");
-			});
-
-		this.addEditableStringList(
-			containerEl,
-			"Canonical tags",
-			"Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
-			"e.g. thought",
-			() => this.plugin.settings.canonicalTags,
-			(items) => { this.plugin.settings.canonicalTags = items; },
-		);
-
-		new Setting(containerEl)
-			.setName("Show inbox health")
-			.setDesc("Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showInbox)
-					.onChange(async (v) => {
-						this.plugin.settings.showInbox = v;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		this.addEditableStringList(
-			containerEl,
-			"Inbox folders",
-			"Folders treated as inbox (techdebt of unprocessed input).",
-			"e.g. 00. Входящие",
-			() => this.plugin.settings.inboxFolders,
-			(items) => { this.plugin.settings.inboxFolders = items; },
-			() => this.plugin.restartCollector(),
-		);
-
-		this.addEditableStringList(
-			containerEl,
-			"Inbox review tags",
-			"Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
-			"e.g. inbox/review",
-			() => this.plugin.settings.inboxReviewTags,
-			(items) => { this.plugin.settings.inboxReviewTags = items; },
-			() => this.plugin.restartCollector(),
-		);
-
-		new Setting(containerEl)
-			.setName("Show history")
-			.setDesc("30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.")
-			.addToggle((value) => {
-				value
-					.setValue(this.plugin.settings.showHistory)
-					.onChange(async (v) => {
-						this.plugin.settings.showHistory = v;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		new Setting(containerEl)
-			.setName("History export folder")
-			.setDesc("Last folder used for CSV export. The export command opens a folder picker each time and updates this value.")
-			.addText((text) => {
-				text.setPlaceholder("(vault root)")
-					.setValue(this.plugin.settings.historyExportFolder)
-					.onChange(async (v) => {
-						this.plugin.settings.historyExportFolder = v.trim().replace(/\/+$/, "");
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.classList.add("vfs-input-wide");
-			});
-
-		this.addTanglesSection(containerEl);
-	}
-
-	private addTanglesSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Tangles").setHeading();
-
-		new Setting(containerEl)
-			.setName("Selection mode")
-			.setDesc("AND: both thresholds must be met. OR: either threshold is enough. SUM: in + out must be ≥ total threshold.")
-			.addDropdown((dd) => {
-				dd.addOption("and", "AND (both ≥ thresholds)")
-					.addOption("or", "OR (either ≥ threshold)")
-					.addOption("sum", "SUM (in + out ≥ total)")
-					.setValue(this.plugin.settings.tanglesMode)
-					.onChange(async (v) => {
-						this.plugin.settings.tanglesMode = (v as 'and' | 'or' | 'sum');
-						this.display();
-						await this.plugin.saveSettings();
-					});
-			});
-
-		const mode = this.plugin.settings.tanglesMode;
-		if (mode === 'and' || mode === 'or') {
-			new Setting(containerEl)
-				.setName("Min incoming links")
-				.setDesc("Minimum number of distinct notes that link to a tangle.")
-				.addText((text) => {
-					text.setPlaceholder("5")
-						.setValue(String(this.plugin.settings.tanglesMinIn))
-						.onChange(async (v) => {
-							const n = parseInt(v.trim(), 10);
-							this.plugin.settings.tanglesMinIn = Number.isFinite(n) && n >= 0 ? n : 5;
-							await this.plugin.saveSettings();
-						});
-					text.inputEl.type = "number";
-					text.inputEl.min = "0";
-					text.inputEl.classList.add("vfs-input-narrow");
-				});
-
-			new Setting(containerEl)
-				.setName("Min outgoing links")
-				.setDesc("Minimum number of distinct notes a tangle links to.")
-				.addText((text) => {
-					text.setPlaceholder("5")
-						.setValue(String(this.plugin.settings.tanglesMinOut))
-						.onChange(async (v) => {
-							const n = parseInt(v.trim(), 10);
-							this.plugin.settings.tanglesMinOut = Number.isFinite(n) && n >= 0 ? n : 5;
-							await this.plugin.saveSettings();
-						});
-					text.inputEl.type = "number";
-					text.inputEl.min = "0";
-					text.inputEl.classList.add("vfs-input-narrow");
-				});
-		}
-
-		if (mode === 'sum') {
-			new Setting(containerEl)
-				.setName("Min in + out")
-				.setDesc("Minimum value of (incoming + outgoing) for a note to count as a tangle.")
-				.addText((text) => {
-					text.setPlaceholder("10")
-						.setValue(String(this.plugin.settings.tanglesMinTotal))
-						.onChange(async (v) => {
-							const n = parseInt(v.trim(), 10);
-							this.plugin.settings.tanglesMinTotal = Number.isFinite(n) && n >= 0 ? n : 10;
-							await this.plugin.saveSettings();
-						});
-					text.inputEl.type = "number";
-					text.inputEl.min = "0";
-					text.inputEl.classList.add("vfs-input-narrow");
-				});
-		}
-
-		new Setting(containerEl)
-			.setName("Top N")
-			.setDesc("How many tangles to show in the side view and report. 0 means no limit.")
-			.addText((text) => {
-				text.setPlaceholder("25")
-					.setValue(String(this.plugin.settings.tanglesTopN))
-					.onChange(async (v) => {
-						const n = parseInt(v.trim(), 10);
-						this.plugin.settings.tanglesTopN = Number.isFinite(n) && n >= 0 ? n : 25;
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.type = "number";
-				text.inputEl.min = "0";
-				text.inputEl.classList.add("vfs-input-narrow");
-			});
-
-		new Setting(containerEl)
-			.setName("Tangles report folder")
-			.setDesc("Folder in the vault where the tangles report note will be created. Empty = vault root.")
-			.addText((text) => {
-				text.setPlaceholder("(vault root)")
-					.setValue(this.plugin.settings.tanglesReportFolder)
-					.onChange(async (v) => {
-						this.plugin.settings.tanglesReportFolder = v.trim().replace(/\/+$/, "");
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.classList.add("vfs-input-wide");
-			});
-
-		this.addTanglesExcludeList(containerEl);
+	/**
+	 * The inherited implementation reads `plugin.settings` directly, which
+	 * happens to be right; overriding keeps the typing honest and pairs
+	 * with the {@link setControlValue} override below.
+	 */
+	getControlValue(key: string): unknown {
+		return this.plugin.settings[key as SettingsKey];
 	}
 
 	/**
-	 * Editable list for tangle exclusions. Each existing entry stays
-	 * inline-editable (typos, manual folder prefixes) but new entries
-	 * come from fuzzy pickers — note picker for files, folder picker for
-	 * directory prefixes — so the user does not have to remember where a
-	 * note lives in the vault tree before excluding it.
+	 * The inherited implementation persists via the plugin's `saveData`,
+	 * which would write a bare settings object and drop the history array —
+	 * this plugin stores `{settings, history}` together. Route through
+	 * `saveSettings()` instead, and re-evaluate `visible` predicates so
+	 * dependent rows appear or disappear without a full re-render.
 	 */
-	private addTanglesExcludeList(containerEl: HTMLElement) {
-		new Setting(containerEl)
-			.setName("Tangles exclude")
-			.setDesc("Notes or folders to skip in tangle detection. Pick a note to exclude one file, or pick a folder to exclude everything under it. Folder match requires a trailing slash boundary — \"Daily\" does NOT match \"DailyArchive\".")
-			.setHeading();
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+		await this.plugin.saveSettings();
+		if (COLLECTOR_KEYS.has(key)) this.plugin.restartCollector();
+		this.refreshDomState();
+	}
 
-		const listEl = containerEl.createDiv({ cls: "vfs-settings-list" });
+	getSettingDefinitions(): SettingDefinitionItem<SettingsKey>[] {
+		return [
+			{
+				name: "Show individual items",
+				desc: "Whether to show multiple items at once or cycle them with a click",
+				control: { type: 'toggle', key: 'displayIndividualItems', defaultValue: DEFAULT_SETTINGS.displayIndividualItems },
+			},
+			{
+				type: 'group',
+				heading: "Status bar items",
+				// Cycling mode shows one statistic at a time, so the
+				// per-item toggles only mean something when every item is
+				// rendered at once.
+				visible: () => this.plugin.settings.displayIndividualItems,
+				items: [
+					this.toggle("Show notes", 'showNotes'),
+					this.toggle("Show words", 'showWords', "Total word count across the vault."),
+					this.toggle("Show links", 'showLinks'),
+					this.toggle("Show tags", 'showTags'),
+					this.toggle("Show quality", 'showQuality'),
+					this.toggle("Show own notes", 'showOwn', "Notes tagged as your own thinking (own taxonomy below)."),
+					this.toggle("Show source notes", 'showSource', "Notes about external material (source taxonomy below)."),
+					this.toggle("Show own %", 'showOwnPct', "Share of own notes within own+source classified set."),
+					this.toggle("Show source %", 'showSourcePct'),
+					this.toggle("Show concept notes", 'showConcepts', "Concepts are a grey zone — off by default."),
+					this.toggle("Show orphans", 'showOrphans', "Notes with no incoming links — disconnected knowledge."),
+					this.toggle("Show trace %", 'showTracePct', "Share of source notes that at least one own note links to."),
+				],
+			},
+			{
+				type: 'group',
+				heading: "Metrics section",
+				items: [
+					this.toggle("Links", 'metricsShowLinks'),
+					this.toggle("Tags", 'metricsShowTags'),
+					this.toggle("Concepts", 'metricsShowConcepts'),
+					this.toggle("Orphans", 'metricsShowOrphans'),
+					this.toggle("Avg words", 'metricsShowAvgWords'),
+				],
+			},
 
-		const addEntry = async (value: string) => {
+			...this.stringList({
+				name: "Excluded folders",
+				desc: "Folders to skip from statistics.",
+				placeholder: "e.g. Templates",
+				addLabel: "Add folder",
+				pick: 'folder',
+				get: () => this.plugin.settings.excludedFolders,
+				set: (items) => { this.plugin.settings.excludedFolders = items; },
+				affectsCollector: true,
+			}),
+			...this.stringList({
+				name: "Own tags",
+				desc: "Tags marking your own thinking. Leading # is optional.",
+				placeholder: "e.g. thought",
+				addLabel: "Add tag",
+				get: () => this.plugin.settings.ownTags,
+				set: (items) => { this.plugin.settings.ownTags = items; },
+				affectsCollector: true,
+			}),
+			...this.stringList({
+				name: "Source tags",
+				desc: "Tags marking notes about external material.",
+				placeholder: "e.g. book",
+				addLabel: "Add tag",
+				get: () => this.plugin.settings.sourceTags,
+				set: (items) => { this.plugin.settings.sourceTags = items; },
+				affectsCollector: true,
+			}),
+			...this.stringList({
+				name: "Concept tags",
+				desc: "Tags marking concept notes (the grey zone).",
+				placeholder: "e.g. concept",
+				addLabel: "Add tag",
+				get: () => this.plugin.settings.conceptTags,
+				set: (items) => { this.plugin.settings.conceptTags = items; },
+				affectsCollector: true,
+			}),
+
+			this.toggle("Show folder breakdown", 'showFolderBreakdown', "Per-folder section in the statistics view (PARA-style)."),
+			...this.folderGroups(),
+
+			this.toggle(
+				"Show sources-with-trace",
+				'showSourcesTrace',
+				"Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).",
+			),
+			this.toggle(
+				"Show dangling notes list",
+				'showDanglingList',
+				"Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.",
+			),
+
+			this.toggle(
+				"Show taxonomy drift",
+				'showTaxonomyDrift',
+				"Section in the statistics view that lists rare tags and tags outside your canonical set.",
+			),
+			{
+				name: "Rare tag threshold",
+				desc: "Tags used fewer than this many times are flagged as rare (likely typos or dead).",
+				control: {
+					type: 'number',
+					key: 'rareTagThreshold',
+					defaultValue: DEFAULT_SETTINGS.rareTagThreshold,
+					placeholder: String(DEFAULT_SETTINGS.rareTagThreshold),
+					min: 1,
+					step: 1,
+					validate: (value) => Number.isInteger(value) && value >= 1
+						? undefined
+						: "Must be a whole number of 1 or more.",
+				},
+			},
+			...this.stringList({
+				name: "Canonical tags",
+				desc: "Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
+				placeholder: "e.g. thought",
+				addLabel: "Add tag",
+				get: () => this.plugin.settings.canonicalTags,
+				set: (items) => { this.plugin.settings.canonicalTags = items; },
+			}),
+
+			this.toggle(
+				"Show inbox health",
+				'showInbox',
+				"Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
+			),
+			...this.stringList({
+				name: "Inbox folders",
+				desc: "Folders treated as inbox (techdebt of unprocessed input).",
+				placeholder: "e.g. 00. Входящие",
+				addLabel: "Add folder",
+				pick: 'folder',
+				get: () => this.plugin.settings.inboxFolders,
+				set: (items) => { this.plugin.settings.inboxFolders = items; },
+				affectsCollector: true,
+			}),
+			...this.stringList({
+				name: "Inbox review tags",
+				desc: "Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
+				placeholder: "e.g. inbox/review",
+				addLabel: "Add tag",
+				get: () => this.plugin.settings.inboxReviewTags,
+				set: (items) => { this.plugin.settings.inboxReviewTags = items; },
+				affectsCollector: true,
+			}),
+
+			this.toggle(
+				"Show history",
+				'showHistory',
+				"30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.",
+			),
+			{
+				name: "History export folder",
+				desc: "Last folder used for CSV export. The export command opens a folder picker each time and updates this value.",
+				control: {
+					type: 'folder',
+					key: 'historyExportFolder',
+					defaultValue: DEFAULT_SETTINGS.historyExportFolder,
+					placeholder: "(vault root)",
+					includeRoot: true,
+				},
+			},
+
+			...this.tangles(),
+		];
+	}
+
+	/** Boolean row bound straight to a settings key. */
+	private toggle(name: string, key: SettingsKey, desc?: string): SettingDefinition<SettingsKey> {
+		return {
+			name,
+			desc,
+			control: { type: 'toggle', key, defaultValue: DEFAULT_SETTINGS[key] as boolean },
+		};
+	}
+
+	private tangles(): SettingDefinitionItem<SettingsKey>[] {
+		const isMode = (...modes: FullStatisticsPluginSettings['tanglesMode'][]) =>
+			() => modes.includes(this.plugin.settings.tanglesMode);
+
+		return [
+			{
+				type: 'group',
+				heading: "Tangles",
+				items: [
+					{
+						name: "Selection mode",
+						desc: "AND: both thresholds must be met. OR: either threshold is enough. SUM: in + out must be ≥ total threshold.",
+						control: {
+							type: 'dropdown',
+							key: 'tanglesMode',
+							defaultValue: DEFAULT_SETTINGS.tanglesMode,
+							options: {
+								and: "AND (both ≥ thresholds)",
+								or: "OR (either ≥ threshold)",
+								sum: "SUM (in + out ≥ total)",
+							},
+						},
+					},
+					{
+						name: "Min incoming links",
+						desc: "Minimum number of distinct notes that link to a tangle.",
+						visible: isMode('and', 'or'),
+						control: this.countControl('tanglesMinIn'),
+					},
+					{
+						name: "Min outgoing links",
+						desc: "Minimum number of distinct notes a tangle links to.",
+						visible: isMode('and', 'or'),
+						control: this.countControl('tanglesMinOut'),
+					},
+					{
+						name: "Min in + out",
+						desc: "Minimum value of (incoming + outgoing) for a note to count as a tangle.",
+						visible: isMode('sum'),
+						control: this.countControl('tanglesMinTotal'),
+					},
+					{
+						name: "Top N",
+						desc: "How many tangles to show in the side view and report. 0 means no limit.",
+						control: this.countControl('tanglesTopN'),
+					},
+					{
+						name: "Tangles report folder",
+						desc: "Folder in the vault where the tangles report note will be created. Empty = vault root.",
+						control: {
+							type: 'folder',
+							key: 'tanglesReportFolder',
+							defaultValue: DEFAULT_SETTINGS.tanglesReportFolder,
+							placeholder: "(vault root)",
+							includeRoot: true,
+						},
+					},
+				],
+			},
+			...this.stringList({
+				name: "Tangles exclude",
+				desc: "Notes or folders to skip in tangle detection. Pick a note to exclude one file, or pick a folder to exclude everything under it. Folder match requires a trailing slash boundary — \"Daily\" does NOT match \"DailyArchive\".",
+				placeholder: "e.g. Personal/Me.md",
+				addLabel: "Add note",
+				pick: 'note',
+				extraAdd: { icon: 'folder-plus', tooltip: "Add folder", pick: 'folder' },
+				get: () => this.plugin.settings.tanglesExclude,
+				set: (items) => { this.plugin.settings.tanglesExclude = items; },
+			}),
+		];
+	}
+
+	/** Non-negative integer threshold bound to a settings key. */
+	private countControl(key: SettingsKey) {
+		const fallback = DEFAULT_SETTINGS[key] as number;
+		return {
+			type: 'number' as const,
+			key,
+			defaultValue: fallback,
+			placeholder: String(fallback),
+			min: 0,
+			step: 1,
+			validate: (value: number) => Number.isInteger(value) && value >= 0
+				? undefined
+				: "Must be a whole number of 0 or more.",
+		};
+	}
+
+	/**
+	 * A labelled row carrying the explanation, followed by a core-rendered
+	 * list of the entries. The list supplies delete, drag-to-reorder and the
+	 * add affordance; each row only has to render its text input.
+	 *
+	 * Entries are array elements, so they cannot bind to a `key` the way
+	 * scalar settings do — hence the `render` escape hatch per row.
+	 */
+	private stringList(opts: StringListOptions): SettingDefinitionItem<SettingsKey>[] {
+		const commit = async (items: string[], structural: boolean) => {
+			opts.set(items);
+			await this.plugin.saveSettings();
+			if (opts.affectsCollector) this.plugin.restartCollector();
+			// Adding or removing entries changes the shape of the
+			// definitions themselves, so a DOM-state refresh is not enough.
+			if (structural) this.update();
+		};
+
+		const append = (value: string) => {
 			const trimmed = value.trim().replace(/\/+$/, "");
 			if (!trimmed) return;
-			if (this.plugin.settings.tanglesExclude.includes(trimmed)) return;
-			this.plugin.settings.tanglesExclude = [...this.plugin.settings.tanglesExclude, trimmed];
+			const current = opts.get();
+			if (current.includes(trimmed)) return;
+			void commit([...current, trimmed], true);
+		};
+
+		const openPicker = (kind: 'folder' | 'note') => {
+			if (kind === 'note') {
+				new NoteFuzzyPickerModal(this.app, (file) => append(file.path), `Pick a note — ${opts.name}`).open();
+				return;
+			}
+			new FolderPickerModal(this.app, (folder) => {
+				// The vault root as an exclusion would swallow everything;
+				// treat it as a mis-click rather than silently applying it.
+				const path = folder.path === '' || folder.path === '/' ? '' : folder.path;
+				if (path) append(path);
+			}, `Pick a folder — ${opts.name}`).open();
+		};
+
+		const list: SettingDefinitionList<SettingsKey> = {
+			type: 'list',
+			emptyState: `Nothing yet — use “${opts.addLabel}”.`,
+			items: opts.get().map((value, idx) => ({
+				name: "",
+				searchable: false,
+				render: (setting: Setting) => {
+					setting.addText((text) => {
+						text.setValue(value)
+							.setPlaceholder(opts.placeholder)
+							.onChange((next) => {
+								const arr = [...opts.get()];
+								arr[idx] = next.trim();
+								void commit(arr, false);
+							});
+						text.inputEl.classList.add("vfs-input-wide");
+					});
+				},
+			})),
+			onDelete: (index: number) => {
+				const arr = [...opts.get()];
+				arr.splice(index, 1);
+				void commit(arr, true);
+			},
+			onReorder: (oldIndex: number, newIndex: number) => {
+				const arr = [...opts.get()];
+				const [moved] = arr.splice(oldIndex, 1);
+				arr.splice(newIndex, 0, moved);
+				void commit(arr, true);
+			},
+			addItem: {
+				name: opts.addLabel,
+				action: () => {
+					if (opts.pick) {
+						openPicker(opts.pick);
+						return;
+					}
+					// Free-text lists get a blank row to type into.
+					void commit([...opts.get(), ""], true);
+				},
+			},
+		};
+
+		if (opts.extraAdd) {
+			const extra = opts.extraAdd;
+			list.extraButtons = [(btn: ExtraButtonComponent) => {
+				btn.setIcon(extra.icon)
+					.setTooltip(extra.tooltip)
+					.onClick(() => openPicker(extra.pick));
+			}];
+		}
+
+		return [{ name: opts.name, desc: opts.desc }, list];
+	}
+
+	/**
+	 * One row per group: [name] = [comma-separated paths]. Multiple paths
+	 * inside a group are entered as a comma list in the second input — the
+	 * same shape parseFolderGroups already supports. The internal model
+	 * stays {name, paths: string[]}; the UI only flattens the paths array
+	 * on display and splits it on edit.
+	 */
+	private folderGroups(): SettingDefinitionItem<SettingsKey>[] {
+		const groups = () => this.plugin.settings.folderGroups;
+
+		const commit = async (next: FolderGroup[], structural: boolean) => {
+			this.plugin.settings.folderGroups = next;
 			await this.plugin.saveSettings();
-			render();
+			if (structural) this.update();
 		};
 
-		const render = () => {
-			listEl.empty();
-			const items = this.plugin.settings.tanglesExclude;
-
-			items.forEach((value, idx) => {
-				const row = new Setting(listEl);
-				row.addText((text) => {
-					text.setValue(value).setPlaceholder("e.g. Personal/Me.md")
-						.onChange(async (newVal) => {
-							const arr = [...this.plugin.settings.tanglesExclude];
-							arr[idx] = newVal.trim();
-							this.plugin.settings.tanglesExclude = arr;
-							await this.plugin.saveSettings();
-						});
-					text.inputEl.classList.add("vfs-input-wide");
-				});
-				row.addExtraButton((btn) => {
-					btn.setIcon("trash").setTooltip("Remove").onClick(async () => {
-						const arr = [...this.plugin.settings.tanglesExclude];
-						arr.splice(idx, 1);
-						this.plugin.settings.tanglesExclude = arr;
-						await this.plugin.saveSettings();
-						render();
-					});
-				});
-				const lead = row.controlEl.createSpan({ cls: "vfs-settings-list-lead" });
-				setIcon(lead, "hash");
-				row.controlEl.prepend(lead);
-			});
-
-			new Setting(listEl)
-				.addButton((btn) => {
-					btn.setButtonText("+ Add note...").setCta().onClick(() => {
-						new NoteFuzzyPickerModal(this.app, (file) => {
-							void addEntry(file.path);
-						}, 'Pick a note to exclude from tangles').open();
-					});
-				})
-				.addButton((btn) => {
-					btn.setButtonText("+ Add folder...").onClick(() => {
-						new FolderPickerModal(this.app, (folder) => {
-							const path = folder.path === '' || folder.path === '/' ? '' : folder.path;
-							if (!path) {
-								// Excluding the vault root would hide every
-								// tangle — almost always a mis-click. Surface
-								// the no-op rather than silently consuming it.
-								new Setting(listEl); // re-render shows nothing changed
-								return;
-							}
-							void addEntry(path);
-						}, 'Pick a folder to exclude (everything below it is skipped)').open();
-					});
-				});
+		const list: SettingDefinitionList<SettingsKey> = {
+			type: 'list',
+			cls: 'vfs-settings-fg',
+			emptyState: "No groups yet — add one to get a per-group breakdown.",
+			items: groups().map((group, gi) => ({
+				name: "",
+				searchable: false,
+				render: (setting: Setting) => { this.renderGroupRow(setting, group, gi); },
+			})),
+			onDelete: (index: number) => {
+				const next = [...groups()];
+				next.splice(index, 1);
+				void commit(next, true);
+			},
+			onReorder: (oldIndex: number, newIndex: number) => {
+				const next = [...groups()];
+				const [moved] = next.splice(oldIndex, 1);
+				next.splice(newIndex, 0, moved);
+				void commit(next, true);
+			},
+			addItem: {
+				name: "Add group",
+				action: () => { void commit([...groups(), { name: "", paths: [] }], true); },
+			},
 		};
-		render();
+
+		return [
+			{
+				name: "Folder groups (PARA)",
+				desc: 'One row per group. Multiple paths in the same group are comma-separated, e.g. "Areas = 02. Сферы, 02b. Health".',
+			},
+			list,
+		];
 	}
 
-	/**
-	 * Renders an editable list of strings: one row per item with a text
-	 * input and a trash icon, plus a "+ Add" button at the bottom. Saves
-	 * on every change. Empty items are kept while editing so the user can
-	 * type a fresh entry; they are filtered on `set` only when committed.
-	 */
-	private addEditableStringList(
-		containerEl: HTMLElement,
-		name: string,
-		desc: string,
-		placeholder: string,
-		get: () => string[],
-		set: (items: string[]) => void,
-		onChange?: () => void,
-	) {
-		new Setting(containerEl).setName(name).setDesc(desc).setHeading();
-
-		const listEl = containerEl.createDiv({ cls: "vfs-settings-list" });
-
-		const render = () => {
-			listEl.empty();
-			const items = get();
-
-			items.forEach((value, idx) => {
-				const row = new Setting(listEl);
-				row.addText((text) => {
-					text.setValue(value).setPlaceholder(placeholder)
-						.onChange(async (newVal) => {
-							const arr = [...get()];
-							arr[idx] = newVal.trim();
-							set(arr);
-							await this.plugin.saveSettings();
-							if (onChange) onChange();
-						});
-					text.inputEl.classList.add("vfs-input-wide");
-				});
-				row.addExtraButton((btn) => {
-					btn.setIcon("trash").setTooltip("Remove").onClick(async () => {
-						const arr = [...get()];
-						arr.splice(idx, 1);
-						set(arr);
-						await this.plugin.saveSettings();
-						render();
-						if (onChange) onChange();
-					});
-				});
-				const lead = row.controlEl.createSpan({ cls: "vfs-settings-list-lead" });
-				setIcon(lead, "hash");
-				row.controlEl.prepend(lead);
-			});
-
-			new Setting(listEl).addButton((btn) => {
-				btn.setButtonText("+ Add").setCta().onClick(async () => {
-					set([...get(), ""]);
-					await this.plugin.saveSettings();
-					render();
-				});
-			});
-		};
-		render();
-	}
-
-	/**
-	 * One row per group: [name] = [comma-separated paths] [×]. Multiple
-	 * paths inside a group are entered as a comma list in the second
-	 * input — same shape parseFolderGroups already supports. Internal
-	 * model stays {name, paths: string[]}; the UI only flattens the
-	 * paths array on display and splits it on edit.
-	 */
-	private addFolderGroupsEditor(containerEl: HTMLElement) {
-		new Setting(containerEl)
-			.setName("Folder groups (PARA)")
-			.setDesc('One row per group. Multiple paths in the same group are comma-separated, e.g. "Areas = 02. Сферы, 02b. Health".')
-			.setHeading();
-
-		const wrap = containerEl.createDiv({ cls: "vfs-settings-fg" });
-
-		const render = () => {
-			wrap.empty();
-			const groups = this.plugin.settings.folderGroups;
-
-			groups.forEach((group, gi) => {
-				this.renderGroupRow(wrap, group, gi, render);
-			});
-
-			new Setting(wrap).addButton((btn) => {
-				btn.setButtonText("+ Add group").setCta().onClick(async () => {
-					this.plugin.settings.folderGroups.push({ name: "", paths: [] });
-					await this.plugin.saveSettings();
-					render();
-				});
-			});
-		};
-		render();
-	}
-
-	private renderGroupRow(wrap: HTMLElement, group: FolderGroup, gi: number, rerender: () => void) {
-		const row = wrap.createDiv({ cls: "vfs-settings-fg-row" });
+	private renderGroupRow(setting: Setting, group: FolderGroup, gi: number): void {
+		const row = setting.controlEl;
+		row.addClass("vfs-settings-fg-row");
 
 		const nameInput = row.createEl("input", {
 			cls: "vfs-settings-fg-name",
 			type: "text",
-			attr: { placeholder: "Projects" },
+			attr: { placeholder: "Projects", "aria-label": "Group name" },
 		});
 		nameInput.value = group.name;
 		nameInput.addEventListener("change", () => {
@@ -734,7 +628,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const pathsInput = row.createEl("input", {
 			cls: "vfs-settings-fg-path-input",
 			type: "text",
-			attr: { placeholder: "01. Проекты, 02. Архив" },
+			attr: { placeholder: "01. Проекты, 02. Архив", "aria-label": "Group paths" },
 		});
 		pathsInput.value = group.paths.join(", ");
 		pathsInput.addEventListener("change", () => {
@@ -743,16 +637,6 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				.map(p => p.trim().replace(/\/+$/, ""))
 				.filter(p => p.length > 0);
 			void this.plugin.saveSettings();
-		});
-
-		const del = row.createEl("button", {
-			cls: "clickable-icon vfs-settings-fg-icon",
-			attr: { "aria-label": "Remove group" },
-		});
-		setIcon(del, "x");
-		del.addEventListener("click", () => {
-			this.plugin.settings.folderGroups.splice(gi, 1);
-			void this.plugin.saveSettings().then(rerender);
 		});
 	}
 }

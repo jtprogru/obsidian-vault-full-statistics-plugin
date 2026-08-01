@@ -3,7 +3,7 @@ import { FolderPickerModal } from './pickers';
 import { DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
-import { FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
+import { DEFAULT_SETTINGS, FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
 import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
 import { TanglesView, TANGLES_VIEW_TYPE } from './tanglesView';
@@ -20,50 +20,6 @@ function isPersistedData(raw: unknown): raw is PersistedData {
 		&& 'settings' in raw
 		&& Array.isArray((raw as PersistedData).history);
 }
-
-const DEFAULT_SETTINGS: Partial<FullStatisticsPluginSettings> = {
-	displayIndividualItems: false,
-	showNotes: true,
-	showWords: true,
-	showLinks: true,
-	showTags: true,
-	showQuality: true,
-	showOwn: true,
-	showSource: true,
-	showOwnPct: true,
-	showSourcePct: true,
-	showConcepts: false,
-	showOrphans: true,
-	showTracePct: true,
-	showSourcesTrace: false,
-	showDanglingList: true,
-	excludedFolders: [],
-	ownTags: ["thought", "synthesis", "fleeting"],
-	sourceTags: ["book", "article", "video", "lecture", "literature", "literature-note"],
-	conceptTags: ["concept"],
-	folderGroups: [],
-	showFolderBreakdown: false,
-	historyExportFolder: '',
-	canonicalTags: [],
-	rareTagThreshold: 3,
-	showTaxonomyDrift: false,
-	showHistory: false,
-	showInbox: false,
-	inboxFolders: [],
-	inboxReviewTags: ["inbox/review"],
-	metricsShowLinks: true,
-	metricsShowTags: true,
-	metricsShowConcepts: true,
-	metricsShowOrphans: true,
-	metricsShowAvgWords: true,
-	tanglesMode: 'and',
-	tanglesMinIn: 5,
-	tanglesMinOut: 5,
-	tanglesMinTotal: 10,
-	tanglesTopN: 25,
-	tanglesReportFolder: '',
-	tanglesExclude: [],
-};
 
 const HISTORY_CSV_FILENAME = 'Vault Statistics — History.csv';
 
@@ -169,7 +125,7 @@ export default class FullStatisticsPlugin extends Plugin {
 			storedSettings = raw as Partial<FullStatisticsPluginSettings> | undefined;
 		}
 
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings) as FullStatisticsPluginSettings;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings);
 		this.historyStore = new HistoryStore(storedHistory);
 	}
 
