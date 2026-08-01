@@ -5,6 +5,7 @@ import type {
 	SettingDefinition,
 	SettingDefinitionItem,
 	SettingDefinitionList,
+	SettingDefinitionPage,
 } from "obsidian";
 
 import StatisticsPlugin from "./main";
@@ -151,6 +152,12 @@ export function serializeFolderGroups(groups: FolderGroup[]): string {
 	return groups.map(g => `${g.name} = ${g.paths.join(", ")}`).join("\n");
 }
 
+/** "3 groups" / "1 group" / "No groups" — for a page's inline display value. */
+export function count(n: number, noun: string): string {
+	if (n === 0) return `No ${noun}s`;
+	return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
 /** Options for {@link FullStatisticsPluginSettingTab.stringList}. */
 interface StringListOptions {
 	name: string;
@@ -277,92 +284,147 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				affectsCollector: true,
 			}),
 
-			this.toggle("Show folder breakdown", 'showFolderBreakdown', "Per-folder section in the statistics view (PARA-style)."),
-			...this.folderGroups(),
-
-			this.toggle(
-				"Show sources-with-trace",
-				'showSourcesTrace',
-				"Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).",
-			),
-			this.toggle(
-				"Show dangling notes list",
-				'showDanglingList',
-				"Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.",
-			),
-
-			this.toggle(
-				"Show taxonomy drift",
-				'showTaxonomyDrift',
-				"Section in the statistics view that lists rare tags and tags outside your canonical set.",
-			),
 			{
-				name: "Rare tag threshold",
-				desc: "Tags used fewer than this many times are flagged as rare (likely typos or dead).",
-				control: {
-					type: 'number',
-					key: 'rareTagThreshold',
-					defaultValue: DEFAULT_SETTINGS.rareTagThreshold,
-					placeholder: String(DEFAULT_SETTINGS.rareTagThreshold),
-					min: 1,
-					step: 1,
-					validate: (value) => Number.isInteger(value) && value >= 1
-						? undefined
-						: "Must be a whole number of 1 or more.",
-				},
-			},
-			...this.stringList({
-				name: "Canonical tags",
-				desc: "Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
-				placeholder: "e.g. thought",
-				addLabel: "Add tag",
-				get: () => this.plugin.settings.canonicalTags,
-				set: (items) => { this.plugin.settings.canonicalTags = items; },
-			}),
-
-			this.toggle(
-				"Show inbox health",
-				'showInbox',
-				"Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
-			),
-			...this.stringList({
-				name: "Inbox folders",
-				desc: "Folders treated as inbox (techdebt of unprocessed input).",
-				placeholder: "e.g. 00. Входящие",
-				addLabel: "Add folder",
-				pick: 'folder',
-				get: () => this.plugin.settings.inboxFolders,
-				set: (items) => { this.plugin.settings.inboxFolders = items; },
-				affectsCollector: true,
-			}),
-			...this.stringList({
-				name: "Inbox review tags",
-				desc: "Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
-				placeholder: "e.g. inbox/review",
-				addLabel: "Add tag",
-				get: () => this.plugin.settings.inboxReviewTags,
-				set: (items) => { this.plugin.settings.inboxReviewTags = items; },
-				affectsCollector: true,
-			}),
-
-			this.toggle(
-				"Show history",
-				'showHistory',
-				"30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.",
-			),
-			{
-				name: "History export folder",
-				desc: "Last folder used for CSV export. The export command opens a folder picker each time and updates this value.",
-				control: {
-					type: 'folder',
-					key: 'historyExportFolder',
-					defaultValue: DEFAULT_SETTINGS.historyExportFolder,
-					placeholder: "(vault root)",
-					includeRoot: true,
-				},
+				type: 'page',
+				name: "Folder breakdown",
+				desc: "Per-folder section in the statistics view (PARA-style).",
+				displayValue: () => this.plugin.settings.showFolderBreakdown
+					? count(this.plugin.settings.folderGroups.length, "group")
+					: "Off",
+				// The section renders nothing without groups, so an enabled
+				// toggle and an empty list is a silent no-op worth flagging.
+				status: () => this.plugin.settings.showFolderBreakdown
+					&& this.plugin.settings.folderGroups.length === 0 ? 'warning' : null,
+				items: [
+					this.toggle("Show folder breakdown", 'showFolderBreakdown', "Per-folder section in the statistics view (PARA-style)."),
+					...this.folderGroups(),
+				],
 			},
 
-			...this.tangles(),
+			{
+				type: 'group',
+				heading: "Sources with trace",
+				items: [
+					this.toggle(
+						"Show sources-with-trace",
+						'showSourcesTrace',
+						"Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).",
+					),
+					this.toggle(
+						"Show dangling notes list",
+						'showDanglingList',
+						"Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.",
+					),
+				],
+			},
+
+			{
+				type: 'page',
+				name: "Taxonomy drift",
+				desc: "Rare tags and tags outside your canonical set.",
+				displayValue: () => this.plugin.settings.showTaxonomyDrift
+					? count(this.plugin.settings.canonicalTags.length, "canonical tag")
+					: "Off",
+				// With no canonical set every tag reads as unknown, which
+				// makes the section noise rather than signal.
+				status: () => this.plugin.settings.showTaxonomyDrift
+					&& this.plugin.settings.canonicalTags.length === 0 ? 'warning' : null,
+				items: [
+					this.toggle(
+						"Show taxonomy drift",
+						'showTaxonomyDrift',
+						"Section in the statistics view that lists rare tags and tags outside your canonical set.",
+					),
+					{
+						name: "Rare tag threshold",
+						desc: "Tags used fewer than this many times are flagged as rare (likely typos or dead).",
+						control: {
+							type: 'number',
+							key: 'rareTagThreshold',
+							defaultValue: DEFAULT_SETTINGS.rareTagThreshold,
+							placeholder: String(DEFAULT_SETTINGS.rareTagThreshold),
+							min: 1,
+							step: 1,
+							validate: (value) => Number.isInteger(value) && value >= 1
+								? undefined
+								: "Must be a whole number of 1 or more.",
+						},
+					},
+					...this.stringList({
+						name: "Canonical tags",
+						desc: "Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
+						placeholder: "e.g. thought",
+						addLabel: "Add tag",
+						get: () => this.plugin.settings.canonicalTags,
+						set: (items) => { this.plugin.settings.canonicalTags = items; },
+					}),
+				],
+			},
+
+			{
+				type: 'page',
+				name: "Inbox health",
+				desc: "Notes in inbox folders and notes tagged for review, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
+				displayValue: () => this.plugin.settings.showInbox
+					? count(this.plugin.settings.inboxFolders.length, "folder")
+					: "Off",
+				// Neither folders nor review tags means nothing is ever
+				// collected — the section stays empty and copy refuses.
+				status: () => this.plugin.settings.showInbox
+					&& this.plugin.settings.inboxFolders.length === 0
+					&& this.plugin.settings.inboxReviewTags.length === 0 ? 'warning' : null,
+				items: [
+					this.toggle(
+						"Show inbox health",
+						'showInbox',
+						"Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
+					),
+					...this.stringList({
+						name: "Inbox folders",
+						desc: "Folders treated as inbox (techdebt of unprocessed input).",
+						placeholder: "e.g. 00. Входящие",
+						addLabel: "Add folder",
+						pick: 'folder',
+						get: () => this.plugin.settings.inboxFolders,
+						set: (items) => { this.plugin.settings.inboxFolders = items; },
+						affectsCollector: true,
+					}),
+					...this.stringList({
+						name: "Inbox review tags",
+						desc: "Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
+						placeholder: "e.g. inbox/review",
+						addLabel: "Add tag",
+						get: () => this.plugin.settings.inboxReviewTags,
+						set: (items) => { this.plugin.settings.inboxReviewTags = items; },
+						affectsCollector: true,
+					}),
+				],
+			},
+
+			{
+				type: 'group',
+				heading: "History",
+				items: [
+					this.toggle(
+						"Show history",
+						'showHistory',
+						"30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.",
+					),
+					{
+						name: "History export folder",
+						desc: "Last folder used for CSV export. The export command opens a folder picker each time and updates this value.",
+						control: {
+							type: 'folder',
+							key: 'historyExportFolder',
+							defaultValue: DEFAULT_SETTINGS.historyExportFolder,
+							placeholder: "(vault root)",
+							includeRoot: true,
+						},
+					},
+				],
+			},
+
+			this.tangles(),
 		];
 	}
 
@@ -375,66 +437,70 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		};
 	}
 
-	private tangles(): SettingDefinitionItem<SettingsKey>[] {
+	private tangles(): SettingDefinitionPage<SettingsKey> {
 		const isMode = (...modes: FullStatisticsPluginSettings['tanglesMode'][]) =>
 			() => modes.includes(this.plugin.settings.tanglesMode);
 
-		return [
-			{
-				type: 'group',
-				heading: "Tangles",
-				items: [
-					{
-						name: "Selection mode",
-						desc: "AND: both thresholds must be met. OR: either threshold is enough. SUM: in + out must be ≥ total threshold.",
-						control: {
-							type: 'dropdown',
-							key: 'tanglesMode',
-							defaultValue: DEFAULT_SETTINGS.tanglesMode,
-							options: {
-								and: "AND (both ≥ thresholds)",
-								or: "OR (either ≥ threshold)",
-								sum: "SUM (in + out ≥ total)",
-							},
-						},
-					},
-					{
-						name: "Min incoming links",
-						desc: "Minimum number of distinct notes that link to a tangle.",
-						visible: isMode('and', 'or'),
-						control: this.countControl('tanglesMinIn'),
-					},
-					{
-						name: "Min outgoing links",
-						desc: "Minimum number of distinct notes a tangle links to.",
-						visible: isMode('and', 'or'),
-						control: this.countControl('tanglesMinOut'),
-					},
-					{
-						name: "Min in + out",
-						desc: "Minimum value of (incoming + outgoing) for a note to count as a tangle.",
-						visible: isMode('sum'),
-						control: this.countControl('tanglesMinTotal'),
-					},
-					{
-						name: "Top N",
-						desc: "How many tangles to show in the side view and report. 0 means no limit.",
-						control: this.countControl('tanglesTopN'),
-					},
-					{
-						name: "Tangles report folder",
-						desc: "Folder in the vault where the tangles report note will be created. Empty = vault root.",
-						control: {
-							type: 'folder',
-							key: 'tanglesReportFolder',
-							defaultValue: DEFAULT_SETTINGS.tanglesReportFolder,
-							placeholder: "(vault root)",
-							includeRoot: true,
-						},
-					},
-				],
+		return {
+			type: 'page',
+			name: "Tangles",
+			desc: "Over-connected notes: hubs that link to and are linked from a lot of the vault.",
+			displayValue: () => {
+				const s = this.plugin.settings;
+				return s.tanglesMode === 'sum'
+					? `SUM ≥ ${s.tanglesMinTotal}`
+					: `${s.tanglesMode.toUpperCase()} ≥ ${s.tanglesMinIn}/${s.tanglesMinOut}`;
 			},
-			...this.stringList({
+			items: [
+				{
+					name: "Selection mode",
+					desc: "AND: both thresholds must be met. OR: either threshold is enough. SUM: in + out must be ≥ total threshold.",
+					control: {
+						type: 'dropdown',
+						key: 'tanglesMode',
+						defaultValue: DEFAULT_SETTINGS.tanglesMode,
+						options: {
+							and: "AND (both ≥ thresholds)",
+							or: "OR (either ≥ threshold)",
+							sum: "SUM (in + out ≥ total)",
+						},
+					},
+				},
+				{
+					name: "Min incoming links",
+					desc: "Minimum number of distinct notes that link to a tangle.",
+					visible: isMode('and', 'or'),
+					control: this.countControl('tanglesMinIn'),
+				},
+				{
+					name: "Min outgoing links",
+					desc: "Minimum number of distinct notes a tangle links to.",
+					visible: isMode('and', 'or'),
+					control: this.countControl('tanglesMinOut'),
+				},
+				{
+					name: "Min in + out",
+					desc: "Minimum value of (incoming + outgoing) for a note to count as a tangle.",
+					visible: isMode('sum'),
+					control: this.countControl('tanglesMinTotal'),
+				},
+				{
+					name: "Top N",
+					desc: "How many tangles to show in the side view and report. 0 means no limit.",
+					control: this.countControl('tanglesTopN'),
+				},
+				{
+					name: "Tangles report folder",
+					desc: "Folder in the vault where the tangles report note will be created. Empty = vault root.",
+					control: {
+						type: 'folder',
+						key: 'tanglesReportFolder',
+						defaultValue: DEFAULT_SETTINGS.tanglesReportFolder,
+						placeholder: "(vault root)",
+						includeRoot: true,
+					},
+				},
+				...this.stringList({
 				name: "Tangles exclude",
 				desc: "Notes or folders to skip in tangle detection. Pick a note to exclude one file, or pick a folder to exclude everything under it. Folder match requires a trailing slash boundary — \"Daily\" does NOT match \"DailyArchive\".",
 				placeholder: "e.g. Personal/Me.md",
@@ -443,8 +509,9 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				extraAdd: { icon: 'folder-plus', tooltip: "Add folder", pick: 'folder' },
 				get: () => this.plugin.settings.tanglesExclude,
 				set: (items) => { this.plugin.settings.tanglesExclude = items; },
-			}),
-		];
+				}),
+			],
+		};
 	}
 
 	/** Non-negative integer threshold bound to a settings key. */
