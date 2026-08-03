@@ -172,30 +172,32 @@ export type StatusBarStatId =
  * time.
  */
 export function statusBarItems(): readonly ToggleItem[] {
+	const l = t().settings.statusBar;
 	return [
-		{ id: 'notes', key: 'showNotes', name: "Show notes" },
-		{ id: 'words', key: 'showWords', name: "Show words", desc: "Total word count across the vault." },
-		{ id: 'links', key: 'showLinks', name: "Show links" },
-		{ id: 'tags', key: 'showTags', name: "Show tags" },
-		{ id: 'QoV', key: 'showQuality', name: "Show quality", aliases: ["QoV"] },
-		{ id: 'own', key: 'showOwn', name: "Show own notes", desc: "Notes tagged as your own thinking — see note classification." },
-		{ id: 'source', key: 'showSource', name: "Show source notes", desc: "Notes about external material — see note classification." },
-		{ id: 'own-pct', key: 'showOwnPct', name: "Show own %", desc: "Share of own notes within own+source classified set." },
-		{ id: 'source-pct', key: 'showSourcePct', name: "Show source %" },
-		{ id: 'concepts', key: 'showConcepts', name: "Show concept notes", desc: "Concepts are a grey zone — off by default." },
-		{ id: 'orphans', key: 'showOrphans', name: "Show orphans", desc: "Notes with no incoming links — disconnected knowledge.", aliases: ["disconnected"] },
-		{ id: 'trace-pct', key: 'showTracePct', name: "Show trace %", desc: "Share of source notes that at least one own note links to." },
+		{ id: 'notes', key: 'showNotes', name: l.notes },
+		{ id: 'words', key: 'showWords', name: l.words, desc: l.wordsDesc },
+		{ id: 'links', key: 'showLinks', name: l.links },
+		{ id: 'tags', key: 'showTags', name: l.tags },
+		{ id: 'QoV', key: 'showQuality', name: l.quality, aliases: l.qualityAliases },
+		{ id: 'own', key: 'showOwn', name: l.own, desc: l.ownDesc },
+		{ id: 'source', key: 'showSource', name: l.source, desc: l.sourceDesc },
+		{ id: 'own-pct', key: 'showOwnPct', name: l.ownPct, desc: l.ownPctDesc },
+		{ id: 'source-pct', key: 'showSourcePct', name: l.sourcePct },
+		{ id: 'concepts', key: 'showConcepts', name: l.concepts, desc: l.conceptsDesc },
+		{ id: 'orphans', key: 'showOrphans', name: l.orphans, desc: l.orphansDesc, aliases: l.orphansAliases },
+		{ id: 'trace-pct', key: 'showTracePct', name: l.tracePct, desc: l.tracePctDesc },
 	];
 }
 
 /** Secondary metrics in the side view's grid, below the hero panel. */
 function metricsItems(): readonly Omit<ToggleItem, 'id'>[] {
+	const l = t().settings.metrics;
 	return [
-		{ key: 'metricsShowLinks', name: "Links" },
-		{ key: 'metricsShowTags', name: "Tags" },
-		{ key: 'metricsShowConcepts', name: "Concepts" },
-		{ key: 'metricsShowOrphans', name: "Orphans" },
-		{ key: 'metricsShowAvgWords', name: "Avg words" },
+		{ key: 'metricsShowLinks', name: l.links },
+		{ key: 'metricsShowTags', name: l.tags },
+		{ key: 'metricsShowConcepts', name: l.concepts },
+		{ key: 'metricsShowOrphans', name: l.orphans },
+		{ key: 'metricsShowAvgWords', name: l.avgWords },
 	];
 }
 
@@ -301,34 +303,34 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const enabled = () => statusBarItems().filter(i => this.plugin.settings[i.key]).length;
 		return [
 			{
-				name: "Language",
+				name: t().settings.language.name,
 				// English is the default on purpose: updating the plugin should
 				// not switch the interface of someone who never asked for it.
 				// Following Obsidian is one click away for those who want it.
-				desc: "Language of the plugin's interface. Auto follows Obsidian.",
+				desc: t().settings.language.desc,
 				control: {
 					type: 'dropdown',
 					key: 'language',
 					defaultValue: DEFAULT_SETTINGS.language,
 					options: {
-						en: "English",
-						ru: "Русский",
-						auto: "Auto (follow Obsidian)",
+						en: t().settings.language.english,
+						ru: t().settings.language.russian,
+						auto: t().settings.language.auto,
 					},
 				},
 			},
 			{
-				name: "Show individual items",
-				desc: "Whether to show multiple items at once or cycle them with a click",
+				name: t().settings.individualItems.name,
+				desc: t().settings.individualItems.desc,
 				control: { type: 'toggle', key: 'displayIndividualItems', defaultValue: DEFAULT_SETTINGS.displayIndividualItems },
 			},
 			{
 				type: 'page',
-				name: "Status bar items",
+				name: t().settings.statusBar.name,
 				// These apply in both modes: cycling walks only the enabled
 				// items and skips over the rest.
-				desc: "Which statistics the status bar shows. Cycling mode skips the ones turned off here.",
-				displayValue: () => `${enabled()} of ${statusBarItems().length}`,
+				desc: t().settings.statusBar.desc,
+				displayValue: () => t().settings.ofTotal(enabled(), statusBarItems().length),
 				// Nothing enabled leaves the status bar blank in either mode.
 				status: () => enabled() === 0 ? 'warning' : null,
 				items: statusBarItems().map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
@@ -341,20 +343,20 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const s = () => this.plugin.settings;
 		return {
 			type: 'group',
-			heading: "What gets counted",
+			heading: t().settings.counting.heading,
 			items: [
 				{
 					type: 'page',
-					name: "Excluded folders",
-					desc: "Folders to skip from statistics. Matched as a path prefix, so a folder covers everything under it.",
+					name: t().settings.counting.excludedName,
+					desc: t().settings.counting.excludedDesc,
 					displayValue: () => t().settings.folderCount(s().excludedFolders.length),
 					items: this.stringList({
-						name: "Excluded folders",
-						desc: "Folders to skip from statistics.",
-						aliases: ["ignore", "skip"],
+						name: t().settings.counting.excludedName,
+						desc: t().settings.counting.excludedListDesc,
+						aliases: t().settings.counting.excludedAliases,
 						standalone: true,
-						placeholder: "e.g. Templates",
-						addLabel: "Add folder",
+						placeholder: t().settings.counting.excludedPlaceholder,
+						addLabel: t().settings.addFolder,
 						pick: 'folder',
 						get: () => s().excludedFolders,
 						set: (items) => { s().excludedFolders = items; },
@@ -363,39 +365,39 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				},
 				{
 					type: 'page',
-					name: "Note classification",
-					desc: "Tags that sort notes into your own thinking, external material, and concepts.",
-					displayValue: () => `${s().ownTags.length} own / ${s().sourceTags.length} source`,
+					name: t().settings.counting.classificationName,
+					desc: t().settings.counting.classificationDesc,
+					displayValue: () => t().settings.counting.classificationValue(s().ownTags.length, s().sourceTags.length),
 					// Own/source is the headline metric of the whole plugin;
 					// an empty side leaves the hero panel meaningless.
 					status: () => s().ownTags.length === 0 || s().sourceTags.length === 0 ? 'warning' : null,
 					items: [
 						...this.stringList({
-							name: "Own tags",
-							desc: "Tags marking your own thinking. Leading # is optional.",
-							aliases: ["classification", "zettelkasten"],
-							placeholder: "e.g. thought",
-							addLabel: "Add tag",
+							name: t().settings.counting.ownTags,
+							desc: t().settings.counting.ownTagsDesc,
+							aliases: t().settings.counting.ownTagsAliases,
+							placeholder: t().settings.counting.ownTagsPlaceholder,
+							addLabel: t().settings.addTag,
 							get: () => s().ownTags,
 							set: (items) => { s().ownTags = items; },
 							affectsCollector: true,
 						}),
 						...this.stringList({
-							name: "Source tags",
-							desc: "Tags marking notes about external material.",
-							aliases: ["classification", "literature"],
-							placeholder: "e.g. book",
-							addLabel: "Add tag",
+							name: t().settings.counting.sourceTags,
+							desc: t().settings.counting.sourceTagsDesc,
+							aliases: t().settings.counting.sourceTagsAliases,
+							placeholder: t().settings.counting.sourceTagsPlaceholder,
+							addLabel: t().settings.addTag,
 							get: () => s().sourceTags,
 							set: (items) => { s().sourceTags = items; },
 							affectsCollector: true,
 						}),
 						...this.stringList({
-							name: "Concept tags",
-							desc: "Tags marking concept notes (the grey zone).",
-							aliases: ["classification"],
-							placeholder: "e.g. concept",
-							addLabel: "Add tag",
+							name: t().settings.counting.conceptTags,
+							desc: t().settings.counting.conceptTagsDesc,
+							aliases: t().settings.counting.conceptTagsAliases,
+							placeholder: t().settings.counting.conceptTagsPlaceholder,
+							addLabel: t().settings.addTag,
 							get: () => s().conceptTags,
 							set: (items) => { s().conceptTags = items; },
 							affectsCollector: true,
@@ -416,7 +418,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	private sideView(): SettingDefinitionGroup<SettingsKey> {
 		return {
 			type: 'group',
-			heading: "Side view",
+			heading: t().settings.sideViewHeading,
 			items: [
 				this.metrics(),
 				this.folderBreakdown(),
@@ -431,7 +433,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	private tools(): SettingDefinitionGroup<SettingsKey> {
 		return {
 			type: 'group',
-			heading: "Tools",
+			heading: t().settings.toolsHeading,
 			items: [this.tangles()],
 		};
 	}
@@ -440,9 +442,9 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const enabled = () => metricsItems().filter(i => this.plugin.settings[i.key]).length;
 		return {
 			type: 'page',
-			name: "Metrics",
-			desc: "Secondary metrics in the grid below the hero panel.",
-			displayValue: () => `${enabled()} of ${metricsItems().length}`,
+			name: t().settings.metrics.name,
+			desc: t().settings.metrics.desc,
+			displayValue: () => t().settings.ofTotal(enabled(), metricsItems().length),
 			items: metricsItems().map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
 		};
 	}
@@ -450,17 +452,17 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	private folderBreakdown(): SettingDefinitionPage<SettingsKey> {
 		return {
 			type: 'page',
-			name: "Folder breakdown",
-			desc: "Per-folder section in the statistics view (PARA-style).",
+			name: t().settings.folderBreakdown.name,
+			desc: t().settings.folderBreakdown.desc,
 			displayValue: () => this.plugin.settings.showFolderBreakdown
 				? t().settings.groupCount(this.plugin.settings.folderGroups.length)
-				: "Off",
+				: t().settings.off,
 			// The section renders nothing without groups, so an enabled
 			// toggle and an empty list is a silent no-op worth flagging.
 			status: () => this.plugin.settings.showFolderBreakdown
 				&& this.plugin.settings.folderGroups.length === 0 ? 'warning' : null,
 			items: [
-				this.toggle("Show folder breakdown", 'showFolderBreakdown', "Per-folder section in the statistics view (PARA-style).", ["PARA"]),
+				this.toggle(t().settings.folderBreakdown.name, 'showFolderBreakdown', t().settings.folderBreakdown.desc, t().settings.folderBreakdown.toggleAliases),
 				...this.folderGroups(),
 			],
 		};
@@ -470,22 +472,22 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const s = () => this.plugin.settings;
 		return {
 			type: 'page',
-			name: "Sources with trace",
-			desc: "How many source notes are referenced by at least one own note.",
+			name: t().settings.sourcesTrace.name,
+			desc: t().settings.sourcesTrace.desc,
 			displayValue: () => !s().showSourcesTrace
-				? "Off"
-				: s().showDanglingList ? "On + top 5" : "On",
+				? t().settings.off
+				: s().showDanglingList ? t().settings.sourcesTrace.onTop5 : t().settings.on,
 			items: [
 				this.toggle(
-					"Show sources-with-trace",
+					t().settings.sourcesTrace.toggleName,
 					'showSourcesTrace',
-					"Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).",
+					t().settings.sourcesTrace.toggleDesc,
 				),
 				this.toggle(
-					"Show dangling notes list",
+					t().settings.sourcesTrace.danglingName,
 					'showDanglingList',
-					"Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.",
-					["dangling", "untraced"],
+					t().settings.sourcesTrace.danglingDesc,
+					t().settings.sourcesTrace.danglingAliases,
 				),
 			],
 		};
@@ -494,24 +496,24 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	private taxonomyDrift(): SettingDefinitionPage<SettingsKey> {
 		return {
 			type: 'page',
-			name: "Taxonomy drift",
-			desc: "Rare tags and tags outside your canonical set.",
+			name: t().settings.taxonomy.name,
+			desc: t().settings.taxonomy.desc,
 			displayValue: () => this.plugin.settings.showTaxonomyDrift
 				? t().settings.canonicalTagCount(this.plugin.settings.canonicalTags.length)
-				: "Off",
+				: t().settings.off,
 			// With no canonical set every tag reads as unknown, which
 			// makes the section noise rather than signal.
 			status: () => this.plugin.settings.showTaxonomyDrift
 				&& this.plugin.settings.canonicalTags.length === 0 ? 'warning' : null,
 			items: [
 				this.toggle(
-					"Show taxonomy drift",
+					t().settings.taxonomy.toggleName,
 					'showTaxonomyDrift',
-					"Section in the statistics view that lists rare tags and tags outside your canonical set.",
+					t().settings.taxonomy.toggleDesc,
 				),
 				{
-					name: "Rare tag threshold",
-					desc: "Tags used fewer than this many times are flagged as rare (likely typos or dead).",
+					name: t().settings.taxonomy.thresholdName,
+					desc: t().settings.taxonomy.thresholdDesc,
 					control: {
 						type: 'number',
 						key: 'rareTagThreshold',
@@ -521,14 +523,14 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						step: 1,
 						validate: (value) => Number.isInteger(value) && value >= 1
 							? undefined
-							: "Must be a whole number of 1 or more.",
+							: t().settings.taxonomy.thresholdInvalid,
 					},
 				},
 				...this.stringList({
-					name: "Canonical tags",
-					desc: "Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
-					placeholder: "e.g. thought",
-					addLabel: "Add tag",
+					name: t().settings.taxonomy.canonicalName,
+					desc: t().settings.taxonomy.canonicalDesc,
+					placeholder: t().settings.taxonomy.canonicalPlaceholder,
+					addLabel: t().settings.addTag,
 					get: () => this.plugin.settings.canonicalTags,
 					set: (items) => { this.plugin.settings.canonicalTags = items; },
 				}),
@@ -539,11 +541,11 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	private inboxHealth(): SettingDefinitionPage<SettingsKey> {
 		return {
 			type: 'page',
-			name: "Inbox health",
-			desc: "Notes in inbox folders and notes tagged for review, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
+			name: t().settings.inbox.name,
+			desc: t().settings.inbox.desc,
 			displayValue: () => this.plugin.settings.showInbox
 				? t().settings.folderCount(this.plugin.settings.inboxFolders.length)
-				: "Off",
+				: t().settings.off,
 			// Neither folders nor review tags means nothing is ever
 			// collected — the section stays empty and copy refuses.
 			status: () => this.plugin.settings.showInbox
@@ -551,25 +553,25 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				&& this.plugin.settings.inboxReviewTags.length === 0 ? 'warning' : null,
 			items: [
 				this.toggle(
-					"Show inbox health",
+					t().settings.inbox.toggleName,
 					'showInbox',
-					"Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
+					t().settings.inbox.toggleDesc,
 				),
 				...this.stringList({
-					name: "Inbox folders",
-					desc: "Folders treated as inbox (techdebt of unprocessed input).",
-					placeholder: "e.g. 00. Входящие",
-					addLabel: "Add folder",
+					name: t().settings.inbox.foldersName,
+					desc: t().settings.inbox.foldersDesc,
+					placeholder: t().settings.inbox.foldersPlaceholder,
+					addLabel: t().settings.addFolder,
 					pick: 'folder',
 					get: () => this.plugin.settings.inboxFolders,
 					set: (items) => { this.plugin.settings.inboxFolders = items; },
 					affectsCollector: true,
 				}),
 				...this.stringList({
-					name: "Inbox review tags",
-					desc: "Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
-					placeholder: "e.g. inbox/review",
-					addLabel: "Add tag",
+					name: t().settings.inbox.tagsName,
+					desc: t().settings.inbox.tagsDesc,
+					placeholder: t().settings.inbox.tagsPlaceholder,
+					addLabel: t().settings.addTag,
 					get: () => this.plugin.settings.inboxReviewTags,
 					set: (items) => { this.plugin.settings.inboxReviewTags = items; },
 					affectsCollector: true,
@@ -581,25 +583,25 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	private history(): SettingDefinitionPage<SettingsKey> {
 		return {
 			type: 'page',
-			name: "History",
-			desc: "30-day sparkline of how the vault evolves.",
-			displayValue: () => this.plugin.settings.showHistory ? "On" : "Off",
+			name: t().settings.history.name,
+			desc: t().settings.history.desc,
+			displayValue: () => this.plugin.settings.showHistory ? t().settings.on : t().settings.off,
 			items: [
 				this.toggle(
-					"Show history",
+					t().settings.history.toggleName,
 					'showHistory',
-					"30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.",
-					["sparkline"],
+					t().settings.history.toggleDesc,
+					t().settings.history.toggleAliases,
 				),
 				{
-					name: "History export folder",
-					desc: "Last folder used for CSV export. The export command opens a folder picker each time and updates this value.",
-					aliases: ["CSV"],
+					name: t().settings.history.exportName,
+					desc: t().settings.history.exportDesc,
+					aliases: t().settings.history.exportAliases,
 					control: {
 						type: 'folder',
 						key: 'historyExportFolder',
 						defaultValue: DEFAULT_SETTINGS.historyExportFolder,
-						placeholder: "(vault root)",
+						placeholder: t().settings.vaultRoot,
 						includeRoot: true,
 					},
 				},
@@ -634,70 +636,70 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 
 		return {
 			type: 'page',
-			name: "Tangles",
-			desc: "Over-connected notes: hubs that link to and are linked from a lot of the vault.",
+			name: t().settings.tangles.name,
+			desc: t().settings.tangles.desc,
 			displayValue: () => {
 				const s = this.plugin.settings;
 				return s.tanglesMode === 'sum'
-					? `SUM ≥ ${s.tanglesMinTotal}`
-					: `${s.tanglesMode.toUpperCase()} ≥ ${s.tanglesMinIn}/${s.tanglesMinOut}`;
+					? t().settings.tangles.valueSum(s.tanglesMinTotal)
+					: t().settings.tangles.valueAndOr(s.tanglesMode.toUpperCase(), s.tanglesMinIn, s.tanglesMinOut);
 			},
 			items: [
 				{
-					name: "Selection mode",
-					desc: "AND: both thresholds must be met. OR: either threshold is enough. SUM: in + out must be ≥ total threshold.",
+					name: t().settings.tangles.modeName,
+					desc: t().settings.tangles.modeDesc,
 					control: {
 						type: 'dropdown',
 						key: 'tanglesMode',
 						defaultValue: DEFAULT_SETTINGS.tanglesMode,
 						options: {
-							and: "AND (both ≥ thresholds)",
-							or: "OR (either ≥ threshold)",
-							sum: "SUM (in + out ≥ total)",
+							and: t().settings.tangles.modeAnd,
+							or: t().settings.tangles.modeOr,
+							sum: t().settings.tangles.modeSum,
 						},
 					},
 				},
 				{
-					name: "Min incoming links",
-					desc: "Minimum number of distinct notes that link to a tangle.",
+					name: t().settings.tangles.minInName,
+					desc: t().settings.tangles.minInDesc,
 					visible: isMode('and', 'or'),
 					control: this.countControl('tanglesMinIn'),
 				},
 				{
-					name: "Min outgoing links",
-					desc: "Minimum number of distinct notes a tangle links to.",
+					name: t().settings.tangles.minOutName,
+					desc: t().settings.tangles.minOutDesc,
 					visible: isMode('and', 'or'),
 					control: this.countControl('tanglesMinOut'),
 				},
 				{
-					name: "Min in + out",
-					desc: "Minimum value of (incoming + outgoing) for a note to count as a tangle.",
+					name: t().settings.tangles.minTotalName,
+					desc: t().settings.tangles.minTotalDesc,
 					visible: isMode('sum'),
 					control: this.countControl('tanglesMinTotal'),
 				},
 				{
-					name: "Top N",
-					desc: "How many tangles to show in the side view and report. 0 means no limit.",
+					name: t().settings.tangles.topNName,
+					desc: t().settings.tangles.topNDesc,
 					control: this.countControl('tanglesTopN'),
 				},
 				{
-					name: "Tangles report folder",
-					desc: "Folder in the vault where the tangles report note will be created. Empty = vault root.",
+					name: t().settings.tangles.reportFolderName,
+					desc: t().settings.tangles.reportFolderDesc,
 					control: {
 						type: 'folder',
 						key: 'tanglesReportFolder',
 						defaultValue: DEFAULT_SETTINGS.tanglesReportFolder,
-						placeholder: "(vault root)",
+						placeholder: t().settings.vaultRoot,
 						includeRoot: true,
 					},
 				},
 				...this.stringList({
-				name: "Tangles exclude",
-				desc: "Notes or folders to skip in tangle detection. Pick a note to exclude one file, or pick a folder to exclude everything under it. Folder match requires a trailing slash boundary — \"Daily\" does NOT match \"DailyArchive\".",
-				placeholder: "e.g. Personal/Me.md",
-				addLabel: "Add note",
+				name: t().settings.tangles.excludeName,
+				desc: t().settings.tangles.excludeDesc,
+				placeholder: t().settings.tangles.excludePlaceholder,
+				addLabel: t().settings.tangles.addNote,
 				pick: 'note',
-				extraAdd: { icon: 'folder-plus', tooltip: "Add folder", pick: 'folder' },
+				extraAdd: { icon: 'folder-plus', tooltip: t().settings.addFolder, pick: 'folder' },
 				get: () => this.plugin.settings.tanglesExclude,
 				set: (items) => { this.plugin.settings.tanglesExclude = items; },
 				}),
@@ -717,7 +719,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			step: 1,
 			validate: (value: number) => Number.isInteger(value) && value >= 0
 				? undefined
-				: "Must be a whole number of 0 or more.",
+				: t().settings.countInvalid,
 		};
 	}
 
@@ -749,7 +751,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 
 		const openPicker = (kind: 'folder' | 'note') => {
 			if (kind === 'note') {
-				new NoteFuzzyPickerModal(this.app, (file) => append(file.path), `Pick a note — ${opts.name}`).open();
+				new NoteFuzzyPickerModal(this.app, (file) => append(file.path), t().settings.pickNote(opts.name)).open();
 				return;
 			}
 			new FolderPickerModal(this.app, (folder) => {
@@ -757,12 +759,12 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				// treat it as a mis-click rather than silently applying it.
 				const path = folder.path === '' || folder.path === '/' ? '' : folder.path;
 				if (path) append(path);
-			}, `Pick a folder — ${opts.name}`).open();
+			}, t().settings.pickFolder(opts.name)).open();
 		};
 
 		const list: SettingDefinitionList<SettingsKey> = {
 			type: 'list',
-			emptyState: `Nothing yet — use “${opts.addLabel}”.`,
+			emptyState: t().settings.listEmpty(opts.addLabel),
 			items: opts.get().map((value, idx) => ({
 				name: "",
 				searchable: false,
@@ -836,7 +838,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const list: SettingDefinitionList<SettingsKey> = {
 			type: 'list',
 			cls: 'vfs-settings-fg',
-			emptyState: "No groups yet — add one to get a per-group breakdown.",
+			emptyState: t().settings.folderBreakdown.groupsEmpty,
 			items: groups().map((group, gi) => ({
 				name: "",
 				searchable: false,
@@ -854,15 +856,15 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				void commit(next, true);
 			},
 			addItem: {
-				name: "Add group",
+				name: t().settings.folderBreakdown.addGroup,
 				action: () => { void commit([...groups(), { name: "", paths: [] }], true); },
 			},
 		};
 
 		return [
 			{
-				name: "Folder groups (PARA)",
-				desc: 'One row per group. Multiple paths in the same group are comma-separated, e.g. "Areas = 02. Сферы, 02b. Health".',
+				name: t().settings.folderBreakdown.groupsName,
+				desc: t().settings.folderBreakdown.groupsDesc,
 			},
 			list,
 		];
@@ -876,7 +878,10 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const nameInput = row.createEl("input", {
 			cls: "vfs-settings-fg-name",
 			type: "text",
-			attr: { placeholder: "Projects", "aria-label": "Group name" },
+			attr: {
+				placeholder: t().settings.folderBreakdown.groupNamePlaceholder,
+				"aria-label": t().settings.folderBreakdown.groupNameAria,
+			},
 		});
 		nameInput.value = group.name;
 		nameInput.addEventListener("change", () => {
@@ -889,7 +894,10 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const pathsInput = row.createEl("input", {
 			cls: "vfs-settings-fg-path-input",
 			type: "text",
-			attr: { placeholder: "01. Проекты, 02. Архив", "aria-label": "Group paths" },
+			attr: {
+				placeholder: t().settings.folderBreakdown.groupPathsPlaceholder,
+				"aria-label": t().settings.folderBreakdown.groupPathsAria,
+			},
 		});
 		pathsInput.value = group.paths.join(", ");
 		pathsInput.addEventListener("change", () => {

@@ -2,6 +2,7 @@ import { ItemView, Notice, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector, GroupAggregate } from './collect';
 import { HistoryStore, pctString } from './historyStore';
+import { t } from './i18n';
 import { FullStatisticsPluginSettings } from './settings';
 import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
 import { InboxBucket } from './inbox';
@@ -64,7 +65,7 @@ export class VaultStatisticsView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Vault statistics';
+		return t().view.title;
 	}
 
 	getIcon(): string {
@@ -123,12 +124,12 @@ export class VaultStatisticsView extends ItemView {
 		const section = parent.createDiv({ cls: 'vfs-section vfs-inbox' });
 
 		const header = section.createDiv({ cls: 'vfs-section-header' });
-		header.createEl('h4', { text: 'Inbox health', cls: 'vfs-section-title' });
+		header.createEl('h4', { text: t().view.inbox.title, cls: 'vfs-section-title' });
 		const copyBtn = header.createEl('button', {
 			cls: 'clickable-icon vfs-section-copy',
 			attr: {
-				'aria-label': 'Copy inbox notes as markdown',
-				title: 'Copy inbox notes as markdown',
+				'aria-label': t().view.inbox.copy,
+				title: t().view.inbox.copy,
 			},
 		});
 		setIcon(copyBtn, 'copy');
@@ -142,7 +143,7 @@ export class VaultStatisticsView extends ItemView {
 		if (!labels.hasFolders && !labels.hasTags) {
 			section.createDiv({
 				cls: 'vfs-empty',
-				text: 'Configure inbox folders or review tags in settings to see this section.',
+				text: t().view.inbox.notConfigured,
 			});
 			return;
 		}
@@ -162,10 +163,10 @@ export class VaultStatisticsView extends ItemView {
 		const hasTags = settings.inboxReviewTags.length > 0;
 		const inFolderLabel = settings.inboxFolders.length === 1
 			? settings.inboxFolders[0]
-			: `${settings.inboxFolders.length} inbox folders`;
+			: t().view.inbox.folders(settings.inboxFolders.length);
 		const outsideWithTagLabel = settings.inboxReviewTags.length === 1
-			? `#${settings.inboxReviewTags[0]} (outside inbox)`
-			: `${settings.inboxReviewTags.length} review tags (outside inbox)`;
+			? t().view.inbox.tag(settings.inboxReviewTags[0])
+			: t().view.inbox.tags(settings.inboxReviewTags.length);
 		return { inFolderLabel, outsideWithTagLabel, hasFolders, hasTags };
 	}
 
@@ -174,7 +175,7 @@ export class VaultStatisticsView extends ItemView {
 		if (!settings.showInbox) return;
 		const labels = this.inboxLabels(settings);
 		if (!labels.hasFolders && !labels.hasTags) {
-			new Notice('Nothing to copy — configure inbox folders or review tags first');
+			new Notice(t().view.inbox.nothingToCopy);
 			return;
 		}
 		const now = new Date();
@@ -182,9 +183,9 @@ export class VaultStatisticsView extends ItemView {
 		const md = renderInboxNotesMarkdown(notes, labels, now);
 		try {
 			await navigator.clipboard.writeText(md);
-			new Notice('Inbox copied to clipboard');
+			new Notice(t().view.inbox.copied);
 		} catch {
-			new Notice('Failed to copy: clipboard unavailable');
+			new Notice(t().view.inbox.copyFailed);
 		}
 	}
 
@@ -197,13 +198,13 @@ export class VaultStatisticsView extends ItemView {
 		if (bucket.old > 0) {
 			head.createSpan({
 				cls: 'vfs-inbox-old',
-				text: `${bucket.old} over 30d`,
-				attr: { title: 'Notes older than 30 days — actionable backlog' },
+				text: t().view.inbox.over30d(bucket.old),
+				attr: { title: t().view.inbox.over30dTooltip },
 			});
 		}
 
 		if (bucket.total === 0) {
-			row.createDiv({ cls: 'vfs-empty', text: 'Empty.' });
+			row.createDiv({ cls: 'vfs-empty', text: t().view.inbox.empty });
 			return;
 		}
 
@@ -214,10 +215,11 @@ export class VaultStatisticsView extends ItemView {
 		this.appendInboxSegment(bar, 'old', bucket.old);
 
 		const legend = row.createDiv({ cls: 'vfs-inbox-legend' });
-		this.appendInboxLegend(legend, 'fresh', '<1d', bucket.fresh);
-		this.appendInboxLegend(legend, 'recent', '1–7d', bucket.recent);
-		this.appendInboxLegend(legend, 'stale', '7–30d', bucket.stale);
-		this.appendInboxLegend(legend, 'old', '30+d', bucket.old);
+		const age = t().view.inbox;
+		this.appendInboxLegend(legend, 'fresh', age.ageFresh, bucket.fresh);
+		this.appendInboxLegend(legend, 'recent', age.ageRecent, bucket.recent);
+		this.appendInboxLegend(legend, 'stale', age.ageStale, bucket.stale);
+		this.appendInboxLegend(legend, 'old', age.ageOld, bucket.old);
 	}
 
 	private appendInboxSegment(bar: HTMLElement, kind: string, value: number): void {
@@ -238,12 +240,12 @@ export class VaultStatisticsView extends ItemView {
 
 		const total = this.vaultMetrics.sourceNotes;
 		const section = parent.createDiv({ cls: 'vfs-section vfs-trace' });
-		section.createEl('h4', { text: 'Sources with trace', cls: 'vfs-section-title' });
+		section.createEl('h4', { text: t().view.trace.title, cls: 'vfs-section-title' });
 
 		if (total === 0) {
 			section.createDiv({
 				cls: 'vfs-empty',
-				text: 'No source notes yet — tag notes about external material with a source tag.',
+				text: t().view.trace.empty,
 			});
 			return;
 		}
@@ -259,8 +261,8 @@ export class VaultStatisticsView extends ItemView {
 		this.appendTraceSegment(bar, 'vfs-trace-bar-bad', danglingCount);
 
 		const legend = section.createDiv({ cls: 'vfs-trace-legend' });
-		this.appendTraceLegend(legend, 'good', withTrace, total > 0 ? withTrace / total : 0, 'traced');
-		this.appendTraceLegend(legend, 'bad', danglingCount, total > 0 ? danglingCount / total : 0, 'dangling');
+		this.appendTraceLegend(legend, 'good', withTrace, total > 0 ? withTrace / total : 0, t().view.trace.traced);
+		this.appendTraceLegend(legend, 'bad', danglingCount, total > 0 ? danglingCount / total : 0, t().view.trace.dangling);
 
 		if (settings.showDanglingList && dangling.length > 0) {
 			const list = section.createDiv({ cls: 'vfs-trace-list' });
@@ -270,7 +272,7 @@ export class VaultStatisticsView extends ItemView {
 			}
 			const overflow = dangling.length - visible.length;
 			if (overflow > 0) {
-				list.createSpan({ cls: 'vfs-trace-more', text: `+${overflow} more` });
+				list.createSpan({ cls: 'vfs-trace-more', text: t().view.more(overflow) });
 			}
 		}
 	}
@@ -326,24 +328,24 @@ export class VaultStatisticsView extends ItemView {
 		const unknown = findUnknownTags(occurrences, canonical);
 
 		const section = parent.createDiv({ cls: 'vfs-section vfs-taxonomy' });
-		section.createEl('h4', { text: 'Tag taxonomy', cls: 'vfs-section-title' });
+		section.createEl('h4', { text: t().view.taxonomy.title, cls: 'vfs-section-title' });
 
 		this.appendTaxonomyGroup(
 			section,
-			`Rare (<${settings.rareTagThreshold})`,
+			t().view.taxonomy.rare(settings.rareTagThreshold),
 			rare,
-			'Tags used fewer than the configured threshold — likely typos or abandoned',
-			'Every tag passes the rare-tag threshold.',
+			t().view.taxonomy.rareTooltip,
+			t().view.taxonomy.rareEmpty,
 		);
 
 		this.appendTaxonomyGroup(
 			section,
-			'Unknown',
+			t().view.taxonomy.unknown,
 			unknown,
-			'Tags not present in your canonical set (configure it in settings)',
+			t().view.taxonomy.unknownTooltip,
 			canonical.size === 0
-				? 'Configure canonical tags in settings to flag unknown tags.'
-				: 'Every tag is in your canonical set.',
+				? t().view.taxonomy.unknownEmptyNoCanonical
+				: t().view.taxonomy.unknownEmpty,
 		);
 	}
 
@@ -374,7 +376,7 @@ export class VaultStatisticsView extends ItemView {
 		}
 		const overflow = findings.length - visible.length;
 		if (overflow > 0) {
-			list.createSpan({ cls: 'vfs-tax-more', text: `+${overflow} more` });
+			list.createSpan({ cls: 'vfs-tax-more', text: t().view.more(overflow) });
 		}
 	}
 
@@ -389,7 +391,7 @@ export class VaultStatisticsView extends ItemView {
 		if (maxNotes === 0) return;
 
 		const section = parent.createDiv({ cls: 'vfs-section vfs-folders' });
-		section.createEl('h4', { text: 'Folder breakdown', cls: 'vfs-section-title' });
+		section.createEl('h4', { text: t().view.folders.title, cls: 'vfs-section-title' });
 
 		const list = section.createDiv({ cls: 'vfs-folder-list' });
 		for (const a of aggregates) {
@@ -423,7 +425,7 @@ export class VaultStatisticsView extends ItemView {
 			row.createSpan({
 				cls: 'vfs-folder-pct',
 				text: pctString(a.ownNotes / classified),
-				title: `${a.ownNotes} own · ${a.sourceNotes} source`,
+				title: t().view.folders.ownSourceTooltip(a.ownNotes, a.sourceNotes),
 			});
 		} else {
 			// Nothing classified — show just the unclassified bar so the
@@ -435,18 +437,19 @@ export class VaultStatisticsView extends ItemView {
 
 	private renderHero(parent: HTMLElement): void {
 		const hero = parent.createDiv({ cls: 'vfs-hero' });
-		this.appendHeroStat(hero, this.vaultMetrics.notes.toLocaleString('en-US'), 'notes');
+		const hero_ = t().view.hero;
+		this.appendHeroStat(hero, this.vaultMetrics.notes.toLocaleString('en-US'), hero_.notes);
 		this.appendHeroStat(
 			hero,
 			formatCompactNumber(this.vaultMetrics.words),
-			'words',
-			`Total words across the vault: ${this.vaultMetrics.words.toLocaleString('en-US')}`,
+			hero_.words,
+			hero_.wordsTooltip(this.vaultMetrics.words.toLocaleString('en-US')),
 		);
 		this.appendHeroStat(
 			hero,
 			this.vaultMetrics.quality.toFixed(3),
-			'QoV',
-			'Quality of Vault — average number of links per note',
+			hero_.QoV,
+			hero_.qovTooltip,
 		);
 	}
 
@@ -465,12 +468,12 @@ export class VaultStatisticsView extends ItemView {
 		const total = own + source + concept;
 
 		const section = parent.createDiv({ cls: 'vfs-section vfs-ratio' });
-		section.createEl('h4', { text: 'Own vs source', cls: 'vfs-section-title' });
+		section.createEl('h4', { text: t().view.ratio.title, cls: 'vfs-section-title' });
 
 		if (total === 0) {
 			section.createDiv({
 				cls: 'vfs-empty',
-				text: 'No notes classified yet — tag some notes (see settings).',
+				text: t().view.ratio.empty,
 			});
 			return;
 		}
@@ -482,12 +485,12 @@ export class VaultStatisticsView extends ItemView {
 
 		const legend = section.createDiv({ cls: 'vfs-ratio-legend' });
 		const classified = own + source;
-		this.appendLegend(legend, 'own', 'own', own, classified > 0 ? own / classified : 0, true);
-		this.appendLegend(legend, 'source', 'source', source, classified > 0 ? source / classified : 0, true);
+		this.appendLegend(legend, 'own', t().view.ratio.own, own, classified > 0 ? own / classified : 0, true);
+		this.appendLegend(legend, 'source', t().view.ratio.source, source, classified > 0 ? source / classified : 0, true);
 		if (concept > 0) {
 			// Concept share is computed against the full classified set so it
 			// communicates "this much of your tagged corpus is grey zone".
-			this.appendLegend(legend, 'concept', 'concept', concept, concept / total, false);
+			this.appendLegend(legend, 'concept', t().view.ratio.concept, concept, concept / total, false);
 		}
 	}
 
@@ -523,17 +526,18 @@ export class VaultStatisticsView extends ItemView {
 			&& !s.metricsShowOrphans && !s.metricsShowAvgWords) return;
 
 		const section = parent.createDiv({ cls: 'vfs-section vfs-grid-section' });
-		section.createEl('h4', { text: 'Metrics', cls: 'vfs-section-title' });
+		section.createEl('h4', { text: t().view.metrics.title, cls: 'vfs-section-title' });
 		const grid = section.createDiv({ cls: 'vfs-grid' });
 
-		if (s.metricsShowLinks) this.appendStat(grid, m.links.toLocaleString('en-US'), 'links');
-		if (s.metricsShowTags) this.appendStat(grid, m.tags.toLocaleString('en-US'), 'tags');
-		if (s.metricsShowConcepts) this.appendStat(grid, m.conceptNotes.toLocaleString('en-US'), 'concepts');
+		const labels = t().view.metrics;
+		if (s.metricsShowLinks) this.appendStat(grid, m.links.toLocaleString('en-US'), labels.links);
+		if (s.metricsShowTags) this.appendStat(grid, m.tags.toLocaleString('en-US'), labels.tags);
+		if (s.metricsShowConcepts) this.appendStat(grid, m.conceptNotes.toLocaleString('en-US'), labels.concepts);
 		if (s.metricsShowOrphans) this.appendStat(
 			grid,
 			m.orphanNotes.toLocaleString('en-US'),
-			'orphans',
-			'Notes nothing else links to',
+			labels.orphans,
+			labels.orphansTooltip,
 		);
 		if (s.metricsShowAvgWords) {
 			if (m.notes > 0) {
@@ -541,11 +545,11 @@ export class VaultStatisticsView extends ItemView {
 				this.appendStat(
 					grid,
 					Math.round(exact).toLocaleString('en-US'),
-					'avg words',
-					`Average words per note: ${exact.toFixed(1)} (words ÷ notes)`,
+					labels.avgWords,
+					labels.avgWordsTooltip(exact.toFixed(1)),
 				);
 			} else {
-				this.appendStat(grid, '—', 'avg words');
+				this.appendStat(grid, '—', labels.avgWords);
 			}
 		}
 	}
@@ -564,38 +568,38 @@ export class VaultStatisticsView extends ItemView {
 		const snapshots = this.historyStore.recent(30);
 
 		if (snapshots.length < 2) {
-			section.createEl('h4', { text: 'History', cls: 'vfs-section-title' });
+			section.createEl('h4', { text: t().view.history.title, cls: 'vfs-section-title' });
 			section.createDiv({
 				cls: 'vfs-empty',
 				text: snapshots.length === 0
-					? 'First snapshot will appear once today\'s metrics settle.'
-					: 'One day recorded so far. A trend will show after a second daily snapshot.',
+					? t().view.history.emptyNone
+					: t().view.history.emptyOne,
 			});
 			return;
 		}
 
 		section.createEl('h4', {
-			text: `Last ${snapshots.length} day${snapshots.length === 1 ? '' : 's'}`,
+			text: t().view.history.lastDays(snapshots.length),
 			cls: 'vfs-section-title',
 		});
 
 		const grid = section.createDiv({ cls: 'vfs-spark-grid' });
-		this.appendSparkRow(grid, 'notes', snapshots.map(s => s.notes), 'vfs-bars-notes');
-		this.appendSparkRow(grid, 'own', snapshots.map(s => s.ownNotes), 'vfs-bars-own');
-		this.appendSparkRow(grid, 'source', snapshots.map(s => s.sourceNotes), 'vfs-bars-source');
-		this.appendSparkRow(grid, 'links', snapshots.map(s => s.links), 'vfs-bars-neutral');
-		this.appendSparkRow(grid, 'tags', snapshots.map(s => s.tags), 'vfs-bars-neutral');
-		this.appendSparkRow(grid, 'orphans', snapshots.map(s => s.orphanNotes ?? 0), 'vfs-bars-warn');
-		this.appendSparkRow(grid, 'traced', snapshots.map(s => s.sourcesWithTrace ?? 0), 'vfs-bars-source');
+		const spark = t().view.history;
+		this.appendSparkRow(grid, spark.notes, snapshots.map(s => s.notes), 'vfs-bars-notes');
+		this.appendSparkRow(grid, spark.own, snapshots.map(s => s.ownNotes), 'vfs-bars-own');
+		this.appendSparkRow(grid, spark.source, snapshots.map(s => s.sourceNotes), 'vfs-bars-source');
+		this.appendSparkRow(grid, spark.links, snapshots.map(s => s.links), 'vfs-bars-neutral');
+		this.appendSparkRow(grid, spark.tags, snapshots.map(s => s.tags), 'vfs-bars-neutral');
+		this.appendSparkRow(grid, spark.orphans, snapshots.map(s => s.orphanNotes ?? 0), 'vfs-bars-warn');
+		this.appendSparkRow(grid, spark.traced, snapshots.map(s => s.sourcesWithTrace ?? 0), 'vfs-bars-source');
 
 		const first = snapshots[0];
 		const last = snapshots[snapshots.length - 1];
 		const delta = last.notes - first.notes;
-		const sign = delta > 0 ? '+' : '';
 		const deltaCls = delta > 0 ? 'vfs-delta-pos' : (delta < 0 ? 'vfs-delta-neg' : 'vfs-delta-flat');
 		const footer = section.createDiv({ cls: 'vfs-history-footer' });
-		footer.createSpan({ cls: `vfs-delta ${deltaCls}`, text: `${sign}${delta} notes` });
-		footer.createSpan({ cls: 'vfs-history-range', text: ` since ${first.date}` });
+		footer.createSpan({ cls: `vfs-delta ${deltaCls}`, text: t().view.history.delta(delta) });
+		footer.createSpan({ cls: 'vfs-history-range', text: t().view.history.since(first.date) });
 	}
 
 	private appendSparkRow(parent: HTMLElement, label: string, values: number[], colorCls: string): void {

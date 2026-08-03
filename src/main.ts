@@ -9,7 +9,7 @@ import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
 import { TanglesView, TANGLES_VIEW_TYPE } from './tanglesView';
 import { computeTangles, renderTanglesReport, formatDate } from './tangles';
-import { setLocale } from './i18n';
+import { setLocale, t } from './i18n';
 
 
 interface PersistedData {
@@ -89,29 +89,29 @@ export default class FullStatisticsPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'open-vault-statistics-view',
-			name: 'Open vault statistics',
+			name: t().commands.openStatistics,
 			callback: () => this.activateStatisticsView(),
 		});
 
 		this.addCommand({
 			id: 'export-vault-statistics-history',
-			name: 'Export statistics history to CSV',
+			name: t().commands.exportHistory,
 			callback: () => this.exportHistoryCsv(),
 		});
 
 		this.addCommand({
 			id: 'open-vault-tangles-view',
-			name: 'Open vault tangles',
+			name: t().commands.openTangles,
 			callback: () => this.activateTanglesView(),
 		});
 
 		this.addCommand({
 			id: 'create-vault-tangles-report',
-			name: 'Create tangles report note',
+			name: t().commands.createTanglesReport,
 			callback: () => this.writeTanglesReport(),
 		});
 
-		this.addRibbonIcon('bar-chart', 'Open vault statistics', () => this.activateStatisticsView());
+		this.addRibbonIcon('bar-chart', t().commands.ribbonTooltip, () => this.activateStatisticsView());
 	}
 
 	async loadSettings() {
@@ -165,7 +165,7 @@ export default class FullStatisticsPlugin extends Plugin {
 	private async exportHistoryCsv() {
 		const snapshots = this.historyStore.all();
 		if (snapshots.length === 0) {
-			new Notice('No history snapshots yet — try again after a few daily updates.');
+			new Notice(t().notices.noHistory);
 			return;
 		}
 		const csv = snapshotsToCsv(snapshots);
@@ -187,14 +187,14 @@ export default class FullStatisticsPlugin extends Plugin {
 				const handle = await nativePicker.call(window, {
 					suggestedName: HISTORY_CSV_FILENAME,
 					types: [{
-						description: 'CSV file',
+						description: t().notices.csvFileType,
 						accept: { 'text/csv': ['.csv'] },
 					}],
 				});
 				const writable = await handle.createWritable();
 				await writable.write(csv);
 				await writable.close();
-				new Notice(`Exported ${snapshots.length} snapshot(s) to ${handle.name}`);
+				new Notice(t().notices.exported(snapshots.length, handle.name));
 				return;
 			} catch (e) {
 				if (e instanceof DOMException && e.name === 'AbortError') return; // user cancelled
@@ -205,7 +205,7 @@ export default class FullStatisticsPlugin extends Plugin {
 
 		new FolderPickerModal(this.app, (folder) => {
 			void this.writeVaultCsv(folder, csv, snapshots.length);
-		}, 'Choose a folder for the CSV').open();
+		}, t().notices.chooseCsvFolder).open();
 	}
 
 	private async writeVaultCsv(folder: TFolder, csv: string, count: number) {
@@ -223,10 +223,10 @@ export default class FullStatisticsPlugin extends Plugin {
 			}
 			this.settings.historyExportFolder = dir;
 			await this.persist();
-			new Notice(`Exported ${count} snapshot(s) to ${path}`);
+			new Notice(t().notices.exported(count, path));
 		} catch (e) {
 			console.error('vault-statistics: csv export failed', e);
-			new Notice(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
+			new Notice(t().notices.exportFailed(e instanceof Error ? e.message : String(e)));
 		}
 	}
 
@@ -252,7 +252,7 @@ export default class FullStatisticsPlugin extends Plugin {
 		if (this.settings.tanglesExclude.includes(path)) return;
 		this.settings.tanglesExclude = [...this.settings.tanglesExclude, path];
 		await this.saveSettings();
-		new Notice(`Excluded "${path}" from tangles`);
+		new Notice(t().notices.excludedFromTangles(path));
 	}
 
 	private async activateTanglesView() {
@@ -283,22 +283,22 @@ export default class FullStatisticsPlugin extends Plugin {
 					await this.app.vault.createFolder(folder);
 				} catch (e) {
 					console.error('vault-statistics: failed to create tangles report folder', e);
-					new Notice(`Could not create folder "${folder}": ${e instanceof Error ? e.message : String(e)}`);
+					new Notice(t().notices.folderCreateFailed(folder, e instanceof Error ? e.message : String(e)));
 					return;
 				}
 			}
 		}
 
-		const filename = `Vault Tangles — ${formatDate(now)}.md`;
+		const filename = t().tangles.reportFileName(formatDate(now));
 		const targetPath = await this.uniqueReportPath(folder, filename);
 		try {
 			const created = await this.app.vault.create(targetPath, body);
-			new Notice(`Saved ${entries.length} tangle(s) to ${targetPath}`);
+			new Notice(t().notices.tanglesSaved(entries.length, targetPath));
 			const leaf = this.app.workspace.getLeaf(true);
 			await leaf.openFile(created);
 		} catch (e) {
 			console.error('vault-statistics: tangles report write failed', e);
-			new Notice(`Tangles report failed: ${e instanceof Error ? e.message : String(e)}`);
+			new Notice(t().notices.tanglesReportFailed(e instanceof Error ? e.message : String(e)));
 		}
 	}
 
@@ -409,28 +409,6 @@ class StatisticView {
 	}
 }
 
-/**
- * Status bar labels. A function, not a constant: the text has to be read at
- * render time so that switching the interface language takes effect without a
- * reload. In the next step these come from the active locale catalogue.
- */
-function statusBarLabels(): Record<StatusBarStatId, string> {
-	return {
-		'notes': "notes",
-		'words': "words",
-		'links': "links",
-		'tags': "tags",
-		'QoV': "QoV",
-		'own': "own",
-		'source': "source",
-		'own-pct': "own",
-		'source-pct': "source",
-		'concepts': "concepts",
-		'orphans': "orphans",
-		'trace-pct': "traced",
-	};
-}
-
 const PCT_FMT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
 
 /**
@@ -439,18 +417,18 @@ const PCT_FMT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFracti
  * order lives in exactly one place — `statusBarItems()`.
  */
 const STAT_FORMATTERS: Record<StatusBarStatId, (s: FullVaultMetrics) => string> = {
-	'notes': s => new DecimalUnitFormatter(statusBarLabels().notes).format(s.notes),
-	'words': s => new DecimalUnitFormatter(statusBarLabels().words).format(s.words),
-	'links': s => new DecimalUnitFormatter(statusBarLabels().links).format(s.links),
-	'tags': s => new DecimalUnitFormatter(statusBarLabels().tags).format(s.tags),
-	'QoV': s => new DecimalUnitFormatter(statusBarLabels().QoV).format(s.quality),
-	'own': s => new DecimalUnitFormatter(statusBarLabels().own).format(s.ownNotes),
-	'source': s => new DecimalUnitFormatter(statusBarLabels().source).format(s.sourceNotes),
-	'own-pct': s => `${PCT_FMT.format(s.ownPct())} ${statusBarLabels()['own-pct']}`,
-	'source-pct': s => `${PCT_FMT.format(s.sourcePct())} ${statusBarLabels()['source-pct']}`,
-	'concepts': s => new DecimalUnitFormatter(statusBarLabels().concepts).format(s.conceptNotes),
-	'orphans': s => new DecimalUnitFormatter(statusBarLabels().orphans).format(s.orphanNotes),
-	'trace-pct': s => `${PCT_FMT.format(s.tracePct())} ${statusBarLabels()['trace-pct']}`,
+	'notes': s => new DecimalUnitFormatter(t().statusBar.notes).format(s.notes),
+	'words': s => new DecimalUnitFormatter(t().statusBar.words).format(s.words),
+	'links': s => new DecimalUnitFormatter(t().statusBar.links).format(s.links),
+	'tags': s => new DecimalUnitFormatter(t().statusBar.tags).format(s.tags),
+	'QoV': s => new DecimalUnitFormatter(t().statusBar.QoV).format(s.quality),
+	'own': s => new DecimalUnitFormatter(t().statusBar.own).format(s.ownNotes),
+	'source': s => new DecimalUnitFormatter(t().statusBar.source).format(s.sourceNotes),
+	'own-pct': s => `${PCT_FMT.format(s.ownPct())} ${t().statusBar.ownPct}`,
+	'source-pct': s => `${PCT_FMT.format(s.sourcePct())} ${t().statusBar.sourcePct}`,
+	'concepts': s => new DecimalUnitFormatter(t().statusBar.concepts).format(s.conceptNotes),
+	'orphans': s => new DecimalUnitFormatter(t().statusBar.orphans).format(s.orphanNotes),
+	'trace-pct': s => `${PCT_FMT.format(s.tracePct())} ${t().statusBar.tracePct}`,
 };
 
 class FullStatisticsStatusBarItem {

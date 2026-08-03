@@ -1,5 +1,6 @@
 import { AgeBucket, InboxBucketNotes, InboxHealthNotes } from './inbox';
 import { wikilinkTargetForPath } from './tangles';
+import { t } from './i18n';
 
 const AGE_ORDER: AgeBucket[] = ['fresh', 'recent', 'stale', 'old'];
 
@@ -9,11 +10,12 @@ const AGE_ORDER: AgeBucket[] = ['fresh', 'recent', 'stale', 'old'];
  * be active at import time.
  */
 function ageLabels(): Record<AgeBucket, string> {
+	const labels = t().inbox;
 	return {
-		fresh: 'fresh (<1d)',
-		recent: 'recent (1–7d)',
-		stale: 'stale (7–30d)',
-		old: 'old (30+d)',
+		fresh: labels.ageFresh,
+		recent: labels.ageRecent,
+		stale: labels.ageStale,
+		old: labels.ageOld,
 	};
 }
 
@@ -30,7 +32,7 @@ export function renderInboxNotesMarkdown(
 	now: Date,
 ): string {
 	const lines: string[] = [];
-	lines.push(`## Inbox health — ${formatYmd(now)}`);
+	lines.push(t().inbox.reportTitle(formatYmd(now)));
 	lines.push('');
 	if (labels.hasFolders) appendGroup(lines, labels.inFolderLabel, notes.inFolder);
 	if (labels.hasTags) appendGroup(lines, labels.outsideWithTagLabel, notes.outsideWithTag);
@@ -53,7 +55,7 @@ function appendGroup(lines: string[], title: string, bucket: InboxBucketNotes): 
 		lines.push('');
 	}
 	if (!any) {
-		lines.push('_Empty._');
+		lines.push(t().inbox.reportEmpty);
 		lines.push('');
 	}
 }

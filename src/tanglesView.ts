@@ -3,6 +3,7 @@ import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings } from './settings';
 import { computeTangles, TangleEntry } from './tangles';
+import { t } from './i18n';
 
 export const TANGLES_VIEW_TYPE = 'vault-full-statistics-tangles-view';
 
@@ -38,7 +39,7 @@ export class TanglesView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Vault tangles';
+		return t().tangles.viewTitle;
 	}
 
 	getIcon(): string {
@@ -63,7 +64,7 @@ export class TanglesView extends ItemView {
 
 		const settings = this.getSettings();
 		const section = contentEl.createDiv({ cls: 'vfs-section vfs-tangles' });
-		section.createEl('h4', { text: 'Tangles', cls: 'vfs-section-title' });
+		section.createEl('h4', { text: t().tangles.sectionTitle, cls: 'vfs-section-title' });
 
 		const entries = computeTangles(this.collector, settings);
 
@@ -74,20 +75,20 @@ export class TanglesView extends ItemView {
 		});
 		meta.createSpan({
 			cls: 'vfs-tangles-meta-count',
-			text: `${entries.length} ${entries.length === 1 ? 'tangle' : 'tangles'}`,
+			text: t().tangles.count(entries.length),
 		});
 
 		if (entries.length === 0) {
 			section.createDiv({
 				cls: 'vfs-empty',
-				text: 'No notes match the current tangle thresholds. Lower min in / min out in settings, or remove an exclude entry.',
+				text: t().tangles.empty,
 			});
 			return;
 		}
 
 		const legend = section.createDiv({ cls: 'vfs-tangles-legend' });
-		this.appendLegendItem(legend, 'in', 'incoming');
-		this.appendLegendItem(legend, 'out', 'outgoing');
+		this.appendLegendItem(legend, 'in', t().tangles.legendIn);
+		this.appendLegendItem(legend, 'out', t().tangles.legendOut);
 
 		const list = section.createDiv({ cls: 'vfs-tangles-list' });
 		for (const entry of entries) {
@@ -97,10 +98,10 @@ export class TanglesView extends ItemView {
 
 	private describeMode(settings: FullStatisticsPluginSettings): string {
 		if (settings.tanglesMode === 'sum') {
-			return `sum · in+out ≥ ${settings.tanglesMinTotal}`;
+			return t().tangles.modeSum(settings.tanglesMinTotal);
 		}
 		const op = settings.tanglesMode === 'or' ? 'OR' : 'AND';
-		return `${settings.tanglesMode} · in ≥ ${settings.tanglesMinIn} ${op} out ≥ ${settings.tanglesMinOut}`;
+		return t().tangles.modeAndOr(settings.tanglesMode, settings.tanglesMinIn, op, settings.tanglesMinOut);
 	}
 
 	private appendLegendItem(parent: HTMLElement, kind: 'in' | 'out', label: string): void {
@@ -114,7 +115,7 @@ export class TanglesView extends ItemView {
 
 		const badge = row.createSpan({
 			cls: 'vfs-tangles-badge',
-			attr: { title: `${entry.inCount} incoming · ${entry.outCount} outgoing` },
+			attr: { title: t().tangles.badgeTitle(entry.inCount, entry.outCount) },
 		});
 		badge.createSpan({ cls: 'vfs-tangles-badge-in', text: String(entry.inCount) });
 		badge.createSpan({ cls: 'vfs-tangles-badge-out', text: String(entry.outCount) });
@@ -145,8 +146,8 @@ export class TanglesView extends ItemView {
 		const excludeBtn = row.createEl('button', {
 			cls: 'clickable-icon vfs-tangles-exclude',
 			attr: {
-				'aria-label': 'Exclude from tangles',
-				title: 'Exclude from tangles',
+				'aria-label': t().tangles.exclude,
+				title: t().tangles.exclude,
 			},
 		});
 		setIcon(excludeBtn, 'x');
