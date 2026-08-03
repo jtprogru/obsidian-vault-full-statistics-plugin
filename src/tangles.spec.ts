@@ -7,6 +7,7 @@ import {
 	wikilinkTargetForPath,
 	TanglesSettings,
 } from './tangles';
+import { setLocale } from './i18n';
 
 function makeMetadataCache(resolvedLinks: Record<string, Record<string, number>>): MetadataCache {
 	const mc = new MetadataCache();
@@ -328,6 +329,29 @@ describe('renderTanglesReport', () => {
 		expect(md).toContain('- Mode: `and` · in ≥ 2 AND out ≥ 2');
 		expect(md).toContain('- Total tangles: 1');
 		expect(md).toContain('| 5 | 4 | [[Notes/hub]] |');
+	});
+
+	// Proves the locale actually reaches a pure renderer: same call, Russian
+	// catalogue, Russian output — including the table header, which is easy to
+	// forget because it looks structural.
+	test("renders in Russian when the locale is switched", () => {
+		const settings: TanglesSettings = {
+			tanglesMode: 'and',
+			tanglesMinIn: 2,
+			tanglesMinOut: 2,
+			tanglesMinTotal: 0,
+			tanglesTopN: 0,
+			tanglesExclude: [],
+		};
+		setLocale('ru');
+		const md = renderTanglesReport([
+			{ path: 'Notes/hub.md', inCount: 5, outCount: 4 },
+		], settings, fixedDate);
+
+		expect(md).toContain('# Клубки хранилища — 2026-05-12 14-30');
+		expect(md).toContain('- Режим: `and` · вх ≥ 2 AND исх ≥ 2');
+		expect(md).toContain('- Всего клубков: 1');
+		expect(md).toContain('| Вх | Исх | Заметка |');
 	});
 
 	test("renders an empty-state notice when there are no entries", () => {

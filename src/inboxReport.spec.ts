@@ -1,5 +1,6 @@
 import { emptyBucketNotes, InboxHealthNotes } from './inbox';
 import { InboxReportLabels, renderInboxNotesMarkdown } from './inboxReport';
+import { setLocale } from './i18n';
 
 function makeNotes(over: Partial<{ inFolder: Partial<Record<keyof ReturnType<typeof emptyBucketNotes>, string[]>>; outsideWithTag: Partial<Record<keyof ReturnType<typeof emptyBucketNotes>, string[]>> }> = {}): InboxHealthNotes {
 	const inFolder = emptyBucketNotes();
@@ -146,5 +147,18 @@ describe('renderInboxNotesMarkdown', () => {
 		expect(md).toContain('### #review (outside inbox)');
 		const empties = md.match(/_Empty\._/g) ?? [];
 		expect(empties.length).toBe(2);
+	});
+});
+
+describe('renderInboxNotesMarkdown in Russian', () => {
+	test('age buckets and the empty state follow the locale', () => {
+		setLocale('ru');
+		const md = renderInboxNotesMarkdown(
+			makeNotes({ inFolder: { fresh: ['Inbox/today.md'] } }),
+			makeLabels({ hasTags: false }),
+			FIXED_DATE,
+		);
+		expect(md).toContain('## Состояние входящих — 2026-05-14');
+		expect(md).toContain('#### свежие (<1д)');
 	});
 });
