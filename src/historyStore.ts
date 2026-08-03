@@ -109,10 +109,6 @@ export function sparkline(values: number[]): string {
 	return out;
 }
 
-export function pctString(v: number): string {
-	return `${Math.round(v * 100)}%`;
-}
-
 const CSV_COLUMNS: (keyof Snapshot)[] = [
 	'date', 'notes', 'links', 'tags', 'words',
 	'ownNotes', 'sourceNotes', 'conceptNotes', 'orphanNotes', 'sourcesWithTrace',

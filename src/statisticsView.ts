@@ -1,8 +1,9 @@
 import { ItemView, Notice, WorkspaceLeaf, debounce, setIcon } from 'obsidian';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector, GroupAggregate } from './collect';
-import { HistoryStore, pctString } from './historyStore';
+import { HistoryStore } from './historyStore';
 import { t } from './i18n';
+import { compactFormat, fractionFormat, numberFormat, percentString } from './i18n/format';
 import { FullStatisticsPluginSettings } from './settings';
 import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
 import { InboxBucket } from './inbox';
@@ -21,20 +22,9 @@ function basenameOf(path: string): string {
 // at similar precision. Words switches to compact notation past 10K to
 // stay readable on million-word vaults ("12.345K" / "1.234M"); the exact
 // value is offered via tooltip.
-const WORDS_FORMATTER = new Intl.NumberFormat('en-US', {
-	minimumFractionDigits: 1,
-	maximumFractionDigits: 2,
-});
-
-const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
-	notation: 'compact',
-	minimumFractionDigits: 1,
-	maximumFractionDigits: 2,
-});
-
 function formatCompactNumber(n: number): string {
-	if (Math.abs(n) < 10_000) return WORDS_FORMATTER.format(n);
-	return COMPACT_FORMATTER.format(n);
+	if (Math.abs(n) < 10_000) return fractionFormat().format(n);
+	return compactFormat().format(n);
 }
 
 export const VAULT_STATISTICS_VIEW_TYPE = 'vault-full-statistics-view';
@@ -313,7 +303,7 @@ export class VaultStatisticsView extends ItemView {
 	private appendTraceLegend(parent: HTMLElement, kind: 'good' | 'bad', count: number, share: number, label: string): void {
 		const item = parent.createSpan({ cls: `vfs-trace-leg vfs-trace-leg-${kind}` });
 		item.createSpan({ cls: `vfs-trace-swatch vfs-trace-swatch-${kind}` });
-		item.createSpan({ cls: 'vfs-trace-leg-text', text: `${pctString(share)} ${label} · ${count}` });
+		item.createSpan({ cls: 'vfs-trace-leg-text', text: `${percentString(share)} ${label} · ${count}` });
 	}
 
 	private renderTaxonomy(parent: HTMLElement): void {
@@ -407,7 +397,7 @@ export class VaultStatisticsView extends ItemView {
 		row.createSpan({ cls: 'vfs-folder-name', text: a.name });
 		row.createSpan({
 			cls: 'vfs-folder-count',
-			text: a.notes.toLocaleString('en-US'),
+			text:numberFormat().format(a.notes),
 		});
 
 		const bar = row.createDiv({ cls: 'vfs-folder-bar' });
@@ -424,7 +414,7 @@ export class VaultStatisticsView extends ItemView {
 			}
 			row.createSpan({
 				cls: 'vfs-folder-pct',
-				text: pctString(a.ownNotes / classified),
+				text: percentString(a.ownNotes / classified),
 				title: t().view.folders.ownSourceTooltip(a.ownNotes, a.sourceNotes),
 			});
 		} else {
@@ -438,12 +428,12 @@ export class VaultStatisticsView extends ItemView {
 	private renderHero(parent: HTMLElement): void {
 		const hero = parent.createDiv({ cls: 'vfs-hero' });
 		const hero_ = t().view.hero;
-		this.appendHeroStat(hero, this.vaultMetrics.notes.toLocaleString('en-US'), hero_.notes);
+		this.appendHeroStat(hero, numberFormat().format(this.vaultMetrics.notes), hero_.notes);
 		this.appendHeroStat(
 			hero,
 			formatCompactNumber(this.vaultMetrics.words),
 			hero_.words,
-			hero_.wordsTooltip(this.vaultMetrics.words.toLocaleString('en-US')),
+			hero_.wordsTooltip(numberFormat().format(this.vaultMetrics.words)),
 		);
 		this.appendHeroStat(
 			hero,
@@ -515,7 +505,7 @@ export class VaultStatisticsView extends ItemView {
 	): void {
 		const item = parent.createSpan({ cls: `vfs-ratio-leg vfs-ratio-leg-${kind}` });
 		item.createSpan({ cls: `vfs-ratio-swatch vfs-ratio-swatch-${kind}` });
-		const text = showPct ? `${pctString(share)} ${label} · ${count}` : `${count} ${label}`;
+		const text = showPct ? `${percentString(share)} ${label} · ${count}` : `${count} ${label}`;
 		item.createSpan({ cls: 'vfs-ratio-leg-text', text });
 	}
 
@@ -530,12 +520,12 @@ export class VaultStatisticsView extends ItemView {
 		const grid = section.createDiv({ cls: 'vfs-grid' });
 
 		const labels = t().view.metrics;
-		if (s.metricsShowLinks) this.appendStat(grid, m.links.toLocaleString('en-US'), labels.links);
-		if (s.metricsShowTags) this.appendStat(grid, m.tags.toLocaleString('en-US'), labels.tags);
-		if (s.metricsShowConcepts) this.appendStat(grid, m.conceptNotes.toLocaleString('en-US'), labels.concepts);
+		if (s.metricsShowLinks) this.appendStat(grid,numberFormat().format(m.links), labels.links);
+		if (s.metricsShowTags) this.appendStat(grid,numberFormat().format(m.tags), labels.tags);
+		if (s.metricsShowConcepts) this.appendStat(grid,numberFormat().format(m.conceptNotes), labels.concepts);
 		if (s.metricsShowOrphans) this.appendStat(
 			grid,
-			m.orphanNotes.toLocaleString('en-US'),
+			numberFormat().format(m.orphanNotes),
 			labels.orphans,
 			labels.orphansTooltip,
 		);
@@ -544,7 +534,7 @@ export class VaultStatisticsView extends ItemView {
 				const exact = m.words / m.notes;
 				this.appendStat(
 					grid,
-					Math.round(exact).toLocaleString('en-US'),
+					numberFormat().format(Math.round(exact)),
 					labels.avgWords,
 					labels.avgWordsTooltip(exact.toFixed(1)),
 				);
@@ -619,10 +609,10 @@ export class VaultStatisticsView extends ItemView {
 			// otherwise scale the bar height across the local range.
 			const ratio = range === 0 ? 0.4 : 0.15 + (0.85 * (v - min) / range);
 			bar.style.setProperty('--vfs-bar-height', `${Math.round(ratio * 100)}%`);
-			bar.setAttribute('title', `${v.toLocaleString('en-US')}`);
+			bar.setAttribute('title', `${numberFormat().format(v)}`);
 		}
 
 		const tail = values[values.length - 1];
-		parent.createDiv({ cls: 'vfs-spark-tail', text: tail.toLocaleString('en-US') });
+		parent.createDiv({ cls: 'vfs-spark-tail', text:numberFormat().format(tail) });
 	}
 }

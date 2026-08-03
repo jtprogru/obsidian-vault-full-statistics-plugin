@@ -1,6 +1,6 @@
 import { setLocale, resolveUiLocale, resolveFormatLocale, t } from './i18n';
 import { plural } from './i18n/plural';
-import { numberFormat, compactFormat, getFormatLocale } from './i18n/format';
+import { numberFormat, compactFormat, percentString, getFormatLocale } from './i18n/format';
 import { en } from './i18n/locales/en';
 import { ru } from './i18n/locales/ru';
 import { DEFAULT_SETTINGS } from './settings';
@@ -128,6 +128,24 @@ describe("setLocale", () => {
 		// Russian groups with a non-breaking space (U+00A0), not a plain one.
 		expect(numberFormat().format(1234567)).toBe("1\u00A0234\u00A0567");
 		expect(numberFormat()).not.toBe(beforeFmt);
+	});
+});
+
+describe("percentString", () => {
+	test("rounds to a whole percent", () => {
+		expect(percentString(0.6667)).toBe("67%");
+		expect(percentString(0)).toBe("0%");
+		expect(percentString(1)).toBe("100%");
+	});
+
+	// The panel and the status bar used to compute percentages two different
+	// ways; under Russian, Intl's `style: 'percent'` would render «67 %» with a
+	// non-breaking space while the panel kept «67%». This asserts the tight
+	// form so a return to Intl percent formatting fails here rather than in a
+	// user's screenshot.
+	test("stays tight in Russian", () => {
+		setLocale('ru');
+		expect(percentString(0.6667)).toBe("67%");
 	});
 });
 

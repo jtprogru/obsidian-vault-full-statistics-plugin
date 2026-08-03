@@ -57,6 +57,19 @@ export function fractionFormat(locale: string = formatLocale): Intl.NumberFormat
 }
 
 /**
+ * The one way percentages are written.
+ *
+ * Deliberately not `Intl.NumberFormat` with `style: 'percent'`: CLDR puts a
+ * non-breaking space before the sign in Russian («67 %»), while the panel has
+ * always written it tight («67%»). Two spellings of the same number in one
+ * interface is worse than deviating from CLDR, and Russian typographic
+ * convention wants it tight anyway. Only the grouping follows the locale.
+ */
+export function percentString(v: number): string {
+	return `${numberFormat().format(Math.round(v * 100))}%`;
+}
+
+/**
  * Compact notation for the hero tile: `12.345K` in English, «12,35 тыс.» in
  * Russian. The explicit `locale` argument is what the "keep hero labels in
  * English" setting passes when the panel is too narrow for the Russian form.

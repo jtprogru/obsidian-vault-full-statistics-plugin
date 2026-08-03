@@ -1,3 +1,5 @@
+import { numberFormat } from './i18n/format';
+
 export abstract class Formatter {
 	public abstract format(value: number): string;
 }
@@ -7,20 +9,21 @@ export abstract class Formatter {
  * that outputs a integers in a standard decimal format with grouped thousands.
  */
 export class DecimalUnitFormatter extends Formatter {
-	private unit: string;
-	private numberFormat: Intl.NumberFormat;
+	private label: string;
 
 	/**
-	 * @param unit the unit of the value being formatted.
+	 * @param label the already-localised label to append, e.g. "notes".
 	 * @constructor
 	 */
-	constructor(unit: string) {
+	constructor(label: string) {
 		super()
-		this.unit = unit;
-		this.numberFormat = Intl.NumberFormat('en-US', { style: 'decimal' });
+		this.label = label;
 	}
 
 	public format(value: number): string {
-		return `${this.numberFormat.format(value)} ${this.unit}`
+		// Looked up per call rather than held in a field: the instance may
+		// outlive a language switch, the cached formatter behind
+		// numberFormat() never does.
+		return `${numberFormat().format(value)} ${this.label}`
 	}
 }

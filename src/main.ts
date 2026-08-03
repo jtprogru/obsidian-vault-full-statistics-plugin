@@ -10,6 +10,7 @@ import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsVie
 import { TanglesView, TANGLES_VIEW_TYPE } from './tanglesView';
 import { computeTangles, renderTanglesReport, formatDate } from './tangles';
 import { setLocale, t } from './i18n';
+import { percentString } from './i18n/format';
 
 
 interface PersistedData {
@@ -409,8 +410,6 @@ class StatisticView {
 	}
 }
 
-const PCT_FMT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
-
 /**
  * How each statistic turns metrics into text, keyed by the same id the settings
  * tab uses. Formatters are looked up rather than pushed positionally, so the
@@ -424,11 +423,11 @@ const STAT_FORMATTERS: Record<StatusBarStatId, (s: FullVaultMetrics) => string> 
 	'QoV': s => new DecimalUnitFormatter(t().statusBar.QoV).format(s.quality),
 	'own': s => new DecimalUnitFormatter(t().statusBar.own).format(s.ownNotes),
 	'source': s => new DecimalUnitFormatter(t().statusBar.source).format(s.sourceNotes),
-	'own-pct': s => `${PCT_FMT.format(s.ownPct())} ${t().statusBar.ownPct}`,
-	'source-pct': s => `${PCT_FMT.format(s.sourcePct())} ${t().statusBar.sourcePct}`,
+	'own-pct': s => `${percentString(s.ownPct())} ${t().statusBar.ownPct}`,
+	'source-pct': s => `${percentString(s.sourcePct())} ${t().statusBar.sourcePct}`,
 	'concepts': s => new DecimalUnitFormatter(t().statusBar.concepts).format(s.conceptNotes),
 	'orphans': s => new DecimalUnitFormatter(t().statusBar.orphans).format(s.orphanNotes),
-	'trace-pct': s => `${PCT_FMT.format(s.tracePct())} ${t().statusBar.tracePct}`,
+	'trace-pct': s => `${percentString(s.tracePct())} ${t().statusBar.tracePct}`,
 };
 
 class FullStatisticsStatusBarItem {
