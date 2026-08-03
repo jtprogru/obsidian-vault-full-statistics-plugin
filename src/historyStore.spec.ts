@@ -1,4 +1,4 @@
-import { HistoryStore, Snapshot, formatDate, sparkline, pctString, snapshotsToCsv } from './historyStore';
+import { HistoryStore, Snapshot, formatDate, sparkline, snapshotsToCsv } from './historyStore';
 import { FullVaultMetrics } from './metrics';
 
 function makeMetrics(overrides: Partial<FullVaultMetrics> = {}): FullVaultMetrics {
@@ -144,14 +144,6 @@ describe("sparkline", () => {
 		const s = sparkline([8, 6, 4, 2, 0]);
 		expect(s.charAt(0)).toBe("█");
 		expect(s.charAt(s.length - 1)).toBe("▁");
-	});
-});
-
-describe("pctString", () => {
-	test("rounds to integer percent", () => {
-		expect(pctString(0.6667)).toBe("67%");
-		expect(pctString(0)).toBe("0%");
-		expect(pctString(1)).toBe("100%");
 	});
 });
 

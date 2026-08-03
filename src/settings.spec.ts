@@ -1,12 +1,11 @@
 import type { SettingDefinitionItem } from 'obsidian';
 
 import {
-	count,
 	DEFAULT_SETTINGS,
 	FullStatisticsPluginSettingTab,
 	parseFolderGroups,
 	serializeFolderGroups,
-	STATUS_BAR_ITEMS,
+	statusBarItems,
 } from './settings';
 import type { FullStatisticsPluginSettings, SettingsKey } from './settings';
 
@@ -86,14 +85,6 @@ describe("serializeFolderGroups", () => {
 
 	test("empty groups serialize to empty string", () => {
 		expect(serializeFolderGroups([])).toBe("");
-	});
-});
-
-describe("count", () => {
-	test("pluralises", () => {
-		expect(count(0, "group")).toBe("No groups");
-		expect(count(1, "group")).toBe("1 group");
-		expect(count(4, "canonical tag")).toBe("4 canonical tags");
 	});
 });
 
@@ -211,9 +202,12 @@ describe("tab layout", () => {
 
 		expect(top.filter(d => 'type' in d && d.type === 'list')).toEqual([]);
 
-		const [first, second, ...rest] = top;
-		expect(isControl(first) && first.control.key).toBe('displayIndividualItems');
-		expect((second as PageDef).type).toBe('page');
+		// Two leading controls — the language picker and the display mode —
+		// then the status bar page, then nothing but groups.
+		const [first, second, third, ...rest] = top;
+		expect(isControl(first) && first.control.key).toBe('language');
+		expect(isControl(second) && second.control.key).toBe('displayIndividualItems');
+		expect((third as PageDef).type).toBe('page');
 		expect(rest.every(d => 'type' in d && d.type === 'group')).toBe(true);
 	});
 
@@ -232,7 +226,7 @@ describe("tab layout", () => {
 	});
 
 	test("status bar items cover the statistics the status bar renders", () => {
-		const keys = STATUS_BAR_ITEMS.map(i => i.key);
+		const keys = statusBarItems().map(i => i.key);
 		expect(keys).toEqual([
 			'showNotes', 'showWords', 'showLinks', 'showTags', 'showQuality',
 			'showOwn', 'showSource', 'showOwnPct', 'showSourcePct',
@@ -291,6 +285,27 @@ describe("control validation", () => {
 	});
 });
 
+describe("language", () => {
+	function heroRow(overrides: Partial<FullStatisticsPluginSettings>) {
+		return [...walk(defs(overrides))]
+			.find(d => isControl(d) && d.control.key === 'heroLabelsInEnglish');
+	}
+
+	// The row exists either way — hiding it is what `visible` is for — but it
+	// says nothing to somebody already reading an English interface.
+	test("the hero-labels escape hatch only shows in a translated UI", () => {
+		expect(resolve(heroRow({ language: 'en' })?.visible, true)).toBe(false);
+		expect(resolve(heroRow({ language: 'ru' })?.visible, true)).toBe(true);
+		expect(resolve(heroRow({ language: 'auto' })?.visible, true)).toBe(true);
+	});
+
+	test("the picker offers English, Russian and auto", () => {
+		const row = [...walk(defs())].find(d => isControl(d) && d.control.key === 'language');
+		const control = (row as ControlDef).control as { options: Record<string, string> };
+		expect(Object.keys(control.options)).toEqual(['en', 'ru', 'auto']);
+	});
+});
+
 describe("page summaries", () => {
 	test("a section that renders nothing is flagged", () => {
 		const enabledButEmpty = defs({ showFolderBreakdown: true, folderGroups: [] });
@@ -332,7 +347,7 @@ describe("page summaries", () => {
 	});
 
 	test("an empty status bar is flagged", () => {
-		const allOff = Object.fromEntries(STATUS_BAR_ITEMS.map(i => [i.key, false]));
+		const allOff = Object.fromEntries(statusBarItems().map(i => [i.key, false]));
 		expect(resolve(page(defs(allOff), "Status bar items").status, null)).toBe('warning');
 		expect(resolve(page(defs({ showNotes: false }), "Status bar items").status, null)).toBeNull();
 	});

@@ -1,5 +1,6 @@
 import { FullVaultMetricsCollector } from './collect';
 import { FullStatisticsPluginSettings } from './settings';
+import { t } from './i18n';
 
 export interface TangleEntry {
 	path: string;
@@ -125,19 +126,19 @@ export function renderTanglesReport(
 	const dateStr = formatDate(now);
 	const modeDesc = describeMode(settings);
 	const lines: string[] = [];
-	lines.push(`# Vault Tangles — ${dateStr}`);
+	lines.push(t().tangles.reportTitle(dateStr));
 	lines.push('');
-	lines.push(`- Mode: ${modeDesc}`);
-	lines.push(`- Total tangles: ${entries.length}`);
+	lines.push(t().tangles.reportMode(modeDesc));
+	lines.push(t().tangles.reportTotal(entries.length));
 	lines.push('');
 
 	if (entries.length === 0) {
-		lines.push('_No notes match the current tangle thresholds._');
+		lines.push(t().tangles.reportEmpty);
 		lines.push('');
 		return lines.join('\n');
 	}
 
-	lines.push('| In | Out | Note |');
+	lines.push(t().tangles.reportTableHead);
 	lines.push('|---:|---:|---|');
 	for (const e of entries) {
 		lines.push(`| ${e.inCount} | ${e.outCount} | [[${wikilinkTargetForPath(e.path)}]] |`);
@@ -148,10 +149,10 @@ export function renderTanglesReport(
 
 function describeMode(settings: TanglesSettings): string {
 	if (settings.tanglesMode === 'sum') {
-		return `\`sum\` · in+out ≥ ${settings.tanglesMinTotal}`;
+		return t().tangles.reportModeSum(settings.tanglesMinTotal);
 	}
 	const op = settings.tanglesMode === 'or' ? 'OR' : 'AND';
-	return `\`${settings.tanglesMode}\` · in ≥ ${settings.tanglesMinIn} ${op} out ≥ ${settings.tanglesMinOut}`;
+	return t().tangles.reportModeAndOr(settings.tanglesMode, settings.tanglesMinIn, op, settings.tanglesMinOut);
 }
 
 export function formatDate(now: Date): string {

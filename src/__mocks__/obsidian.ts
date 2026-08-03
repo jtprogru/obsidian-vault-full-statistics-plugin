@@ -72,3 +72,10 @@ export class Events {
 	getItemText(_item: T): string { return ''; }
 	onChooseItem(_item: T): void {}
   }
+
+  /**
+   * Obsidian's interface language. Tests that care about locale resolution pass
+   * a raw value to `setLocale` explicitly; everything else runs in English,
+   * which `setupLocale.ts` enforces before each test.
+   */
+  export function getLanguage(): string { return 'en'; }

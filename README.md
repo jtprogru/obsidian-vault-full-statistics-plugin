@@ -11,7 +11,9 @@
 
 Quantify the shape of your knowledge base: counts, ratios, and trends right inside Obsidian. A click-to-cycle status bar item gives you the headline numbers; a dedicated side view goes deep — own vs source split, dangling sources, tangles, inbox health, taxonomy drift, and a 30-day sparkline.
 
-**Requires:** Obsidian 0.16.0+ on desktop. Mobile is not supported.
+**Requires:** Obsidian 1.13.1+ on desktop. Mobile is not supported.
+
+**Languages:** English and Russian. English is the default; Russian and follow-Obsidian are opt-in under `Settings → Language`.
 
 ## Features
 
@@ -64,6 +66,13 @@ For own/source classification, configure your own/source/concept tags in setting
 All settings live under `Settings → Community plugins → Vault Full Statistics`, and are searchable from the settings search box. Defaults are sensible — most users only touch own/source tags and the opt-in section toggles.
 
 The tab itself is an index. The first screen holds one toggle and a list of navigable entries grouped under **What gets counted**, **Side view** and **Tools**; everything below lives one level down on its own page. Each entry shows its current state (`11 of 12`, `3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. Every list supports drag-to-reorder and removal with Delete or Backspace. If you know what you are looking for, `Settings → Search` finds the row directly and opens the page it lives on.
+
+### Language
+- **Language** — `English` (default), `Русский`, or `Auto (follow Obsidian)`. The plugin stays English until you change this: updating it never switches the interface of somebody who did not ask for it. Pick `Auto` if you want it to follow Obsidian's own interface language from now on.
+- Switching redraws the settings tab, both side panels and the status bar right away. Command names and the ribbon tooltip only change after the plugin reloads — Obsidian caches those when they are registered, and a notice reminds you.
+- **Keep hero labels in English** — appears only when the interface is not English. The three top tiles keep `notes` / `words` / `QoV` and the `12.35K` number format, which fit a narrow sidebar better than «заметок» / «слов» and «12,35 тыс.». Tooltips stay translated.
+- Numbers follow the language too: `1,234` in English, `1 234` in Russian. Under `Auto` the grouping follows Obsidian even for languages the plugin has no translation for — a German interface gets English text and German digit grouping.
+- Not translated by design: the CSV export file name and the CSV column headers (it is an interchange format — your spreadsheet formulas keep working), and the default tag values (`thought`, `book`, `concept`, …), which are vault content rather than interface.
 
 ### Status bar
 - **Show individual items** — when on, every enabled statistic is rendered as its own status bar slot; when off (default) the bar shows one statistic at a time and clicking cycles.

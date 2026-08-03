@@ -1,5 +1,5 @@
 import { UNIT_TOKENIZER, countWords } from './text';
-import { BytesFormatter, DecimalUnitFormatter } from './format';
+import { DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 
 describe("Unit tokenize", () => {
@@ -73,22 +73,6 @@ describe("countWords", () => {
 		// "Today"(1) "I"(2) "read"(3) "3"(4) "chapters"(5) "and"(6) "wrote"(7)
 		// "по-русски"(8) + 你(9) 好(10)
 		expect(countWords(md)).toBe(10);
-	});
-});
-
-describe("Bytes formatter", () => {
-	const fmt = new BytesFormatter();
-	test("formats bytes < 1KB", () => {
-		expect(fmt.format(512)).toBe("512.00 bytes");
-	});
-	test("formats KB", () => {
-		expect(fmt.format(2048)).toBe("2.00 KB");
-	});
-	test("formats MB", () => {
-		expect(fmt.format(1048576)).toBe("1.00 MB");
-	});
-	test("formats GB", () => {
-		expect(fmt.format(1073741824)).toBe("1.00 GB");
 	});
 });
 

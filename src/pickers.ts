@@ -1,5 +1,7 @@
 import { App, FuzzySuggestModal, TFile, TFolder } from 'obsidian';
 
+import { t } from './i18n';
+
 /**
  * Fuzzy picker over every folder in the vault, including the root. The
  * placeholder is parameterised so the same modal can serve both the CSV
@@ -10,7 +12,7 @@ export class FolderPickerModal extends FuzzySuggestModal<TFolder> {
 
 	private readonly onSelect: (folder: TFolder) => void;
 
-	constructor(app: App, onSelect: (folder: TFolder) => void, placeholder = 'Choose a folder') {
+	constructor(app: App, onSelect: (folder: TFolder) => void, placeholder = t().pickers.chooseFolder) {
 		super(app);
 		this.onSelect = onSelect;
 		this.setPlaceholder(placeholder);
@@ -30,7 +32,7 @@ export class FolderPickerModal extends FuzzySuggestModal<TFolder> {
 
 	getItemText(folder: TFolder): string {
 		return folder.path === '' || folder.path === '/'
-			? '/ (vault root)'
+			? t().pickers.vaultRoot
 			: folder.path;
 	}
 
@@ -49,7 +51,7 @@ export class NoteFuzzyPickerModal extends FuzzySuggestModal<TFile> {
 
 	private readonly onSelect: (file: TFile) => void;
 
-	constructor(app: App, onSelect: (file: TFile) => void, placeholder = 'Type to find a note') {
+	constructor(app: App, onSelect: (file: TFile) => void, placeholder = t().pickers.findNote) {
 		super(app);
 		this.onSelect = onSelect;
 		this.setPlaceholder(placeholder);
