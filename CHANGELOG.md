@@ -2,6 +2,23 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+The settings tab became an index. The first screen used to be one scroll of 28 rows (40 with individual status bar items on), mixing a lone toggle, two blocks of checkboxes and four editable lists with the four navigable pages added in 1.21.0. Now it holds one toggle and ten navigable entries under three headings, each entry summarising its own state.
+
+### Changed
+- **Settings are organised into pages.** Top level: `Show individual items` and `Status bar items`, then **What gets counted** (excluded folders, note classification), **Side view** (metrics, folder breakdown, sources with trace, taxonomy drift, inbox health, history) and **Tools** (tangles). No setting was removed, renamed or given a new default — everything moved one level down and is still reachable from `Settings → Search`.
+- Every entry now carries a state summary: `11 of 12`, `3 own / 6 source`, `No folders`, `On + top 5`. Previously only four of them did.
+- Two more configurations that silently render nothing are flagged with a warning marker: every status bar item turned off, and an empty own or source tag list (the own/source ratio, which the hero panel is built on, has no meaning then).
+- The twelve status bar toggles and the five side view metric toggles are generated from one ordered list each. `StatusBarView` reads the same list to decide which statistics are enabled, so the settings tab and the status bar can no longer drift apart.
+- **`minAppVersion` raised from 1.13.0 to 1.13.1.** `displayValue` and `status` on a settings page landed in 1.13.1, and 1.21.0 already shipped them — the manifest has been understating the requirement since that release.
+
+### Fixed
+- The per-statistic status bar toggles are no longer hidden when `Show individual items` is off. Cycling mode walks only the enabled statistics and skips the rest, so those toggles were doing their job the whole time while the settings tab claimed otherwise and hid them.
+
+### Documentation
+- README's settings reference follows the new hierarchy and describes the index-plus-pages layout.
+
 ## [1.21.0] - 2026-08-01
 
 Settings are rebuilt on Obsidian 1.13's declarative settings API. The plugin's settings are now searchable from the settings panel, the long sections became navigable pages, and the tag/folder lists gained drag-to-reorder.
