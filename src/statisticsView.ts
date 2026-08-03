@@ -3,6 +3,7 @@ import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector, GroupAggregate } from './collect';
 import { HistoryStore } from './historyStore';
 import { t } from './i18n';
+import { en } from './i18n/locales/en';
 import { compactFormat, fractionFormat, numberFormat, percentString } from './i18n/format';
 import { FullStatisticsPluginSettings } from './settings';
 import { findRareTags, findUnknownTags, normalizeCanonical, TagFinding } from './taxonomy';
@@ -20,12 +21,19 @@ function basenameOf(path: string): string {
 
 // Words / QoV share a uniform 3-decimal form so the hero numbers read
 // at similar precision. Words switches to compact notation past 10K to
-// stay readable on million-word vaults ("12.345K" / "1.234M"); the exact
+// stay readable on million-word vaults ("12.35K" / "1.23M"); the exact
 // value is offered via tooltip.
-function formatCompactNumber(n: number): string {
-	if (Math.abs(n) < 10_000) return fractionFormat().format(n);
-	return compactFormat().format(n);
+//
+// `locale` is what the "keep hero labels in English" setting passes: the
+// Russian compact form is «12,35 тыс.», which is both wider and differently
+// punctuated, and a narrow sidebar may not have room for it.
+function formatCompactNumber(n: number, locale?: string): string {
+	if (Math.abs(n) < 10_000) return fractionFormat(locale).format(n);
+	return compactFormat(locale).format(n);
 }
+
+/** Locale to format hero numbers in — English on request, otherwise the active one. */
+const HERO_LATIN_LOCALE = 'en-US';
 
 export const VAULT_STATISTICS_VIEW_TYPE = 'vault-full-statistics-view';
 
@@ -427,19 +435,24 @@ export class VaultStatisticsView extends ItemView {
 
 	private renderHero(parent: HTMLElement): void {
 		const hero = parent.createDiv({ cls: 'vfs-hero' });
-		const hero_ = t().view.hero;
-		this.appendHeroStat(hero, numberFormat().format(this.vaultMetrics.notes), hero_.notes);
+		// Labels and the number format can be held back to English for width;
+		// tooltips never are — they have room and explain things.
+		const latin = this.getSettings().heroLabelsInEnglish;
+		const labels = latin ? en.view.hero : t().view.hero;
+		const numberLocale = latin ? HERO_LATIN_LOCALE : undefined;
+
+		this.appendHeroStat(hero, numberFormat(numberLocale).format(this.vaultMetrics.notes), labels.notes);
 		this.appendHeroStat(
 			hero,
-			formatCompactNumber(this.vaultMetrics.words),
-			hero_.words,
-			hero_.wordsTooltip(numberFormat().format(this.vaultMetrics.words)),
+			formatCompactNumber(this.vaultMetrics.words, numberLocale),
+			labels.words,
+			t().view.hero.wordsTooltip(numberFormat().format(this.vaultMetrics.words)),
 		);
 		this.appendHeroStat(
 			hero,
 			this.vaultMetrics.quality.toFixed(3),
-			hero_.QoV,
-			hero_.qovTooltip,
+			labels.QoV,
+			t().view.hero.qovTooltip,
 		);
 	}
 

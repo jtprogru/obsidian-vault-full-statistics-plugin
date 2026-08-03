@@ -1,4 +1,4 @@
-import { App, PluginSettingTab } from "obsidian";
+import { App, Notice, PluginSettingTab } from "obsidian";
 import type {
 	ExtraButtonComponent,
 	Setting,
@@ -24,6 +24,12 @@ export interface FullStatisticsPluginSettings {
 	 * that updating the plugin never switches someone's interface for them.
 	 */
 	language: LanguageSetting,
+	/**
+	 * Keep the three hero tiles in English even when the interface is not.
+	 * The Russian forms are wider and «12,35 тыс.» is wider still than
+	 * `12.35K`; on a narrow sidebar that can overflow.
+	 */
+	heroLabelsInEnglish: boolean,
 	displayIndividualItems: boolean,
 	showNotes: boolean,
 	showWords: boolean,
@@ -81,6 +87,7 @@ export type SettingsKey = keyof FullStatisticsPluginSettings;
  */
 export const DEFAULT_SETTINGS: FullStatisticsPluginSettings = {
 	language: 'en',
+	heroLabelsInEnglish: false,
 	displayIndividualItems: false,
 	showNotes: true,
 	showWords: true,
@@ -274,9 +281,21 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	 */
 	async setControlValue(key: string, value: unknown): Promise<void> {
 		(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+		// The locale has to change before saveSettings(), which re-fires the
+		// metrics event and redraws both panels — otherwise they would repaint
+		// in the outgoing language.
+		if (key === 'language') setLocale(this.plugin.settings.language);
 		await this.plugin.saveSettings();
 		if (COLLECTOR_KEYS.has(key)) this.plugin.restartCollector();
-		if (key === 'language') setLocale(this.plugin.settings.language);
+		if (key === 'language') {
+			// Structural redraw: every name and description on this tab, plus
+			// the hero-labels row, which only exists in a non-English UI.
+			this.update();
+			// Command names and the ribbon tooltip were cached by Obsidian at
+			// registration time and cannot be refreshed from here.
+			new Notice(t().notices.languageChanged);
+			return;
+		}
 		this.refreshDomState();
 	}
 
@@ -420,6 +439,16 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			type: 'group',
 			heading: t().settings.sideViewHeading,
 			items: [
+				{
+					...this.toggle(
+						t().settings.heroLabels.name,
+						'heroLabelsInEnglish',
+						t().settings.heroLabels.desc,
+						t().settings.heroLabels.aliases,
+					),
+					// Pointless while the interface is already English.
+					visible: () => this.plugin.settings.language !== 'en',
+				},
 				this.metrics(),
 				this.folderBreakdown(),
 				this.sourcesTrace(),

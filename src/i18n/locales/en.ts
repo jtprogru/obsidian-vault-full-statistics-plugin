@@ -80,6 +80,12 @@ export const en = {
 			auto: "Auto (follow Obsidian)",
 		},
 
+		heroLabels: {
+			name: "Keep hero labels in English",
+			desc: "The top three tiles keep their English labels and compact number format. Useful on a narrow sidebar, where translated labels can overflow. Tooltips stay in the interface language.",
+			aliases: ["hero", "latin"],
+		},
+
 		individualItems: {
 			name: "Show individual items",
 			desc: "Whether to show multiple items at once or cycle them with a click",
@@ -383,5 +389,6 @@ export const en = {
 		tanglesSaved: (n: number, path: string) =>
 			`Saved ${n} tangle${n === 1 ? "" : "s"} to ${path}`,
 		tanglesReportFailed: (reason: string) => `Tangles report failed: ${reason}`,
+		languageChanged: "Language changed. Reload the plugin to update command names and the ribbon tooltip.",
 	},
 };

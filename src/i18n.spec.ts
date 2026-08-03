@@ -255,7 +255,7 @@ describe("russian catalogue completeness", () => {
 			if (!/[A-Za-z]/.test(value)) return false;      // digits, symbols, dates
 			if (/[А-Яа-яЁё]/.test(value)) return false;     // mixed but translated
 			// Search aliases are intentionally bilingual, one English term per entry.
-			if (path.includes("Aliases")) return false;
+			if (/aliases/i.test(path)) return false;
 			return ![...ALLOWED].some(term => value.includes(term));
 		});
 

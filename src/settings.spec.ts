@@ -285,6 +285,27 @@ describe("control validation", () => {
 	});
 });
 
+describe("language", () => {
+	function heroRow(overrides: Partial<FullStatisticsPluginSettings>) {
+		return [...walk(defs(overrides))]
+			.find(d => isControl(d) && d.control.key === 'heroLabelsInEnglish');
+	}
+
+	// The row exists either way — hiding it is what `visible` is for — but it
+	// says nothing to somebody already reading an English interface.
+	test("the hero-labels escape hatch only shows in a translated UI", () => {
+		expect(resolve(heroRow({ language: 'en' })?.visible, true)).toBe(false);
+		expect(resolve(heroRow({ language: 'ru' })?.visible, true)).toBe(true);
+		expect(resolve(heroRow({ language: 'auto' })?.visible, true)).toBe(true);
+	});
+
+	test("the picker offers English, Russian and auto", () => {
+		const row = [...walk(defs())].find(d => isControl(d) && d.control.key === 'language');
+		const control = (row as ControlDef).control as { options: Record<string, string> };
+		expect(Object.keys(control.options)).toEqual(['en', 'ru', 'auto']);
+	});
+});
+
 describe("page summaries", () => {
 	test("a section that renders nothing is flagged", () => {
 		const enabledButEmpty = defs({ showFolderBreakdown: true, folderGroups: [] });
