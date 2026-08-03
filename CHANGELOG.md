@@ -2,6 +2,26 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] - 2026-08-03
+
+The plugin speaks Russian. Every string in the interface — status bar, both side panels, all settings pages, notices, the tangles report and the inbox markdown — now comes from a locale catalogue, and numbers are formatted for the active language.
+
+English remains the default. Updating the plugin changes nothing about what you see; Russian and follow-Obsidian are things you switch on yourself.
+
+### Added
+- **`Language` setting**: `English` (default), `Русский`, `Auto (follow Obsidian)`. Switching redraws the settings tab, both panels and the status bar immediately. Command names and the ribbon tooltip follow after a plugin reload — Obsidian caches those at registration — and a notice says so.
+- **`Keep hero labels in English`**, shown only when the interface is not English. The three hero tiles keep their Latin labels and the `12.35K` compact format, which fit a narrow sidebar better than «заметок» / «слов» and «12,35 тыс.». Tooltips stay translated.
+- Russian translation of all ~245 interface strings, with Russian plural forms («1 папка» / «3 папки» / «7 папок») and terminology that follows Obsidian's own Russian locale where it has a word for something.
+
+### Changed
+- Numbers, including those in the sparkline and the hero panel, are formatted for the active language: `1,234` in English, `1 234` in Russian. Under `Auto` the formatting follows Obsidian's language even where the plugin has no translation, so a German interface reads English but groups digits the German way.
+- Percentages are written one way everywhere. The panel and the status bar used to compute them separately — identical in English, but Russian would have rendered the status bar as «67 %» with a non-breaking space while the panel kept «67%». Both are now tight.
+- The tangles report note is created with a localised name and body; the CSV export keeps its English file name and column headers, since it is an interchange format and a renamed file would simply appear twice.
+- Status bar statistics keep stable English identifiers in their CSS classes (`obsidian-vault-full-statistics--item-notes` and friends) regardless of language, so existing CSS snippets keep working.
+
+### Removed
+- `BytesFormatter` and `ScalingUnitFormatter`, unused in production since well before this release.
+
 ## [1.22.0] - 2026-08-03
 
 The settings tab became an index. The first screen used to be one scroll of 28 rows (40 with individual status bar items on), mixing a lone toggle, two blocks of checkboxes and four editable lists with the four navigable pages added in 1.21.0. Now it holds one toggle and ten navigable entries under three headings, each entry summarising its own state.
