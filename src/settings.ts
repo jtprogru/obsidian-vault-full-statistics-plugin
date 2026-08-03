@@ -10,7 +10,7 @@ import type {
 } from "obsidian";
 
 import type StatisticsPlugin from "./main";
-import { setLocale, type LanguageSetting } from "./i18n";
+import { setLocale, t, type LanguageSetting } from "./i18n";
 import { FolderPickerModal, NoteFuzzyPickerModal } from "./pickers";
 
 export interface FolderGroup {
@@ -138,43 +138,66 @@ const COLLECTOR_KEYS: ReadonlySet<string> = new Set<SettingsKey>([
 	"inboxReviewTags",
 ]);
 
-/** A togglable item: the row it renders and the settings key behind it. */
+/**
+ * A togglable statistic.
+ *
+ * `id` and `name` are deliberately separate. The id is a stable English
+ * identifier that reaches the user as a CSS class
+ * (`obsidian-vault-full-statistics--item-notes`) and must never change —
+ * people write snippets against those classes. The name is a label and
+ * changes with the interface language.
+ */
 interface ToggleItem {
+	id: StatusBarStatId;
 	key: SettingsKey;
 	name: string;
 	desc?: string;
 	aliases?: string[];
 }
 
+/** Ids of the status bar statistics, in render order. Part of the CSS surface. */
+export type StatusBarStatId =
+	| 'notes' | 'words' | 'links' | 'tags' | 'QoV'
+	| 'own' | 'source' | 'own-pct' | 'source-pct'
+	| 'concepts' | 'orphans' | 'trace-pct';
+
 /**
  * The status bar statistics, in the order the status bar renders them —
  * `StatusBarView` builds its views and reads its enabled-flags in exactly
  * this sequence. One source of truth for the toggle rows and the "N of 12"
  * summary on the page entry.
+ *
+ * A function rather than a constant: labels come from the active locale, and a
+ * module-level constant would freeze on whichever locale was active at import
+ * time.
  */
-export const STATUS_BAR_ITEMS: readonly ToggleItem[] = [
-	{ key: 'showNotes', name: "Show notes" },
-	{ key: 'showWords', name: "Show words", desc: "Total word count across the vault." },
-	{ key: 'showLinks', name: "Show links" },
-	{ key: 'showTags', name: "Show tags" },
-	{ key: 'showQuality', name: "Show quality", aliases: ["QoV"] },
-	{ key: 'showOwn', name: "Show own notes", desc: "Notes tagged as your own thinking — see note classification." },
-	{ key: 'showSource', name: "Show source notes", desc: "Notes about external material — see note classification." },
-	{ key: 'showOwnPct', name: "Show own %", desc: "Share of own notes within own+source classified set." },
-	{ key: 'showSourcePct', name: "Show source %" },
-	{ key: 'showConcepts', name: "Show concept notes", desc: "Concepts are a grey zone — off by default." },
-	{ key: 'showOrphans', name: "Show orphans", desc: "Notes with no incoming links — disconnected knowledge.", aliases: ["disconnected"] },
-	{ key: 'showTracePct', name: "Show trace %", desc: "Share of source notes that at least one own note links to." },
-];
+export function statusBarItems(): readonly ToggleItem[] {
+	return [
+		{ id: 'notes', key: 'showNotes', name: "Show notes" },
+		{ id: 'words', key: 'showWords', name: "Show words", desc: "Total word count across the vault." },
+		{ id: 'links', key: 'showLinks', name: "Show links" },
+		{ id: 'tags', key: 'showTags', name: "Show tags" },
+		{ id: 'QoV', key: 'showQuality', name: "Show quality", aliases: ["QoV"] },
+		{ id: 'own', key: 'showOwn', name: "Show own notes", desc: "Notes tagged as your own thinking — see note classification." },
+		{ id: 'source', key: 'showSource', name: "Show source notes", desc: "Notes about external material — see note classification." },
+		{ id: 'own-pct', key: 'showOwnPct', name: "Show own %", desc: "Share of own notes within own+source classified set." },
+		{ id: 'source-pct', key: 'showSourcePct', name: "Show source %" },
+		{ id: 'concepts', key: 'showConcepts', name: "Show concept notes", desc: "Concepts are a grey zone — off by default." },
+		{ id: 'orphans', key: 'showOrphans', name: "Show orphans", desc: "Notes with no incoming links — disconnected knowledge.", aliases: ["disconnected"] },
+		{ id: 'trace-pct', key: 'showTracePct', name: "Show trace %", desc: "Share of source notes that at least one own note links to." },
+	];
+}
 
 /** Secondary metrics in the side view's grid, below the hero panel. */
-const METRICS_ITEMS: readonly ToggleItem[] = [
-	{ key: 'metricsShowLinks', name: "Links" },
-	{ key: 'metricsShowTags', name: "Tags" },
-	{ key: 'metricsShowConcepts', name: "Concepts" },
-	{ key: 'metricsShowOrphans', name: "Orphans" },
-	{ key: 'metricsShowAvgWords', name: "Avg words" },
-];
+function metricsItems(): readonly Omit<ToggleItem, 'id'>[] {
+	return [
+		{ key: 'metricsShowLinks', name: "Links" },
+		{ key: 'metricsShowTags', name: "Tags" },
+		{ key: 'metricsShowConcepts', name: "Concepts" },
+		{ key: 'metricsShowOrphans', name: "Orphans" },
+		{ key: 'metricsShowAvgWords', name: "Avg words" },
+	];
+}
 
 export function parseFolderGroups(text: string): FolderGroup[] {
 	const groups: FolderGroup[] = [];
@@ -198,11 +221,6 @@ export function serializeFolderGroups(groups: FolderGroup[]): string {
 	return groups.map(g => `${g.name} = ${g.paths.join(", ")}`).join("\n");
 }
 
-/** "3 groups" / "1 group" / "No groups" — for a page's inline display value. */
-export function count(n: number, noun: string): string {
-	if (n === 0) return `No ${noun}s`;
-	return `${n} ${noun}${n === 1 ? "" : "s"}`;
-}
 
 /** Options for {@link FullStatisticsPluginSettingTab.stringList}. */
 interface StringListOptions {
@@ -280,7 +298,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	 * from the second section onwards.
 	 */
 	private general(): SettingDefinitionItem<SettingsKey>[] {
-		const enabled = () => STATUS_BAR_ITEMS.filter(i => this.plugin.settings[i.key]).length;
+		const enabled = () => statusBarItems().filter(i => this.plugin.settings[i.key]).length;
 		return [
 			{
 				name: "Language",
@@ -310,10 +328,10 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				// These apply in both modes: cycling walks only the enabled
 				// items and skips over the rest.
 				desc: "Which statistics the status bar shows. Cycling mode skips the ones turned off here.",
-				displayValue: () => `${enabled()} of ${STATUS_BAR_ITEMS.length}`,
+				displayValue: () => `${enabled()} of ${statusBarItems().length}`,
 				// Nothing enabled leaves the status bar blank in either mode.
 				status: () => enabled() === 0 ? 'warning' : null,
-				items: STATUS_BAR_ITEMS.map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
+				items: statusBarItems().map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
 			},
 		];
 	}
@@ -329,7 +347,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					type: 'page',
 					name: "Excluded folders",
 					desc: "Folders to skip from statistics. Matched as a path prefix, so a folder covers everything under it.",
-					displayValue: () => count(s().excludedFolders.length, "folder"),
+					displayValue: () => t().settings.folderCount(s().excludedFolders.length),
 					items: this.stringList({
 						name: "Excluded folders",
 						desc: "Folders to skip from statistics.",
@@ -419,13 +437,13 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	}
 
 	private metrics(): SettingDefinitionPage<SettingsKey> {
-		const enabled = () => METRICS_ITEMS.filter(i => this.plugin.settings[i.key]).length;
+		const enabled = () => metricsItems().filter(i => this.plugin.settings[i.key]).length;
 		return {
 			type: 'page',
 			name: "Metrics",
 			desc: "Secondary metrics in the grid below the hero panel.",
-			displayValue: () => `${enabled()} of ${METRICS_ITEMS.length}`,
-			items: METRICS_ITEMS.map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
+			displayValue: () => `${enabled()} of ${metricsItems().length}`,
+			items: metricsItems().map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
 		};
 	}
 
@@ -435,7 +453,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			name: "Folder breakdown",
 			desc: "Per-folder section in the statistics view (PARA-style).",
 			displayValue: () => this.plugin.settings.showFolderBreakdown
-				? count(this.plugin.settings.folderGroups.length, "group")
+				? t().settings.groupCount(this.plugin.settings.folderGroups.length)
 				: "Off",
 			// The section renders nothing without groups, so an enabled
 			// toggle and an empty list is a silent no-op worth flagging.
@@ -479,7 +497,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			name: "Taxonomy drift",
 			desc: "Rare tags and tags outside your canonical set.",
 			displayValue: () => this.plugin.settings.showTaxonomyDrift
-				? count(this.plugin.settings.canonicalTags.length, "canonical tag")
+				? t().settings.canonicalTagCount(this.plugin.settings.canonicalTags.length)
 				: "Off",
 			// With no canonical set every tag reads as unknown, which
 			// makes the section noise rather than signal.
@@ -524,7 +542,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			name: "Inbox health",
 			desc: "Notes in inbox folders and notes tagged for review, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
 			displayValue: () => this.plugin.settings.showInbox
-				? count(this.plugin.settings.inboxFolders.length, "folder")
+				? t().settings.folderCount(this.plugin.settings.inboxFolders.length)
 				: "Off",
 			// Neither folders nor review tags means nothing is ever
 			// collected — the section stays empty and copy refuses.

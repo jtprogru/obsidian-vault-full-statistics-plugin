@@ -482,12 +482,12 @@ export class VaultStatisticsView extends ItemView {
 
 		const legend = section.createDiv({ cls: 'vfs-ratio-legend' });
 		const classified = own + source;
-		this.appendLegend(legend, 'own', own, classified > 0 ? own / classified : 0, true);
-		this.appendLegend(legend, 'source', source, classified > 0 ? source / classified : 0, true);
+		this.appendLegend(legend, 'own', 'own', own, classified > 0 ? own / classified : 0, true);
+		this.appendLegend(legend, 'source', 'source', source, classified > 0 ? source / classified : 0, true);
 		if (concept > 0) {
 			// Concept share is computed against the full classified set so it
 			// communicates "this much of your tagged corpus is grey zone".
-			this.appendLegend(legend, 'concept', concept, concept / total, false);
+			this.appendLegend(legend, 'concept', 'concept', concept, concept / total, false);
 		}
 	}
 
@@ -497,11 +497,23 @@ export class VaultStatisticsView extends ItemView {
 		seg.style.setProperty('--vfs-grow', String(value));
 	}
 
-	private appendLegend(parent: HTMLElement, kind: 'own' | 'source' | 'concept', count: number, share: number, showPct: boolean): void {
+	/**
+	 * `kind` drives the CSS classes only — `.vfs-ratio-swatch-own` and friends
+	 * carry the colours, so it has to stay English. `label` is what the user
+	 * reads. Same split the inbox and trace legends already use.
+	 */
+	private appendLegend(
+		parent: HTMLElement,
+		kind: 'own' | 'source' | 'concept',
+		label: string,
+		count: number,
+		share: number,
+		showPct: boolean,
+	): void {
 		const item = parent.createSpan({ cls: `vfs-ratio-leg vfs-ratio-leg-${kind}` });
 		item.createSpan({ cls: `vfs-ratio-swatch vfs-ratio-swatch-${kind}` });
-		const label = showPct ? `${pctString(share)} ${kind} · ${count}` : `${count} ${kind}`;
-		item.createSpan({ cls: 'vfs-ratio-leg-text', text: label });
+		const text = showPct ? `${pctString(share)} ${label} · ${count}` : `${count} ${label}`;
+		item.createSpan({ cls: 'vfs-ratio-leg-text', text });
 	}
 
 	private renderSecondaryGrid(parent: HTMLElement): void {

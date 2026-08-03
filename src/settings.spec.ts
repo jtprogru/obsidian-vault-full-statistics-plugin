@@ -1,12 +1,11 @@
 import type { SettingDefinitionItem } from 'obsidian';
 
 import {
-	count,
 	DEFAULT_SETTINGS,
 	FullStatisticsPluginSettingTab,
 	parseFolderGroups,
 	serializeFolderGroups,
-	STATUS_BAR_ITEMS,
+	statusBarItems,
 } from './settings';
 import type { FullStatisticsPluginSettings, SettingsKey } from './settings';
 
@@ -86,14 +85,6 @@ describe("serializeFolderGroups", () => {
 
 	test("empty groups serialize to empty string", () => {
 		expect(serializeFolderGroups([])).toBe("");
-	});
-});
-
-describe("count", () => {
-	test("pluralises", () => {
-		expect(count(0, "group")).toBe("No groups");
-		expect(count(1, "group")).toBe("1 group");
-		expect(count(4, "canonical tag")).toBe("4 canonical tags");
 	});
 });
 
@@ -235,7 +226,7 @@ describe("tab layout", () => {
 	});
 
 	test("status bar items cover the statistics the status bar renders", () => {
-		const keys = STATUS_BAR_ITEMS.map(i => i.key);
+		const keys = statusBarItems().map(i => i.key);
 		expect(keys).toEqual([
 			'showNotes', 'showWords', 'showLinks', 'showTags', 'showQuality',
 			'showOwn', 'showSource', 'showOwnPct', 'showSourcePct',
@@ -335,7 +326,7 @@ describe("page summaries", () => {
 	});
 
 	test("an empty status bar is flagged", () => {
-		const allOff = Object.fromEntries(STATUS_BAR_ITEMS.map(i => [i.key, false]));
+		const allOff = Object.fromEntries(statusBarItems().map(i => [i.key, false]));
 		expect(resolve(page(defs(allOff), "Status bar items").status, null)).toBe('warning');
 		expect(resolve(page(defs({ showNotes: false }), "Status bar items").status, null)).toBeNull();
 	});

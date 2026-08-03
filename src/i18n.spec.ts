@@ -29,6 +29,32 @@ describe("plural", () => {
 	});
 });
 
+describe("inline counts", () => {
+	// Replaces the old `count(n, noun)` helper in settings.ts, which could not
+	// survive contact with Russian: three plural forms plus gender agreement
+	// mean each noun needs its own function.
+	test("English forms", () => {
+		expect(en.settings.groupCount(0)).toBe("No groups");
+		expect(en.settings.groupCount(1)).toBe("1 group");
+		expect(en.settings.canonicalTagCount(4)).toBe("4 canonical tags");
+		expect(en.settings.folderCount(2)).toBe("2 folders");
+	});
+
+	test("Russian forms agree in number and gender", () => {
+		expect(ru.settings.folderCount(0)).toBe("Нет папок");
+		expect(ru.settings.folderCount(1)).toBe("1 папка");
+		expect(ru.settings.folderCount(3)).toBe("3 папки");
+		expect(ru.settings.folderCount(7)).toBe("7 папок");
+
+		expect(ru.settings.groupCount(1)).toBe("1 группа");
+		expect(ru.settings.groupCount(2)).toBe("2 группы");
+
+		expect(ru.settings.canonicalTagCount(1)).toBe("1 канонический тег");
+		expect(ru.settings.canonicalTagCount(4)).toBe("4 канонических тега");
+		expect(ru.settings.canonicalTagCount(11)).toBe("11 канонических тегов");
+	});
+});
+
 describe("resolveUiLocale", () => {
 	test("auto follows Obsidian for Russian", () => {
 		expect(resolveUiLocale('auto', 'ru')).toBe('ru');

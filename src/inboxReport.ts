@@ -3,12 +3,19 @@ import { wikilinkTargetForPath } from './tangles';
 
 const AGE_ORDER: AgeBucket[] = ['fresh', 'recent', 'stale', 'old'];
 
-const AGE_LABELS: Record<AgeBucket, string> = {
-	fresh: 'fresh (<1d)',
-	recent: 'recent (1–7d)',
-	stale: 'stale (7–30d)',
-	old: 'old (30+d)',
-};
+/**
+ * A function rather than a constant so the labels are read when the report is
+ * rendered — a module-level object would freeze on the locale that happened to
+ * be active at import time.
+ */
+function ageLabels(): Record<AgeBucket, string> {
+	return {
+		fresh: 'fresh (<1d)',
+		recent: 'recent (1–7d)',
+		stale: 'stale (7–30d)',
+		old: 'old (30+d)',
+	};
+}
 
 export interface InboxReportLabels {
 	inFolderLabel: string;
@@ -33,6 +40,7 @@ export function renderInboxNotesMarkdown(
 }
 
 function appendGroup(lines: string[], title: string, bucket: InboxBucketNotes): void {
+	const labels = ageLabels();
 	lines.push(`### ${title}`);
 	lines.push('');
 	let any = false;
@@ -40,7 +48,7 @@ function appendGroup(lines: string[], title: string, bucket: InboxBucketNotes): 
 		const paths = [...bucket[age]].sort((a, b) => a.localeCompare(b));
 		if (paths.length === 0) continue;
 		any = true;
-		lines.push(`#### ${AGE_LABELS[age]}`);
+		lines.push(`#### ${labels[age]}`);
 		for (const p of paths) lines.push(`- [[${wikilinkTargetForPath(p)}]]`);
 		lines.push('');
 	}

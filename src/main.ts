@@ -3,7 +3,8 @@ import { FolderPickerModal } from './pickers';
 import { DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
-import { DEFAULT_SETTINGS, FullStatisticsPluginSettings, FullStatisticsPluginSettingTab, STATUS_BAR_ITEMS } from './settings';
+import { DEFAULT_SETTINGS, FullStatisticsPluginSettings, FullStatisticsPluginSettingTab, statusBarItems } from './settings';
+import type { StatusBarStatId } from './settings';
 import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
 import { TanglesView, TANGLES_VIEW_TYPE } from './tanglesView';
@@ -353,10 +354,13 @@ class StatisticView {
 	}
 
 	/**
-	 * Sets the name of the statistic.
+	 * Tags the view with its stable identifier, which reaches the user as a CSS
+	 * class. This is not a label: the visible text comes from the formatter and
+	 * follows the interface language, while the id stays English forever
+	 * because people write snippets against these classes.
 	 */
-	setStatisticName(name: string): StatisticView {
-		this.containerElementsForVaultFullStatistics.addClass(`obsidian-vault-full-statistics--item-${name}`);
+	setStatisticId(id: StatusBarStatId): StatisticView {
+		this.containerElementsForVaultFullStatistics.addClass(`obsidian-vault-full-statistics--item-${id}`);
 		return this;
 	}
 
@@ -405,6 +409,50 @@ class StatisticView {
 	}
 }
 
+/**
+ * Status bar labels. A function, not a constant: the text has to be read at
+ * render time so that switching the interface language takes effect without a
+ * reload. In the next step these come from the active locale catalogue.
+ */
+function statusBarLabels(): Record<StatusBarStatId, string> {
+	return {
+		'notes': "notes",
+		'words': "words",
+		'links': "links",
+		'tags': "tags",
+		'QoV': "QoV",
+		'own': "own",
+		'source': "source",
+		'own-pct': "own",
+		'source-pct': "source",
+		'concepts': "concepts",
+		'orphans': "orphans",
+		'trace-pct': "traced",
+	};
+}
+
+const PCT_FMT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
+
+/**
+ * How each statistic turns metrics into text, keyed by the same id the settings
+ * tab uses. Formatters are looked up rather than pushed positionally, so the
+ * order lives in exactly one place — `statusBarItems()`.
+ */
+const STAT_FORMATTERS: Record<StatusBarStatId, (s: FullVaultMetrics) => string> = {
+	'notes': s => new DecimalUnitFormatter(statusBarLabels().notes).format(s.notes),
+	'words': s => new DecimalUnitFormatter(statusBarLabels().words).format(s.words),
+	'links': s => new DecimalUnitFormatter(statusBarLabels().links).format(s.links),
+	'tags': s => new DecimalUnitFormatter(statusBarLabels().tags).format(s.tags),
+	'QoV': s => new DecimalUnitFormatter(statusBarLabels().QoV).format(s.quality),
+	'own': s => new DecimalUnitFormatter(statusBarLabels().own).format(s.ownNotes),
+	'source': s => new DecimalUnitFormatter(statusBarLabels().source).format(s.sourceNotes),
+	'own-pct': s => `${PCT_FMT.format(s.ownPct())} ${statusBarLabels()['own-pct']}`,
+	'source-pct': s => `${PCT_FMT.format(s.sourcePct())} ${statusBarLabels()['source-pct']}`,
+	'concepts': s => new DecimalUnitFormatter(statusBarLabels().concepts).format(s.conceptNotes),
+	'orphans': s => new DecimalUnitFormatter(statusBarLabels().orphans).format(s.orphanNotes),
+	'trace-pct': s => `${PCT_FMT.format(s.tracePct())} ${statusBarLabels()['trace-pct']}`,
+};
+
 class FullStatisticsStatusBarItem {
 
 	private owner: FullStatisticsPlugin;
@@ -424,44 +472,15 @@ class FullStatisticsStatusBarItem {
 		this.owner = owner;
 		this.statusBarItem = statusBarItem;
 
-		const pctFmt = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
-
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("notes").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("notes").format(s.notes) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("words").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("words").format(s.words) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("links").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("links").format(s.links) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("tags").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("tags").format(s.tags) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("QoV").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("QoV").format(s.quality) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("own").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("own").format(s.ownNotes) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("source").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("source").format(s.sourceNotes) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("own-pct").
-			setFormatter((s: FullVaultMetrics) => { return `${pctFmt.format(s.ownPct())} own` }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("source-pct").
-			setFormatter((s: FullVaultMetrics) => { return `${pctFmt.format(s.sourcePct())} source` }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("concepts").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("concepts").format(s.conceptNotes) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("orphans").
-			setFormatter((s: FullVaultMetrics) => { return new DecimalUnitFormatter("orphans").format(s.orphanNotes) }));
-		this.statisticViews.push(new StatisticView(this.statusBarItem).
-			setStatisticName("trace-pct").
-			setFormatter((s: FullVaultMetrics) => { return `${pctFmt.format(s.tracePct())} traced` }));
+		// Built from the same array the settings tab renders, so the views and
+		// their toggles cannot drift out of order. The id tags the element with
+		// a stable CSS class; the label is read inside the formatter, on every
+		// refresh, so it follows the interface language.
+		for (const item of statusBarItems()) {
+			this.statisticViews.push(new StatisticView(this.statusBarItem)
+				.setStatisticId(item.id)
+				.setFormatter(STAT_FORMATTERS[item.id]));
+		}
 
 		this.statusBarItem.onClickEvent(() => { this.onclick() });
 	}
@@ -484,13 +503,13 @@ class FullStatisticsStatusBarItem {
 	private refreshSoon = debounce(() => { this.refresh(); }, 2000, false);
 
 	/**
-	 * Positional against `statisticViews` above: STATUS_BAR_ITEMS is declared
-	 * in the same order the views are pushed, and the settings tab builds its
-	 * toggles from that same array, so the two can't drift apart.
+	 * Positional against `statisticViews` above: both are built from
+	 * `statusBarItems()` in the same order, and the settings tab builds its
+	 * toggles from that same array, so the three can't drift apart.
 	 */
 	private viewEnabledFlags(): boolean[] {
 		const s = this.owner.settings;
-		return STATUS_BAR_ITEMS.map(item => s[item.key] as boolean);
+		return statusBarItems().map(item => s[item.key] as boolean);
 	}
 
 	public refresh() {

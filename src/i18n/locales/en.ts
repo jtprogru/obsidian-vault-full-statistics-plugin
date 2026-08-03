@@ -18,7 +18,19 @@
 export const en = {
 	commands: {},
 	statusBar: {},
-	settings: {},
+	settings: {
+		/**
+		 * Inline counts on page entries. These are three separate functions
+		 * rather than one `count(n, noun)` helper on purpose: Russian needs
+		 * three plural forms *and* agreement in gender, so a shared helper
+		 * taking a noun cannot work — «нет папок» / «1 папка» but «нет групп» /
+		 * «1 группа».
+		 */
+		folderCount: (n: number) => n === 0 ? "No folders" : `${n} folder${n === 1 ? "" : "s"}`,
+		groupCount: (n: number) => n === 0 ? "No groups" : `${n} group${n === 1 ? "" : "s"}`,
+		canonicalTagCount: (n: number) =>
+			n === 0 ? "No canonical tags" : `${n} canonical tag${n === 1 ? "" : "s"}`,
+	},
 	view: {},
 	tangles: {},
 	inbox: {},
