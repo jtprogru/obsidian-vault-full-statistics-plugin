@@ -187,6 +187,15 @@ describe("catalogue parity", () => {
 				}
 				continue;
 			}
+			// Search aliases are lists of synonyms, and a locale may reasonably
+			// carry more of them — the Russian catalogue keeps the English
+			// terms alongside its own. Only the key has to exist in both.
+			if (Array.isArray(left) || Array.isArray(right)) {
+				if (!Array.isArray(left) || !Array.isArray(right)) {
+					report.push(`one side is not an array at ${here}`);
+				}
+				continue;
+			}
 			if (left && typeof left === 'object') {
 				walk(left as Node, right as Node, here, report);
 			}
@@ -203,5 +212,53 @@ describe("catalogue parity", () => {
 		const report: string[] = [];
 		walk(en as unknown as Node, ru as unknown as Node, '', report);
 		expect(report).toStrictEqual([]);
+	});
+});
+
+describe("russian catalogue completeness", () => {
+	/**
+	 * Values that are legitimately Latin: abbreviations, format names, search
+	 * aliases people type in English, tag examples that refer to actual tag
+	 * values, and the language picker's own option labels.
+	 */
+	const ALLOWED = new Set([
+		"QoV",
+		"CSV",
+		"English",
+		"Русский",
+		"SUM ≥ ",
+		"e.g.",
+		"PARA",
+	]);
+
+	function leaves(node: Record<string, unknown>, path: string, out: [string, string][]): void {
+		for (const [key, value] of Object.entries(node)) {
+			const here = path ? `${path}.${key}` : key;
+			if (typeof value === 'string') out.push([here, value]);
+			else if (Array.isArray(value)) value.forEach((v, i) => {
+				if (typeof v === 'string') out.push([`${here}[${i}]`, v]);
+			});
+			else if (value && typeof value === 'object') leaves(value as Record<string, unknown>, here, out);
+		}
+	}
+
+	/**
+	 * Catches strings forgotten during translation better than re-reading the
+	 * file does: anything with Latin letters and no Cyrillic is either a
+	 * deliberate abbreviation or an oversight.
+	 */
+	test("every Russian string carries Cyrillic unless it is an accepted term", () => {
+		const out: [string, string][] = [];
+		leaves(ru as unknown as Record<string, unknown>, '', out);
+
+		const suspicious = out.filter(([path, value]) => {
+			if (!/[A-Za-z]/.test(value)) return false;      // digits, symbols, dates
+			if (/[А-Яа-яЁё]/.test(value)) return false;     // mixed but translated
+			// Search aliases are intentionally bilingual, one English term per entry.
+			if (path.includes("Aliases")) return false;
+			return ![...ALLOWED].some(term => value.includes(term));
+		});
+
+		expect(suspicious).toStrictEqual([]);
 	});
 });
