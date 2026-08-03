@@ -6,6 +6,7 @@ import {
 	FullStatisticsPluginSettingTab,
 	parseFolderGroups,
 	serializeFolderGroups,
+	STATUS_BAR_ITEMS,
 } from './settings';
 import type { FullStatisticsPluginSettings, SettingsKey } from './settings';
 
@@ -132,7 +133,13 @@ function defs(overrides: Partial<FullStatisticsPluginSettings> = {}): AnyDef[] {
 	return makeTab(overrides).tab.getSettingDefinitions();
 }
 
-/** The list that follows the labelled row carrying `name`. */
+type PageDef = Extract<AnyDef, { type: 'page' }>;
+
+/**
+ * The list that follows the row carrying `name`. `walk` yields a parent
+ * before its children, so this finds both a labelled row followed by its
+ * list and a standalone list that is the first item of its page.
+ */
 function listAfter(all: AnyDef[], name: string): ListDef {
 	const flat = [...walk(all)];
 	const idx = flat.findIndex(d => 'name' in d && d.name === name);
@@ -140,6 +147,14 @@ function listAfter(all: AnyDef[], name: string): ListDef {
 	const list = flat[idx + 1];
 	expect((list as ListDef).type).toBe('list');
 	return list as ListDef;
+}
+
+function page(all: AnyDef[], name: string): PageDef {
+	return [...walk(all)].find(d => 'type' in d && d.type === 'page' && d.name === name) as PageDef;
+}
+
+function pages(all: AnyDef[]): PageDef[] {
+	return [...walk(all)].filter(d => 'type' in d && d.type === 'page') as PageDef[];
 }
 
 /** Keys managed by a list editor rather than a bound control. */
@@ -187,14 +202,52 @@ describe("getSettingDefinitions", () => {
 	});
 });
 
-describe("visibility predicates", () => {
-	function group(all: AnyDef[], heading: string) {
-		return [...walk(all)].find(d => 'heading' in d && d.heading === heading)!;
-	}
+describe("tab layout", () => {
+	// The guard against sliding back into one long scroll: the first screen
+	// is an index, so nothing below the leading general row may render as a
+	// bare control or an editable list at the top level.
+	test("the top level is an index, not a wall of settings", () => {
+		const top = defs();
 
-	test("status bar item toggles follow displayIndividualItems", () => {
-		expect(resolve(group(defs({ displayIndividualItems: false }), "Status bar items").visible, true)).toBe(false);
-		expect(resolve(group(defs({ displayIndividualItems: true }), "Status bar items").visible, true)).toBe(true);
+		expect(top.filter(d => 'type' in d && d.type === 'list')).toEqual([]);
+
+		const [first, second, ...rest] = top;
+		expect(isControl(first) && first.control.key).toBe('displayIndividualItems');
+		expect((second as PageDef).type).toBe('page');
+		expect(rest.every(d => 'type' in d && d.type === 'group')).toBe(true);
+	});
+
+	test("the leading section carries no heading", () => {
+		const headings = defs()
+			.filter(d => 'heading' in d)
+			.map(d => (d as { heading?: string }).heading);
+		expect(headings).toEqual(["What gets counted", "Side view", "Tools"]);
+	});
+
+	test("every page summarises itself on the entry", () => {
+		const withoutSummary = pages(defs())
+			.filter(p => p.displayValue === undefined)
+			.map(p => p.name);
+		expect(withoutSummary).toEqual([]);
+	});
+
+	test("status bar items cover the statistics the status bar renders", () => {
+		const keys = STATUS_BAR_ITEMS.map(i => i.key);
+		expect(keys).toEqual([
+			'showNotes', 'showWords', 'showLinks', 'showTags', 'showQuality',
+			'showOwn', 'showSource', 'showOwnPct', 'showSourcePct',
+			'showConcepts', 'showOrphans', 'showTracePct',
+		]);
+		expect(page(defs(), "Status bar items").items).toHaveLength(keys.length);
+	});
+});
+
+describe("visibility predicates", () => {
+	// Cycling walks only the enabled statistics and skips the rest, so the
+	// per-item toggles matter in both modes and the page stays reachable.
+	test("status bar items stay reachable in cycling mode", () => {
+		expect(resolve(page(defs({ displayIndividualItems: false }), "Status bar items").visible, true)).toBe(true);
+		expect(resolve(page(defs({ displayIndividualItems: true }), "Status bar items").visible, true)).toBe(true);
 	});
 
 	test("tangles thresholds follow the selection mode", () => {
@@ -239,11 +292,6 @@ describe("control validation", () => {
 });
 
 describe("page summaries", () => {
-	function page(all: AnyDef[], name: string) {
-		return [...walk(all)].find(d => 'type' in d && d.type === 'page' && d.name === name) as
-			Extract<AnyDef, { type: 'page' }>;
-	}
-
 	test("a section that renders nothing is flagged", () => {
 		const enabledButEmpty = defs({ showFolderBreakdown: true, folderGroups: [] });
 		expect(resolve(page(enabledButEmpty, "Folder breakdown").status, null)).toBe('warning');
@@ -272,6 +320,43 @@ describe("page summaries", () => {
 		const all = defs({ showInbox: true, inboxFolders: ["00. Inbox", "Clippings"] });
 		expect(resolve(page(all, "Inbox health").displayValue, "")).toBe("2 folders");
 		expect(resolve(page(defs({ showInbox: false }), "Inbox health").displayValue, "")).toBe("Off");
+	});
+
+	test("toggle pages count what is enabled", () => {
+		// showConcepts is the one status bar item off by default.
+		expect(resolve(page(defs(), "Status bar items").displayValue, "")).toBe("11 of 12");
+		expect(resolve(page(defs({ showWords: false, showTags: false }), "Status bar items").displayValue, ""))
+			.toBe("9 of 12");
+		expect(resolve(page(defs(), "Metrics").displayValue, "")).toBe("5 of 5");
+		expect(resolve(page(defs({ metricsShowTags: false }), "Metrics").displayValue, "")).toBe("4 of 5");
+	});
+
+	test("an empty status bar is flagged", () => {
+		const allOff = Object.fromEntries(STATUS_BAR_ITEMS.map(i => [i.key, false]));
+		expect(resolve(page(defs(allOff), "Status bar items").status, null)).toBe('warning');
+		expect(resolve(page(defs({ showNotes: false }), "Status bar items").status, null)).toBeNull();
+	});
+
+	test("classification counts both sides and flags an empty one", () => {
+		expect(resolve(page(defs(), "Note classification").displayValue, "")).toBe("3 own / 6 source");
+		expect(resolve(page(defs(), "Note classification").status, null)).toBeNull();
+		expect(resolve(page(defs({ ownTags: [] }), "Note classification").status, null)).toBe('warning');
+		expect(resolve(page(defs({ sourceTags: [] }), "Note classification").status, null)).toBe('warning');
+	});
+
+	test("excluded folders and sections summarise their state", () => {
+		expect(resolve(page(defs(), "Excluded folders").displayValue, "")).toBe("No folders");
+		expect(resolve(page(defs({ excludedFolders: ["Templates"] }), "Excluded folders").displayValue, ""))
+			.toBe("1 folder");
+
+		expect(resolve(page(defs(), "Sources with trace").displayValue, "")).toBe("Off");
+		expect(resolve(page(defs({ showSourcesTrace: true }), "Sources with trace").displayValue, ""))
+			.toBe("On + top 5");
+		expect(resolve(page(defs({ showSourcesTrace: true, showDanglingList: false }), "Sources with trace").displayValue, ""))
+			.toBe("On");
+
+		expect(resolve(page(defs(), "History").displayValue, "")).toBe("Off");
+		expect(resolve(page(defs({ showHistory: true }), "History").displayValue, "")).toBe("On");
 	});
 
 	test("tangles summarises the active mode", () => {

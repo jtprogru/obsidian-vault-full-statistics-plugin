@@ -3,6 +3,7 @@ import type {
 	ExtraButtonComponent,
 	Setting,
 	SettingDefinition,
+	SettingDefinitionGroup,
 	SettingDefinitionItem,
 	SettingDefinitionList,
 	SettingDefinitionPage,
@@ -130,6 +131,44 @@ const COLLECTOR_KEYS: ReadonlySet<string> = new Set<SettingsKey>([
 	"inboxReviewTags",
 ]);
 
+/** A togglable item: the row it renders and the settings key behind it. */
+interface ToggleItem {
+	key: SettingsKey;
+	name: string;
+	desc?: string;
+	aliases?: string[];
+}
+
+/**
+ * The status bar statistics, in the order the status bar renders them —
+ * `StatusBarView` builds its views and reads its enabled-flags in exactly
+ * this sequence. One source of truth for the toggle rows and the "N of 12"
+ * summary on the page entry.
+ */
+export const STATUS_BAR_ITEMS: readonly ToggleItem[] = [
+	{ key: 'showNotes', name: "Show notes" },
+	{ key: 'showWords', name: "Show words", desc: "Total word count across the vault." },
+	{ key: 'showLinks', name: "Show links" },
+	{ key: 'showTags', name: "Show tags" },
+	{ key: 'showQuality', name: "Show quality", aliases: ["QoV"] },
+	{ key: 'showOwn', name: "Show own notes", desc: "Notes tagged as your own thinking — see note classification." },
+	{ key: 'showSource', name: "Show source notes", desc: "Notes about external material — see note classification." },
+	{ key: 'showOwnPct', name: "Show own %", desc: "Share of own notes within own+source classified set." },
+	{ key: 'showSourcePct', name: "Show source %" },
+	{ key: 'showConcepts', name: "Show concept notes", desc: "Concepts are a grey zone — off by default." },
+	{ key: 'showOrphans', name: "Show orphans", desc: "Notes with no incoming links — disconnected knowledge.", aliases: ["disconnected"] },
+	{ key: 'showTracePct', name: "Show trace %", desc: "Share of source notes that at least one own note links to." },
+];
+
+/** Secondary metrics in the side view's grid, below the hero panel. */
+const METRICS_ITEMS: readonly ToggleItem[] = [
+	{ key: 'metricsShowLinks', name: "Links" },
+	{ key: 'metricsShowTags', name: "Tags" },
+	{ key: 'metricsShowConcepts', name: "Concepts" },
+	{ key: 'metricsShowOrphans', name: "Orphans" },
+	{ key: 'metricsShowAvgWords', name: "Avg words" },
+];
+
 export function parseFolderGroups(text: string): FolderGroup[] {
 	const groups: FolderGroup[] = [];
 	for (const rawLine of text.split("\n")) {
@@ -166,6 +205,14 @@ interface StringListOptions {
 	addLabel: string;
 	get: () => string[];
 	set: (items: string[]) => void;
+	/** Extra search terms for the labelled row. */
+	aliases?: string[];
+	/**
+	 * Drops the labelled row. Use on a page whose only content is this list —
+	 * the page title and description already say what the list is, and a row
+	 * repeating them reads as a duplicate.
+	 */
+	standalone?: boolean;
 	/** Whether the value feeds the collector and needs a rescan on change. */
 	affectsCollector?: boolean;
 	/** Opens a picker instead of appending a blank row. */
@@ -205,7 +252,27 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		this.refreshDomState();
 	}
 
+	/**
+	 * The tab is an index: the first screen carries only the one general
+	 * toggle and a list of navigable entries, each summarising its own state.
+	 * Everything else lives one level down.
+	 */
 	getSettingDefinitions(): SettingDefinitionItem<SettingsKey>[] {
+		return [
+			...this.general(),
+			this.counting(),
+			this.sideView(),
+			this.tools(),
+		];
+	}
+
+	/**
+	 * The leading section carries no heading: the tab title in the sidebar
+	 * already names the plugin, and headings only start to earn their keep
+	 * from the second section onwards.
+	 */
+	private general(): SettingDefinitionItem<SettingsKey>[] {
+		const enabled = () => STATUS_BAR_ITEMS.filter(i => this.plugin.settings[i.key]).length;
 		return [
 			{
 				name: "Show individual items",
@@ -213,226 +280,296 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				control: { type: 'toggle', key: 'displayIndividualItems', defaultValue: DEFAULT_SETTINGS.displayIndividualItems },
 			},
 			{
-				type: 'group',
-				heading: "Status bar items",
-				// Cycling mode shows one statistic at a time, so the
-				// per-item toggles only mean something when every item is
-				// rendered at once.
-				visible: () => this.plugin.settings.displayIndividualItems,
-				items: [
-					this.toggle("Show notes", 'showNotes'),
-					this.toggle("Show words", 'showWords', "Total word count across the vault."),
-					this.toggle("Show links", 'showLinks'),
-					this.toggle("Show tags", 'showTags'),
-					this.toggle("Show quality", 'showQuality'),
-					this.toggle("Show own notes", 'showOwn', "Notes tagged as your own thinking (own taxonomy below)."),
-					this.toggle("Show source notes", 'showSource', "Notes about external material (source taxonomy below)."),
-					this.toggle("Show own %", 'showOwnPct', "Share of own notes within own+source classified set."),
-					this.toggle("Show source %", 'showSourcePct'),
-					this.toggle("Show concept notes", 'showConcepts', "Concepts are a grey zone — off by default."),
-					this.toggle("Show orphans", 'showOrphans', "Notes with no incoming links — disconnected knowledge."),
-					this.toggle("Show trace %", 'showTracePct', "Share of source notes that at least one own note links to."),
-				],
-			},
-			{
-				type: 'group',
-				heading: "Metrics section",
-				items: [
-					this.toggle("Links", 'metricsShowLinks'),
-					this.toggle("Tags", 'metricsShowTags'),
-					this.toggle("Concepts", 'metricsShowConcepts'),
-					this.toggle("Orphans", 'metricsShowOrphans'),
-					this.toggle("Avg words", 'metricsShowAvgWords'),
-				],
-			},
-
-			...this.stringList({
-				name: "Excluded folders",
-				desc: "Folders to skip from statistics.",
-				placeholder: "e.g. Templates",
-				addLabel: "Add folder",
-				pick: 'folder',
-				get: () => this.plugin.settings.excludedFolders,
-				set: (items) => { this.plugin.settings.excludedFolders = items; },
-				affectsCollector: true,
-			}),
-			...this.stringList({
-				name: "Own tags",
-				desc: "Tags marking your own thinking. Leading # is optional.",
-				placeholder: "e.g. thought",
-				addLabel: "Add tag",
-				get: () => this.plugin.settings.ownTags,
-				set: (items) => { this.plugin.settings.ownTags = items; },
-				affectsCollector: true,
-			}),
-			...this.stringList({
-				name: "Source tags",
-				desc: "Tags marking notes about external material.",
-				placeholder: "e.g. book",
-				addLabel: "Add tag",
-				get: () => this.plugin.settings.sourceTags,
-				set: (items) => { this.plugin.settings.sourceTags = items; },
-				affectsCollector: true,
-			}),
-			...this.stringList({
-				name: "Concept tags",
-				desc: "Tags marking concept notes (the grey zone).",
-				placeholder: "e.g. concept",
-				addLabel: "Add tag",
-				get: () => this.plugin.settings.conceptTags,
-				set: (items) => { this.plugin.settings.conceptTags = items; },
-				affectsCollector: true,
-			}),
-
-			{
 				type: 'page',
-				name: "Folder breakdown",
-				desc: "Per-folder section in the statistics view (PARA-style).",
-				displayValue: () => this.plugin.settings.showFolderBreakdown
-					? count(this.plugin.settings.folderGroups.length, "group")
-					: "Off",
-				// The section renders nothing without groups, so an enabled
-				// toggle and an empty list is a silent no-op worth flagging.
-				status: () => this.plugin.settings.showFolderBreakdown
-					&& this.plugin.settings.folderGroups.length === 0 ? 'warning' : null,
-				items: [
-					this.toggle("Show folder breakdown", 'showFolderBreakdown', "Per-folder section in the statistics view (PARA-style)."),
-					...this.folderGroups(),
-				],
+				name: "Status bar items",
+				// These apply in both modes: cycling walks only the enabled
+				// items and skips over the rest.
+				desc: "Which statistics the status bar shows. Cycling mode skips the ones turned off here.",
+				displayValue: () => `${enabled()} of ${STATUS_BAR_ITEMS.length}`,
+				// Nothing enabled leaves the status bar blank in either mode.
+				status: () => enabled() === 0 ? 'warning' : null,
+				items: STATUS_BAR_ITEMS.map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
 			},
-
-			{
-				type: 'group',
-				heading: "Sources with trace",
-				items: [
-					this.toggle(
-						"Show sources-with-trace",
-						'showSourcesTrace',
-						"Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).",
-					),
-					this.toggle(
-						"Show dangling notes list",
-						'showDanglingList',
-						"Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.",
-					),
-				],
-			},
-
-			{
-				type: 'page',
-				name: "Taxonomy drift",
-				desc: "Rare tags and tags outside your canonical set.",
-				displayValue: () => this.plugin.settings.showTaxonomyDrift
-					? count(this.plugin.settings.canonicalTags.length, "canonical tag")
-					: "Off",
-				// With no canonical set every tag reads as unknown, which
-				// makes the section noise rather than signal.
-				status: () => this.plugin.settings.showTaxonomyDrift
-					&& this.plugin.settings.canonicalTags.length === 0 ? 'warning' : null,
-				items: [
-					this.toggle(
-						"Show taxonomy drift",
-						'showTaxonomyDrift',
-						"Section in the statistics view that lists rare tags and tags outside your canonical set.",
-					),
-					{
-						name: "Rare tag threshold",
-						desc: "Tags used fewer than this many times are flagged as rare (likely typos or dead).",
-						control: {
-							type: 'number',
-							key: 'rareTagThreshold',
-							defaultValue: DEFAULT_SETTINGS.rareTagThreshold,
-							placeholder: String(DEFAULT_SETTINGS.rareTagThreshold),
-							min: 1,
-							step: 1,
-							validate: (value) => Number.isInteger(value) && value >= 1
-								? undefined
-								: "Must be a whole number of 1 or more.",
-						},
-					},
-					...this.stringList({
-						name: "Canonical tags",
-						desc: "Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
-						placeholder: "e.g. thought",
-						addLabel: "Add tag",
-						get: () => this.plugin.settings.canonicalTags,
-						set: (items) => { this.plugin.settings.canonicalTags = items; },
-					}),
-				],
-			},
-
-			{
-				type: 'page',
-				name: "Inbox health",
-				desc: "Notes in inbox folders and notes tagged for review, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
-				displayValue: () => this.plugin.settings.showInbox
-					? count(this.plugin.settings.inboxFolders.length, "folder")
-					: "Off",
-				// Neither folders nor review tags means nothing is ever
-				// collected — the section stays empty and copy refuses.
-				status: () => this.plugin.settings.showInbox
-					&& this.plugin.settings.inboxFolders.length === 0
-					&& this.plugin.settings.inboxReviewTags.length === 0 ? 'warning' : null,
-				items: [
-					this.toggle(
-						"Show inbox health",
-						'showInbox',
-						"Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
-					),
-					...this.stringList({
-						name: "Inbox folders",
-						desc: "Folders treated as inbox (techdebt of unprocessed input).",
-						placeholder: "e.g. 00. Входящие",
-						addLabel: "Add folder",
-						pick: 'folder',
-						get: () => this.plugin.settings.inboxFolders,
-						set: (items) => { this.plugin.settings.inboxFolders = items; },
-						affectsCollector: true,
-					}),
-					...this.stringList({
-						name: "Inbox review tags",
-						desc: "Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
-						placeholder: "e.g. inbox/review",
-						addLabel: "Add tag",
-						get: () => this.plugin.settings.inboxReviewTags,
-						set: (items) => { this.plugin.settings.inboxReviewTags = items; },
-						affectsCollector: true,
-					}),
-				],
-			},
-
-			{
-				type: 'group',
-				heading: "History",
-				items: [
-					this.toggle(
-						"Show history",
-						'showHistory',
-						"30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.",
-					),
-					{
-						name: "History export folder",
-						desc: "Last folder used for CSV export. The export command opens a folder picker each time and updates this value.",
-						control: {
-							type: 'folder',
-							key: 'historyExportFolder',
-							defaultValue: DEFAULT_SETTINGS.historyExportFolder,
-							placeholder: "(vault root)",
-							includeRoot: true,
-						},
-					},
-				],
-			},
-
-			this.tangles(),
 		];
 	}
 
+	/** What the collector sees: the folders it skips and the tags it sorts by. */
+	private counting(): SettingDefinitionGroup<SettingsKey> {
+		const s = () => this.plugin.settings;
+		return {
+			type: 'group',
+			heading: "What gets counted",
+			items: [
+				{
+					type: 'page',
+					name: "Excluded folders",
+					desc: "Folders to skip from statistics. Matched as a path prefix, so a folder covers everything under it.",
+					displayValue: () => count(s().excludedFolders.length, "folder"),
+					items: this.stringList({
+						name: "Excluded folders",
+						desc: "Folders to skip from statistics.",
+						aliases: ["ignore", "skip"],
+						standalone: true,
+						placeholder: "e.g. Templates",
+						addLabel: "Add folder",
+						pick: 'folder',
+						get: () => s().excludedFolders,
+						set: (items) => { s().excludedFolders = items; },
+						affectsCollector: true,
+					}),
+				},
+				{
+					type: 'page',
+					name: "Note classification",
+					desc: "Tags that sort notes into your own thinking, external material, and concepts.",
+					displayValue: () => `${s().ownTags.length} own / ${s().sourceTags.length} source`,
+					// Own/source is the headline metric of the whole plugin;
+					// an empty side leaves the hero panel meaningless.
+					status: () => s().ownTags.length === 0 || s().sourceTags.length === 0 ? 'warning' : null,
+					items: [
+						...this.stringList({
+							name: "Own tags",
+							desc: "Tags marking your own thinking. Leading # is optional.",
+							aliases: ["classification", "zettelkasten"],
+							placeholder: "e.g. thought",
+							addLabel: "Add tag",
+							get: () => s().ownTags,
+							set: (items) => { s().ownTags = items; },
+							affectsCollector: true,
+						}),
+						...this.stringList({
+							name: "Source tags",
+							desc: "Tags marking notes about external material.",
+							aliases: ["classification", "literature"],
+							placeholder: "e.g. book",
+							addLabel: "Add tag",
+							get: () => s().sourceTags,
+							set: (items) => { s().sourceTags = items; },
+							affectsCollector: true,
+						}),
+						...this.stringList({
+							name: "Concept tags",
+							desc: "Tags marking concept notes (the grey zone).",
+							aliases: ["classification"],
+							placeholder: "e.g. concept",
+							addLabel: "Add tag",
+							get: () => s().conceptTags,
+							set: (items) => { s().conceptTags = items; },
+							affectsCollector: true,
+						}),
+					],
+				},
+			],
+		};
+	}
+
+	/**
+	 * Every optional section of the statistics view, one entry each. Two of
+	 * them hold only a pair of toggles, but a section that looks like its
+	 * neighbours is worth more here than a row saved: the alternative is an
+	 * index with loose toggles wedged between navigable entries, and the API
+	 * does not let a group nest inside another group.
+	 */
+	private sideView(): SettingDefinitionGroup<SettingsKey> {
+		return {
+			type: 'group',
+			heading: "Side view",
+			items: [
+				this.metrics(),
+				this.folderBreakdown(),
+				this.sourcesTrace(),
+				this.taxonomyDrift(),
+				this.inboxHealth(),
+				this.history(),
+			],
+		};
+	}
+
+	private tools(): SettingDefinitionGroup<SettingsKey> {
+		return {
+			type: 'group',
+			heading: "Tools",
+			items: [this.tangles()],
+		};
+	}
+
+	private metrics(): SettingDefinitionPage<SettingsKey> {
+		const enabled = () => METRICS_ITEMS.filter(i => this.plugin.settings[i.key]).length;
+		return {
+			type: 'page',
+			name: "Metrics",
+			desc: "Secondary metrics in the grid below the hero panel.",
+			displayValue: () => `${enabled()} of ${METRICS_ITEMS.length}`,
+			items: METRICS_ITEMS.map(i => this.toggle(i.name, i.key, i.desc, i.aliases)),
+		};
+	}
+
+	private folderBreakdown(): SettingDefinitionPage<SettingsKey> {
+		return {
+			type: 'page',
+			name: "Folder breakdown",
+			desc: "Per-folder section in the statistics view (PARA-style).",
+			displayValue: () => this.plugin.settings.showFolderBreakdown
+				? count(this.plugin.settings.folderGroups.length, "group")
+				: "Off",
+			// The section renders nothing without groups, so an enabled
+			// toggle and an empty list is a silent no-op worth flagging.
+			status: () => this.plugin.settings.showFolderBreakdown
+				&& this.plugin.settings.folderGroups.length === 0 ? 'warning' : null,
+			items: [
+				this.toggle("Show folder breakdown", 'showFolderBreakdown', "Per-folder section in the statistics view (PARA-style).", ["PARA"]),
+				...this.folderGroups(),
+			],
+		};
+	}
+
+	private sourcesTrace(): SettingDefinitionPage<SettingsKey> {
+		const s = () => this.plugin.settings;
+		return {
+			type: 'page',
+			name: "Sources with trace",
+			desc: "How many source notes are referenced by at least one own note.",
+			displayValue: () => !s().showSourcesTrace
+				? "Off"
+				: s().showDanglingList ? "On + top 5" : "On",
+			items: [
+				this.toggle(
+					"Show sources-with-trace",
+					'showSourcesTrace',
+					"Section in the statistics view showing how many source notes are referenced by at least one own note (and which ones aren't).",
+				),
+				this.toggle(
+					"Show dangling notes list",
+					'showDanglingList',
+					"Inside Sources-with-trace: the top-5 list of source notes nothing links to. Off keeps just the bar and legend.",
+					["dangling", "untraced"],
+				),
+			],
+		};
+	}
+
+	private taxonomyDrift(): SettingDefinitionPage<SettingsKey> {
+		return {
+			type: 'page',
+			name: "Taxonomy drift",
+			desc: "Rare tags and tags outside your canonical set.",
+			displayValue: () => this.plugin.settings.showTaxonomyDrift
+				? count(this.plugin.settings.canonicalTags.length, "canonical tag")
+				: "Off",
+			// With no canonical set every tag reads as unknown, which
+			// makes the section noise rather than signal.
+			status: () => this.plugin.settings.showTaxonomyDrift
+				&& this.plugin.settings.canonicalTags.length === 0 ? 'warning' : null,
+			items: [
+				this.toggle(
+					"Show taxonomy drift",
+					'showTaxonomyDrift',
+					"Section in the statistics view that lists rare tags and tags outside your canonical set.",
+				),
+				{
+					name: "Rare tag threshold",
+					desc: "Tags used fewer than this many times are flagged as rare (likely typos or dead).",
+					control: {
+						type: 'number',
+						key: 'rareTagThreshold',
+						defaultValue: DEFAULT_SETTINGS.rareTagThreshold,
+						placeholder: String(DEFAULT_SETTINGS.rareTagThreshold),
+						min: 1,
+						step: 1,
+						validate: (value) => Number.isInteger(value) && value >= 1
+							? undefined
+							: "Must be a whole number of 1 or more.",
+					},
+				},
+				...this.stringList({
+					name: "Canonical tags",
+					desc: "Your accepted tag set. Anything else is flagged as unknown. A canonical parent (e.g. 'journal') covers descendants ('journal/daily').",
+					placeholder: "e.g. thought",
+					addLabel: "Add tag",
+					get: () => this.plugin.settings.canonicalTags,
+					set: (items) => { this.plugin.settings.canonicalTags = items; },
+				}),
+			],
+		};
+	}
+
+	private inboxHealth(): SettingDefinitionPage<SettingsKey> {
+		return {
+			type: 'page',
+			name: "Inbox health",
+			desc: "Notes in inbox folders and notes tagged for review, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
+			displayValue: () => this.plugin.settings.showInbox
+				? count(this.plugin.settings.inboxFolders.length, "folder")
+				: "Off",
+			// Neither folders nor review tags means nothing is ever
+			// collected — the section stays empty and copy refuses.
+			status: () => this.plugin.settings.showInbox
+				&& this.plugin.settings.inboxFolders.length === 0
+				&& this.plugin.settings.inboxReviewTags.length === 0 ? 'warning' : null,
+			items: [
+				this.toggle(
+					"Show inbox health",
+					'showInbox',
+					"Section showing notes in inbox folders and notes outside them tagged with a review tag, bucketed by age (<1d / 1–7d / 7–30d / 30+d).",
+				),
+				...this.stringList({
+					name: "Inbox folders",
+					desc: "Folders treated as inbox (techdebt of unprocessed input).",
+					placeholder: "e.g. 00. Входящие",
+					addLabel: "Add folder",
+					pick: 'folder',
+					get: () => this.plugin.settings.inboxFolders,
+					set: (items) => { this.plugin.settings.inboxFolders = items; },
+					affectsCollector: true,
+				}),
+				...this.stringList({
+					name: "Inbox review tags",
+					desc: "Tags marking notes that need processing even when outside inbox folders. Leading # is optional.",
+					placeholder: "e.g. inbox/review",
+					addLabel: "Add tag",
+					get: () => this.plugin.settings.inboxReviewTags,
+					set: (items) => { this.plugin.settings.inboxReviewTags = items; },
+					affectsCollector: true,
+				}),
+			],
+		};
+	}
+
+	private history(): SettingDefinitionPage<SettingsKey> {
+		return {
+			type: 'page',
+			name: "History",
+			desc: "30-day sparkline of how the vault evolves.",
+			displayValue: () => this.plugin.settings.showHistory ? "On" : "Off",
+			items: [
+				this.toggle(
+					"Show history",
+					'showHistory',
+					"30-day sparkline section in the statistics view. Snapshots are recorded daily regardless of this toggle.",
+					["sparkline"],
+				),
+				{
+					name: "History export folder",
+					desc: "Last folder used for CSV export. The export command opens a folder picker each time and updates this value.",
+					aliases: ["CSV"],
+					control: {
+						type: 'folder',
+						key: 'historyExportFolder',
+						defaultValue: DEFAULT_SETTINGS.historyExportFolder,
+						placeholder: "(vault root)",
+						includeRoot: true,
+					},
+				},
+			],
+		};
+	}
+
 	/** Boolean row bound straight to a settings key. */
-	private toggle(name: string, key: SettingsKey, desc?: string): SettingDefinition<SettingsKey> {
+	private toggle(name: string, key: SettingsKey, desc?: string, aliases?: string[]): SettingDefinition<SettingsKey> {
 		return {
 			name,
 			desc,
+			aliases,
 			control: { type: 'toggle', key, defaultValue: DEFAULT_SETTINGS[key] as boolean },
 		};
 	}
@@ -633,7 +770,8 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			}];
 		}
 
-		return [{ name: opts.name, desc: opts.desc }, list];
+		if (opts.standalone) return [list];
+		return [{ name: opts.name, desc: opts.desc, aliases: opts.aliases }, list];
 	}
 
 	/**
