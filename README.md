@@ -49,7 +49,7 @@ For pre-releases (testing unreleased features), use [BRAT](https://github.com/Tf
 
 Manual install: grab the latest `main.js`, `manifest.json`, and `styles.css` from the [release section](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/releases) and drop them into `<vault>/.obsidian/plugins/vault-full-statistics/`.
 
-This plugin is desktop-only and requires Obsidian 1.13.0 or newer. Earlier builds lack the declarative settings API the settings tab is built on; if you are on an older Obsidian, it will keep offering you 1.20.2, which works.
+This plugin is desktop-only and requires Obsidian 1.13.1 or newer. Earlier builds lack the declarative settings API the settings tab is built on, and the state summaries on its navigable entries; if you are on an older Obsidian, it will keep offering you 1.20.2, which works.
 
 ## Usage
 
@@ -63,21 +63,22 @@ For own/source classification, configure your own/source/concept tags in setting
 
 All settings live under `Settings → Community plugins → Vault Full Statistics`, and are searchable from the settings search box. Defaults are sensible — most users only touch own/source tags and the opt-in section toggles.
 
-Folder breakdown, Tag taxonomy drift, Inbox health and Tangles are navigable pages: the entry shows the current state (`3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. Every list below supports drag-to-reorder and removal with Delete or Backspace.
+The tab itself is an index. The first screen holds one toggle and a list of navigable entries grouped under **What gets counted**, **Side view** and **Tools**; everything below lives one level down on its own page. Each entry shows its current state (`11 of 12`, `3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. Every list supports drag-to-reorder and removal with Delete or Backspace. If you know what you are looking for, `Settings → Search` finds the row directly and opens the page it lives on.
 
 ### Status bar
-- **Show individual items** — when on, every enabled statistic is rendered as its own status bar slot; when off (default) the bar shows one statistic at a time and clicking cycles. Below toggles apply when this is on.
-- **Show notes / links / tags / quality / own / source / own % / source % / concepts / orphans / trace %** — visibility of each individual status bar stat.
+- **Show individual items** — when on, every enabled statistic is rendered as its own status bar slot; when off (default) the bar shows one statistic at a time and clicking cycles.
+- **Status bar items** — page with a toggle per statistic: **Show notes / words / links / tags / quality / own / source / own % / source % / concepts / orphans / trace %**. These apply in both modes; cycling walks only the enabled ones and skips the rest. All on by default except concepts.
 
-### Metrics section (side view)
+### What gets counted
+- **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Added through the vault folder picker; matched as path prefix with a `/` boundary.
+- **Note classification** — the three tag sets behind own/source and the hero panel. The entry warns when either own or source is empty, because the ratio is meaningless then.
+  - **Own tags** (default: `thought`, `synthesis`, `fleeting`) — mark notes as your own thinking.
+  - **Source tags** (default: `book`, `article`, `video`, `lecture`, `literature`, `literature-note`) — mark notes about external material.
+  - **Concept tags** (default: `concept`) — the grey zone between own and source.
+
+### Metrics (side view)
 Toggle which secondary metrics appear in the side view's grid below the hero panel:
 - **Links**, **Tags**, **Concepts**, **Orphans**, **Avg words** — all on by default.
-
-### Classification
-- **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Added through the vault folder picker; matched as path prefix with a `/` boundary.
-- **Own tags** (default: `thought`, `synthesis`, `fleeting`) — mark notes as your own thinking.
-- **Source tags** (default: `book`, `article`, `video`, `lecture`, `literature`, `literature-note`) — mark notes about external material.
-- **Concept tags** (default: `concept`) — the grey zone between own and source.
 
 ### Folder breakdown (PARA)
 - **Show folder breakdown** (default: off) — opt-in section that breaks down notes per folder group.

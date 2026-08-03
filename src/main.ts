@@ -3,7 +3,7 @@ import { FolderPickerModal } from './pickers';
 import { DecimalUnitFormatter } from './format';
 import { FullVaultMetrics } from './metrics';
 import { FullVaultMetricsCollector } from './collect';
-import { DEFAULT_SETTINGS, FullStatisticsPluginSettings, FullStatisticsPluginSettingTab } from './settings';
+import { DEFAULT_SETTINGS, FullStatisticsPluginSettings, FullStatisticsPluginSettingTab, STATUS_BAR_ITEMS } from './settings';
 import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
 import { TanglesView, TANGLES_VIEW_TYPE } from './tanglesView';
@@ -479,22 +479,14 @@ class FullStatisticsStatusBarItem {
 
 	private refreshSoon = debounce(() => { this.refresh(); }, 2000, false);
 
+	/**
+	 * Positional against `statisticViews` above: STATUS_BAR_ITEMS is declared
+	 * in the same order the views are pushed, and the settings tab builds its
+	 * toggles from that same array, so the two can't drift apart.
+	 */
 	private viewEnabledFlags(): boolean[] {
 		const s = this.owner.settings;
-		return [
-			s.showNotes,
-			s.showWords,
-			s.showLinks,
-			s.showTags,
-			s.showQuality,
-			s.showOwn,
-			s.showSource,
-			s.showOwnPct,
-			s.showSourcePct,
-			s.showConcepts,
-			s.showOrphans,
-			s.showTracePct,
-		];
+		return STATUS_BAR_ITEMS.map(item => s[item.key] as boolean);
 	}
 
 	public refresh() {
