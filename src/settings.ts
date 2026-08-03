@@ -10,6 +10,7 @@ import type {
 } from "obsidian";
 
 import type StatisticsPlugin from "./main";
+import { setLocale, type LanguageSetting } from "./i18n";
 import { FolderPickerModal, NoteFuzzyPickerModal } from "./pickers";
 
 export interface FolderGroup {
@@ -18,6 +19,11 @@ export interface FolderGroup {
 }
 
 export interface FullStatisticsPluginSettings {
+	/**
+	 * Interface language. `'auto'` follows Obsidian; the default is `'en'` so
+	 * that updating the plugin never switches someone's interface for them.
+	 */
+	language: LanguageSetting,
 	displayIndividualItems: boolean,
 	showNotes: boolean,
 	showWords: boolean,
@@ -74,6 +80,7 @@ export type SettingsKey = keyof FullStatisticsPluginSettings;
  * imports this module back).
  */
 export const DEFAULT_SETTINGS: FullStatisticsPluginSettings = {
+	language: 'en',
 	displayIndividualItems: false,
 	showNotes: true,
 	showWords: true,
@@ -249,6 +256,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
 		await this.plugin.saveSettings();
 		if (COLLECTOR_KEYS.has(key)) this.plugin.restartCollector();
+		if (key === 'language') setLocale(this.plugin.settings.language);
 		this.refreshDomState();
 	}
 
@@ -274,6 +282,23 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	private general(): SettingDefinitionItem<SettingsKey>[] {
 		const enabled = () => STATUS_BAR_ITEMS.filter(i => this.plugin.settings[i.key]).length;
 		return [
+			{
+				name: "Language",
+				// English is the default on purpose: updating the plugin should
+				// not switch the interface of someone who never asked for it.
+				// Following Obsidian is one click away for those who want it.
+				desc: "Language of the plugin's interface. Auto follows Obsidian.",
+				control: {
+					type: 'dropdown',
+					key: 'language',
+					defaultValue: DEFAULT_SETTINGS.language,
+					options: {
+						en: "English",
+						ru: "Русский",
+						auto: "Auto (follow Obsidian)",
+					},
+				},
+			},
 			{
 				name: "Show individual items",
 				desc: "Whether to show multiple items at once or cycle them with a click",

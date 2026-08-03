@@ -211,9 +211,12 @@ describe("tab layout", () => {
 
 		expect(top.filter(d => 'type' in d && d.type === 'list')).toEqual([]);
 
-		const [first, second, ...rest] = top;
-		expect(isControl(first) && first.control.key).toBe('displayIndividualItems');
-		expect((second as PageDef).type).toBe('page');
+		// Two leading controls — the language picker and the display mode —
+		// then the status bar page, then nothing but groups.
+		const [first, second, third, ...rest] = top;
+		expect(isControl(first) && first.control.key).toBe('language');
+		expect(isControl(second) && second.control.key).toBe('displayIndividualItems');
+		expect((third as PageDef).type).toBe('page');
 		expect(rest.every(d => 'type' in d && d.type === 'group')).toBe(true);
 	});
 

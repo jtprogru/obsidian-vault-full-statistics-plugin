@@ -8,6 +8,7 @@ import { HistoryStore, Snapshot, snapshotsToCsv } from './historyStore';
 import { VaultStatisticsView, VAULT_STATISTICS_VIEW_TYPE } from './statisticsView';
 import { TanglesView, TANGLES_VIEW_TYPE } from './tanglesView';
 import { computeTangles, renderTanglesReport, formatDate } from './tangles';
+import { setLocale } from './i18n';
 
 
 interface PersistedData {
@@ -127,6 +128,9 @@ export default class FullStatisticsPlugin extends Plugin {
 
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings);
 		this.historyStore = new HistoryStore(storedHistory);
+		// Before anything renders: views and the status bar read strings at
+		// render time, so the locale has to be in place first.
+		setLocale(this.settings.language);
 	}
 
 	async saveSettings() {
