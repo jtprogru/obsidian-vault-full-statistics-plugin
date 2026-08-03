@@ -2,7 +2,7 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.22.0] - 2026-08-03
 
 The settings tab became an index. The first screen used to be one scroll of 28 rows (40 with individual status bar items on), mixing a lone toggle, two blocks of checkboxes and four editable lists with the four navigable pages added in 1.21.0. Now it holds one toggle and ten navigable entries under three headings, each entry summarising its own state.
 
