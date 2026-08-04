@@ -65,7 +65,9 @@ For own/source classification, configure your own/source/concept tags in setting
 
 All settings live under `Settings → Community plugins → Vault Full Statistics`, and are searchable from the settings search box. Defaults are sensible — most users only touch own/source tags and the opt-in section toggles.
 
-The tab itself is an index. The first screen holds one toggle and a list of navigable entries grouped under **What gets counted**, **Side view** and **Tools**; everything below lives one level down on its own page. Each entry shows its current state (`11 of 12`, `3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. Every list supports drag-to-reorder and removal with Delete or Backspace. If you know what you are looking for, `Settings → Search` finds the row directly and opens the page it lives on.
+The tab itself is an index. The first screen holds one toggle and a list of navigable entries grouped under **What gets counted**, **Side view** and **Tools**; everything below lives one level down on its own page. Each entry shows its current state (`11 of 12`, `3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. If you know what you are looking for, `Settings → Search` finds the row directly and opens the page it lives on.
+
+Editable lists — excluded folders, the tag sets, folder groups, inbox folders — are named by the header sitting directly above them, next to the `+` that adds an entry. What belongs in a list is spelled out inside it while it is still empty. Every list supports drag-to-reorder and removal with Delete or Backspace.
 
 ### Language
 - **Language** — `English` (default), `Русский`, or `Auto (follow Obsidian)`. The plugin stays English until you change this: updating it never switches the interface of somebody who did not ask for it. Pick `Auto` if you want it to follow Obsidian's own interface language from now on.

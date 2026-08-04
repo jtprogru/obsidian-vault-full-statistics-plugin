@@ -119,7 +119,6 @@ export const ru: Translations = {
 			excludedName: "Исключённые папки",
 			excludedDesc: "Папки, которые не учитываются в статистике. Совпадение по префиксу пути, поэтому папка покрывает всё внутри себя.",
 			excludedListDesc: "Папки, которые не учитываются в статистике.",
-			excludedAliases: ["ignore", "skip", "игнор", "пропустить"],
 			excludedPlaceholder: "например, Templates",
 
 			classificationName: "Классификация заметок",
@@ -127,15 +126,12 @@ export const ru: Translations = {
 			classificationValue: (own, source) => `${own} своих / ${source} источников`,
 			ownTags: "Теги своих заметок",
 			ownTagsDesc: "Теги, помечающие ваше собственное мышление. Ведущий # необязателен.",
-			ownTagsAliases: ["classification", "zettelkasten", "классификация"],
 			ownTagsPlaceholder: "например, thought",
 			sourceTags: "Теги источников",
 			sourceTagsDesc: "Теги, помечающие заметки о внешнем материале.",
-			sourceTagsAliases: ["classification", "literature", "классификация", "литература"],
 			sourceTagsPlaceholder: "например, book",
 			conceptTags: "Теги концептов",
 			conceptTagsDesc: "Теги, помечающие концепты (серая зона).",
-			conceptTagsAliases: ["classification", "классификация"],
 			conceptTagsPlaceholder: "например, concept",
 		},
 

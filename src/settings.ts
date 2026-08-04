@@ -239,12 +239,10 @@ interface StringListOptions {
 	addLabel: string;
 	get: () => string[];
 	set: (items: string[]) => void;
-	/** Extra search terms for the labelled row. */
-	aliases?: string[];
 	/**
-	 * Drops the labelled row. Use on a page whose only content is this list —
-	 * the page title and description already say what the list is, and a row
-	 * repeating them reads as a duplicate.
+	 * Drops the list header. Use on a page whose only content is this list —
+	 * the page title already names it, and a header repeating it reads as a
+	 * duplicate.
 	 */
 	standalone?: boolean;
 	/** Whether the value feeds the collector and needs a rescan on change. */
@@ -369,10 +367,9 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					name: t().settings.counting.excludedName,
 					desc: t().settings.counting.excludedDesc,
 					displayValue: () => t().settings.folderCount(s().excludedFolders.length),
-					items: this.stringList({
+					items: [this.stringList({
 						name: t().settings.counting.excludedName,
 						desc: t().settings.counting.excludedListDesc,
-						aliases: t().settings.counting.excludedAliases,
 						standalone: true,
 						placeholder: t().settings.counting.excludedPlaceholder,
 						addLabel: t().settings.addFolder,
@@ -380,7 +377,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						get: () => s().excludedFolders,
 						set: (items) => { s().excludedFolders = items; },
 						affectsCollector: true,
-					}),
+					})],
 				},
 				{
 					type: 'page',
@@ -391,30 +388,27 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					// an empty side leaves the hero panel meaningless.
 					status: () => s().ownTags.length === 0 || s().sourceTags.length === 0 ? 'warning' : null,
 					items: [
-						...this.stringList({
+						this.stringList({
 							name: t().settings.counting.ownTags,
 							desc: t().settings.counting.ownTagsDesc,
-							aliases: t().settings.counting.ownTagsAliases,
 							placeholder: t().settings.counting.ownTagsPlaceholder,
 							addLabel: t().settings.addTag,
 							get: () => s().ownTags,
 							set: (items) => { s().ownTags = items; },
 							affectsCollector: true,
 						}),
-						...this.stringList({
+						this.stringList({
 							name: t().settings.counting.sourceTags,
 							desc: t().settings.counting.sourceTagsDesc,
-							aliases: t().settings.counting.sourceTagsAliases,
 							placeholder: t().settings.counting.sourceTagsPlaceholder,
 							addLabel: t().settings.addTag,
 							get: () => s().sourceTags,
 							set: (items) => { s().sourceTags = items; },
 							affectsCollector: true,
 						}),
-						...this.stringList({
+						this.stringList({
 							name: t().settings.counting.conceptTags,
 							desc: t().settings.counting.conceptTagsDesc,
-							aliases: t().settings.counting.conceptTagsAliases,
 							placeholder: t().settings.counting.conceptTagsPlaceholder,
 							addLabel: t().settings.addTag,
 							get: () => s().conceptTags,
@@ -492,7 +486,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 				&& this.plugin.settings.folderGroups.length === 0 ? 'warning' : null,
 			items: [
 				this.toggle(t().settings.folderBreakdown.name, 'showFolderBreakdown', t().settings.folderBreakdown.desc, t().settings.folderBreakdown.toggleAliases),
-				...this.folderGroups(),
+				this.folderGroups(),
 			],
 		};
 	}
@@ -555,7 +549,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 							: t().settings.taxonomy.thresholdInvalid,
 					},
 				},
-				...this.stringList({
+				this.stringList({
 					name: t().settings.taxonomy.canonicalName,
 					desc: t().settings.taxonomy.canonicalDesc,
 					placeholder: t().settings.taxonomy.canonicalPlaceholder,
@@ -586,7 +580,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					'showInbox',
 					t().settings.inbox.toggleDesc,
 				),
-				...this.stringList({
+				this.stringList({
 					name: t().settings.inbox.foldersName,
 					desc: t().settings.inbox.foldersDesc,
 					placeholder: t().settings.inbox.foldersPlaceholder,
@@ -596,7 +590,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					set: (items) => { this.plugin.settings.inboxFolders = items; },
 					affectsCollector: true,
 				}),
-				...this.stringList({
+				this.stringList({
 					name: t().settings.inbox.tagsName,
 					desc: t().settings.inbox.tagsDesc,
 					placeholder: t().settings.inbox.tagsPlaceholder,
@@ -722,15 +716,15 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 						includeRoot: true,
 					},
 				},
-				...this.stringList({
-				name: t().settings.tangles.excludeName,
-				desc: t().settings.tangles.excludeDesc,
-				placeholder: t().settings.tangles.excludePlaceholder,
-				addLabel: t().settings.tangles.addNote,
-				pick: 'note',
-				extraAdd: { icon: 'folder-plus', tooltip: t().settings.addFolder, pick: 'folder' },
-				get: () => this.plugin.settings.tanglesExclude,
-				set: (items) => { this.plugin.settings.tanglesExclude = items; },
+				this.stringList({
+					name: t().settings.tangles.excludeName,
+					desc: t().settings.tangles.excludeDesc,
+					placeholder: t().settings.tangles.excludePlaceholder,
+					addLabel: t().settings.tangles.addNote,
+					pick: 'note',
+					extraAdd: { icon: 'folder-plus', tooltip: t().settings.addFolder, pick: 'folder' },
+					get: () => this.plugin.settings.tanglesExclude,
+					set: (items) => { this.plugin.settings.tanglesExclude = items; },
 				}),
 			],
 		};
@@ -753,14 +747,21 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	}
 
 	/**
-	 * A labelled row carrying the explanation, followed by a core-rendered
-	 * list of the entries. The list supplies delete, drag-to-reorder and the
-	 * add affordance; each row only has to render its text input.
+	 * A core-rendered list of entries, named by its own header. The list
+	 * supplies delete, drag-to-reorder and the add affordance; each row only
+	 * has to render its text input.
+	 *
+	 * The name lives in `heading` rather than in a preceding labelled row:
+	 * the core packs consecutive plain rows into one card, so a label row
+	 * ends up joined to whatever sits above it instead of to the list it
+	 * names. The header has no slot for the explanation, so that goes to the
+	 * empty state — visible exactly while the list is empty, which is when
+	 * the user does not yet know what belongs there.
 	 *
 	 * Entries are array elements, so they cannot bind to a `key` the way
 	 * scalar settings do — hence the `render` escape hatch per row.
 	 */
-	private stringList(opts: StringListOptions): SettingDefinitionItem<SettingsKey>[] {
+	private stringList(opts: StringListOptions): SettingDefinitionList<SettingsKey> {
 		const commit = async (items: string[], structural: boolean) => {
 			opts.set(items);
 			await this.plugin.saveSettings();
@@ -793,7 +794,8 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 
 		const list: SettingDefinitionList<SettingsKey> = {
 			type: 'list',
-			emptyState: t().settings.listEmpty(opts.addLabel),
+			heading: opts.standalone ? undefined : opts.name,
+			emptyState: this.listEmptyState(opts.desc, t().settings.listEmpty(opts.addLabel)),
 			items: opts.get().map((value, idx) => ({
 				name: "",
 				searchable: false,
@@ -844,8 +846,16 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			}];
 		}
 
-		if (opts.standalone) return [list];
-		return [{ name: opts.name, desc: opts.desc, aliases: opts.aliases }, list];
+		return list;
+	}
+
+	/**
+	 * What a list says while it holds nothing: first what belongs in it,
+	 * then how to put something there. The core renders this as one muted
+	 * line inside the card, so the two sentences run together on purpose.
+	 */
+	private listEmptyState(desc: string, nudge: string): string {
+		return `${desc} ${nudge}`;
 	}
 
 	/**
@@ -855,7 +865,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 	 * stays {name, paths: string[]}; the UI only flattens the paths array
 	 * on display and splits it on edit.
 	 */
-	private folderGroups(): SettingDefinitionItem<SettingsKey>[] {
+	private folderGroups(): SettingDefinitionList<SettingsKey> {
 		const groups = () => this.plugin.settings.folderGroups;
 
 		const commit = async (next: FolderGroup[], structural: boolean) => {
@@ -867,7 +877,11 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 		const list: SettingDefinitionList<SettingsKey> = {
 			type: 'list',
 			cls: 'vfs-settings-fg',
-			emptyState: t().settings.folderBreakdown.groupsEmpty,
+			heading: t().settings.folderBreakdown.groupsName,
+			emptyState: this.listEmptyState(
+				t().settings.folderBreakdown.groupsDesc,
+				t().settings.folderBreakdown.groupsEmpty,
+			),
 			items: groups().map((group, gi) => ({
 				name: "",
 				searchable: false,
@@ -890,13 +904,7 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			},
 		};
 
-		return [
-			{
-				name: t().settings.folderBreakdown.groupsName,
-				desc: t().settings.folderBreakdown.groupsDesc,
-			},
-			list,
-		];
+		return list;
 	}
 
 	private renderGroupRow(setting: Setting, group: FolderGroup, gi: number): void {

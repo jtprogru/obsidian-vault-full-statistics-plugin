@@ -126,18 +126,15 @@ function defs(overrides: Partial<FullStatisticsPluginSettings> = {}): AnyDef[] {
 
 type PageDef = Extract<AnyDef, { type: 'page' }>;
 
-/**
- * The list that follows the row carrying `name`. `walk` yields a parent
- * before its children, so this finds both a labelled row followed by its
- * list and a standalone list that is the first item of its page.
- */
-function listAfter(all: AnyDef[], name: string): ListDef {
-	const flat = [...walk(all)];
-	const idx = flat.findIndex(d => 'name' in d && d.name === name);
-	expect(idx).toBeGreaterThanOrEqual(0);
-	const list = flat[idx + 1];
-	expect((list as ListDef).type).toBe('list');
-	return list as ListDef;
+/** Lists carry their own name, so nothing here depends on row order. */
+function lists(all: AnyDef[]): ListDef[] {
+	return [...walk(all)].filter(d => 'type' in d && d.type === 'list') as ListDef[];
+}
+
+function listNamed(all: AnyDef[], heading: string): ListDef {
+	const found = lists(all).find(d => d.heading === heading);
+	expect(found).toBeDefined();
+	return found as ListDef;
 }
 
 function page(all: AnyDef[], name: string): PageDef {
@@ -216,6 +213,41 @@ describe("tab layout", () => {
 			.filter(d => 'heading' in d)
 			.map(d => (d as { heading?: string }).heading);
 		expect(headings).toEqual(["What gets counted", "Side view", "Tools"]);
+	});
+
+	// The core packs consecutive plain rows into one card, so a row that only
+	// carries a name and a description gets joined to whatever sits above it
+	// rather than to the list it was meant to label. Names belong in the
+	// list's own header instead.
+	test("no bare label rows — every plain row does something", () => {
+		const inert = [...walk(defs())]
+			.filter(d => !('type' in d))
+			.filter(d => !isControl(d) && !('render' in d && d.render) && !('action' in d && d.action))
+			.map(d => (d as { name?: string }).name);
+		expect(inert).toEqual([]);
+	});
+
+	test("every list is named by its own header", () => {
+		const all = lists(defs());
+		expect(all.length).toBeGreaterThan(0);
+		// Excluded folders is the one page whose entire content is a single
+		// list: its page title already names it, so a header would repeat it.
+		const unnamed = all.filter(l => !l.heading);
+		expect(unnamed).toHaveLength(1);
+	});
+
+	test("a list explains itself while it is empty", () => {
+		const empty = defs({
+			ownTags: [],
+			inboxFolders: [],
+			folderGroups: [],
+		});
+		expect(listNamed(empty, "Own tags").emptyState)
+			.toBe("Tags marking your own thinking. Leading # is optional. Nothing yet — use “Add tag”.");
+		expect(listNamed(empty, "Inbox folders").emptyState)
+			.toBe("Folders treated as inbox (techdebt of unprocessed input). Nothing yet — use “Add folder”.");
+		expect(listNamed(empty, "Folder groups (PARA)").emptyState)
+			.toContain("No groups yet");
 	});
 
 	test("every page summarises itself on the entry", () => {
@@ -387,7 +419,7 @@ describe("list mutation", () => {
 		const { tab, settings, saveSettings, restartCollector } = makeTab({
 			ownTags: ["a", "b", "c"],
 		});
-		listAfter(tab.getSettingDefinitions(), "Own tags").onDelete!(1);
+		listNamed(tab.getSettingDefinitions(), "Own tags").onDelete!(1);
 		await Promise.resolve();
 
 		expect(settings.ownTags).toEqual(["a", "c"]);
@@ -397,7 +429,7 @@ describe("list mutation", () => {
 
 	test("reorder moves the entry to the new index", async () => {
 		const { tab, settings } = makeTab({ ownTags: ["a", "b", "c"] });
-		listAfter(tab.getSettingDefinitions(), "Own tags").onReorder!(0, 2);
+		listNamed(tab.getSettingDefinitions(), "Own tags").onReorder!(0, 2);
 		await Promise.resolve();
 
 		expect(settings.ownTags).toEqual(["b", "c", "a"]);
@@ -405,7 +437,7 @@ describe("list mutation", () => {
 
 	test("reorder is a move, not a swap", async () => {
 		const { tab, settings } = makeTab({ ownTags: ["a", "b", "c", "d"] });
-		listAfter(tab.getSettingDefinitions(), "Own tags").onReorder!(3, 1);
+		listNamed(tab.getSettingDefinitions(), "Own tags").onReorder!(3, 1);
 		await Promise.resolve();
 
 		expect(settings.ownTags).toEqual(["a", "d", "b", "c"]);
@@ -413,7 +445,7 @@ describe("list mutation", () => {
 
 	test("free-text lists append a blank row to type into", async () => {
 		const { tab, settings } = makeTab({ ownTags: ["a"] });
-		listAfter(tab.getSettingDefinitions(), "Own tags").addItem!.action(null as never);
+		listNamed(tab.getSettingDefinitions(), "Own tags").addItem!.action(null as never);
 		await Promise.resolve();
 
 		expect(settings.ownTags).toEqual(["a", ""]);
@@ -421,7 +453,7 @@ describe("list mutation", () => {
 
 	test("lists that do not feed the collector do not trigger a rescan", async () => {
 		const { tab, settings, restartCollector } = makeTab({ canonicalTags: ["x", "y"] });
-		listAfter(tab.getSettingDefinitions(), "Canonical tags").onDelete!(0);
+		listNamed(tab.getSettingDefinitions(), "Canonical tags").onDelete!(0);
 		await Promise.resolve();
 
 		expect(settings.canonicalTags).toEqual(["y"]);
@@ -435,7 +467,7 @@ describe("list mutation", () => {
 				{ name: "A", paths: ["b"] },
 			],
 		});
-		listAfter(tab.getSettingDefinitions(), "Folder groups (PARA)").onDelete!(0);
+		listNamed(tab.getSettingDefinitions(), "Folder groups (PARA)").onDelete!(0);
 		await Promise.resolve();
 
 		expect(settings.folderGroups).toEqual([{ name: "A", paths: ["b"] }]);
