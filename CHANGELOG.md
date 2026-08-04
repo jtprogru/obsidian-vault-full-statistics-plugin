@@ -2,6 +2,13 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.1] - 2026-08-04
+
+A maintenance release. The build toolchain picked up a newer `@types/node`; nothing the plugin ships or does changed.
+
+### Changed
+- Bumped the dev dependency `@types/node` to `^26.1.2`.
+
 ## [1.24.0] - 2026-08-03
 
 Every editable list now carries its own name. On a page like **Inbox health** the label `Inbox folders` used to sit in a separate row above its list, and Obsidian packs consecutive plain rows into one card — so the label ended up sharing a card with the `Show inbox health` toggle while the folders it named lived in the next card down, past a lone `+` button. The name has moved into the list's own header, where it sits beside that `+` and directly above the entries it belongs to.
