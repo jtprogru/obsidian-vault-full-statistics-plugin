@@ -2,6 +2,28 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-08-03
+
+Every editable list now carries its own name. On a page like **Inbox health** the label `Inbox folders` used to sit in a separate row above its list, and Obsidian packs consecutive plain rows into one card — so the label ended up sharing a card with the `Show inbox health` toggle while the folders it named lived in the next card down, past a lone `+` button. The name has moved into the list's own header, where it sits beside that `+` and directly above the entries it belongs to.
+
+The explanation that used to ride along with the label now shows inside the list while the list is empty, which is when it is actually needed. Once you have added an entry, the list speaks for itself.
+
+Nothing about what the plugin counts or stores changed, and no setting was renamed or given a new default.
+
+### Changed
+- **List names moved into the list header** on all eight editable lists: excluded folders, own/source/concept tags, canonical tags, inbox folders, inbox review tags, folder groups and the tangles exclusion list. `Excluded folders` is the one exception — it is the whole content of its own page, so the page title already names it and the header would only repeat it.
+- **List descriptions moved into the empty state.** Each list explains what belongs in it while it holds nothing, then gets out of the way.
+
+### Fixed
+- The English catalogue carried Russian examples in three places — the inbox folder placeholder (`e.g. 00. Входящие`), the folder-groups placeholder and the folder-groups description. An English interface now shows English examples; the Russian catalogue keeps its own.
+
+### Removed
+- Search aliases for the four list labels that no longer have a row of their own (`ignore`, `skip`, `classification`, `zettelkasten`, `literature`). Obsidian's settings search indexes rows and page names, not list headers, so these had nowhere left to live. The pages holding them — **Excluded folders**, **Note classification** — are still found by name.
+
+### Tests
+- The list helpers in the settings spec look lists up by their header instead of by "the definition that follows this row", so the tests no longer encode the layout that was the problem.
+- Three new guards: no plain row may exist without a control, a renderer or an action (the exact shape of the old label rows); every list except the standalone one carries a header; and a list's empty state repeats its description.
+
 ## [1.23.0] - 2026-08-03
 
 The plugin speaks Russian. Every string in the interface — status bar, both side panels, all settings pages, notices, the tangles report and the inbox markdown — now comes from a locale catalogue, and numbers are formatted for the active language.
