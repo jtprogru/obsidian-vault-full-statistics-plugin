@@ -1,9 +1,8 @@
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+    '^.+\\.tsx?$': ['@swc/jest', { jsc: { parser: { syntax: 'typescript', tsx: true }, target: 'es2018' } }],
   },
   testMatch: ['**/?(*.)+(spec|test).ts?(x)'],
   // Resets the i18n locale to English before each test — the specs assert on

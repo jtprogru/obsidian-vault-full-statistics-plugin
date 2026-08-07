@@ -31,6 +31,8 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@swc/core": "^1.15.0",
+		"@swc/jest": "^0.2.39",
 		"@types/jest": "^30.0.0",
 		"@types/node": "^26.1.2",
 		"esbuild": "^0.28.1",
@@ -38,7 +40,6 @@
 		"globals": "^17.8.0",
 		"jest": "^30.4.2",
 		"obsidian": "1.13.1",
-		"ts-jest": "^29.4.12",
 		"tslib": "^2.8.1",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.65.0"
