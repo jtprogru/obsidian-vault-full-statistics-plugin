@@ -203,7 +203,7 @@ cd obsidian-vault-full-statistics-plugin
 npm install
 npm run dev      # watch-mode esbuild — rebuilds main.js on save
 npm test         # jest test suite
-npm run lint     # eslint
+npm run lint     # oxlint
 npm run build    # production build (tsc type-check + esbuild)
 ```
 

@@ -2,6 +2,15 @@
 
 All notable changes to this plugin are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Build toolchain moved to TypeScript 7. Nothing the plugin ships or does changed — no source file was touched, and the linter rule set is identical to the previous one.
+
+### Changed
+- `typescript` upgraded 6.0.3 → 7.0.2. Neither of the two packages that blocked the major is left in the tree.
+- `ts-jest` replaced with `@swc/jest`: it needs the JavaScript compiler API that TypeScript 7 no longer exposes. Type-checking of the specs is unaffected — they live under `src/`, which `tsc -noEmit` covers on the build step. Test runner is still Jest; the suite runs in roughly a third of the time.
+- `eslint`, `typescript-eslint`, `@eslint/js` and `globals` replaced with `oxlint`: `typescript-eslint` refuses to run on TypeScript 7 and has no release supporting it ([typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)). `eslint.config.mjs` was ported one-for-one to `.oxlintrc.json`, keeping every rule and the spec/mocks overrides.
+
 ## [1.24.1] - 2026-08-04
 
 A maintenance release. The build toolchain picked up a newer `@types/node`; nothing the plugin ships or does changed.
