@@ -27,7 +27,7 @@ tasks:
       - npm test
 
   lint:
-    desc: "Run ESLint over the TypeScript sources"
+    desc: "Run oxlint over the TypeScript sources"
     cmds:
       - npm run lint
 

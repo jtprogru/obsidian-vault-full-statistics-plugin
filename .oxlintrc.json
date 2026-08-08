@@ -1,0 +1,24 @@
+{
+  "plugins": ["typescript"],
+  "categories": { "correctness": "error" },
+  "ignorePatterns": ["node_modules/", "main.js", "esbuild.config.mjs", "jest.config.js"],
+  "rules": {
+    "no-unused-vars": "off",
+    "typescript/no-unused-vars": ["error", { "args": "none" }],
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-expect-error": "allow-with-description", "ts-ignore": "allow-with-description" }
+    ],
+    "no-prototype-builtins": "off",
+    "typescript/no-empty-function": "off",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unsafe-declaration-merging": "warn",
+    "no-console": ["error", { "allow": ["warn", "error"] }]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.spec.ts", "src/__mocks__/**"],
+      "rules": { "typescript/no-explicit-any": "off" }
+    }
+  ]
+}
