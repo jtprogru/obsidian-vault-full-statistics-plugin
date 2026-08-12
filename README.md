@@ -7,6 +7,8 @@
 [![License](https://img.shields.io/github/license/jtprogru/obsidian-vault-full-statistics-plugin)](LICENSE)
 [![Sponsor](https://img.shields.io/github/sponsors/jtprogru?logo=github)](https://github.com/sponsors/jtprogru)
 
+![Vault Full Statistics — notes, words, QoV, own vs source ratio and a 30-day history](assets/cover.png)
+
 **NOTE**: This plugin is a modified fork of the [Obsidian Vault Statistics Plugin](https://github.com/bkyle/obsidian-vault-statistics-plugin).
 
 Quantify the shape of your knowledge base: counts, ratios, and trends right inside Obsidian. A click-to-cycle status bar item gives you the headline numbers; a dedicated side view goes deep — own vs source split, dangling sources, tangles, inbox health, taxonomy drift, and a 30-day sparkline.
