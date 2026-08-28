@@ -136,6 +136,9 @@ export const en = {
 			conceptTags: "Concept tags",
 			conceptTagsDesc: "Tags marking concept notes (the grey zone).",
 			conceptTagsPlaceholder: "e.g. concept",
+			conceptFolders: "Concept folders",
+			conceptFoldersDesc: "Folders whose notes count as concepts, whether or not they carry a concept tag.",
+			conceptFoldersPlaceholder: "e.g. 03. Concepts",
 		},
 
 		sideViewHeading: "Side view",

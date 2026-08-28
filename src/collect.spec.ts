@@ -278,6 +278,20 @@ describe("NoteMetricsCollector.collect — own/source/concept classification", (
 		expect(r?.metrics.conceptNotes).toBe(1);
 	});
 
+	test("classifies concept when the note lives under a concept folder, tag or not", async () => {
+		nmc.setConceptFolders(["03. Concepts"]);
+		const inFolder = { path: "03. Concepts/idea.md" } as TFile;
+		const r = await nmc.collect(inFolder, {} as any);
+		expect(r?.metrics.conceptNotes).toBe(1);
+	});
+
+	test("concept folder match is path-prefix, not a substring anywhere", async () => {
+		nmc.setConceptFolders(["03. Concepts"]);
+		const notInFolder = { path: "03. Concepts Archive/idea.md" } as TFile;
+		const r = await nmc.collect(notInFolder, {} as any);
+		expect(r?.metrics.conceptNotes).toBe(0);
+	});
+
 	test("a note with both own and source tags counts in both buckets", async () => {
 		const r = await nmc.collect(file, {
 			tags: [{ tag: "#thought" }, { tag: "#book" }],

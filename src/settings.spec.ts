@@ -151,6 +151,7 @@ const LIST_MANAGED_KEYS: SettingsKey[] = [
 	"ownTags",
 	"sourceTags",
 	"conceptTags",
+	"conceptFolders",
 	"canonicalTags",
 	"inboxFolders",
 	"inboxReviewTags",

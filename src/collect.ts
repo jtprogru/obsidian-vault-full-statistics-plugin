@@ -127,6 +127,11 @@ export class FullVaultMetricsCollector {
 		return this;
 	}
 
+	public setConceptFolders(folders: string[]) {
+		this.noteMetricsCollector.setConceptFolders(folders);
+		return this;
+	}
+
 	public setInboxFolders(folders: string[]) {
 		this.inboxFolders = folders
 			.map(f => f.trim().replace(/\/+$/, ''))
@@ -733,6 +738,7 @@ export class NoteMetricsCollector {
 	private ownTags: Set<string> = new Set();
 	private sourceTags: Set<string> = new Set();
 	private conceptTags: Set<string> = new Set();
+	private conceptFolders: string[] = [];
 
 	public setOwnTags(tags: string[]) {
 		this.ownTags = normalizeTagSet(tags);
@@ -748,6 +754,14 @@ export class NoteMetricsCollector {
 
 	public setConceptTags(tags: string[]) {
 		this.conceptTags = normalizeTagSet(tags);
+		this.clearCache();
+		return this;
+	}
+
+	public setConceptFolders(folders: string[]) {
+		this.conceptFolders = folders
+			.map(f => f.trim().replace(/\/+$/, ''))
+			.filter(f => f.length > 0);
 		this.clearCache();
 		return this;
 	}
@@ -772,7 +786,8 @@ export class NoteMetricsCollector {
 		metrics.words = content ? countWords(content) : 0;
 		metrics.ownNotes = hasIntersection(noteTags, this.ownTags) ? 1 : 0;
 		metrics.sourceNotes = hasIntersection(noteTags, this.sourceTags) ? 1 : 0;
-		metrics.conceptNotes = hasIntersection(noteTags, this.conceptTags) ? 1 : 0;
+		metrics.conceptNotes = (hasIntersection(noteTags, this.conceptTags)
+			|| matchesAnyFolder(file.path, this.conceptFolders)) ? 1 : 0;
 		metrics.quality = linkCount;
 
 		this.signatureCache.set(file.path, { links: linkCount, tagKey, mtime, words: metrics.words });

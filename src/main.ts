@@ -48,6 +48,7 @@ export default class FullStatisticsPlugin extends Plugin {
 			setOwnTags(this.settings.ownTags).
 			setSourceTags(this.settings.sourceTags).
 			setConceptTags(this.settings.conceptTags).
+			setConceptFolders(this.settings.conceptFolders).
 			setInboxFolders(this.settings.inboxFolders).
 			setInboxReviewTags(this.settings.inboxReviewTags);
 
@@ -326,6 +327,7 @@ export default class FullStatisticsPlugin extends Plugin {
 			.setOwnTags(this.settings.ownTags)
 			.setSourceTags(this.settings.sourceTags)
 			.setConceptTags(this.settings.conceptTags)
+			.setConceptFolders(this.settings.conceptFolders)
 			.setInboxFolders(this.settings.inboxFolders)
 			.setInboxReviewTags(this.settings.inboxReviewTags)
 			.restart();

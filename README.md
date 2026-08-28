@@ -88,6 +88,7 @@ Editable lists — excluded folders, the tag sets, folder groups, inbox folders 
   - **Own tags** (default: `thought`, `synthesis`, `fleeting`) — mark notes as your own thinking.
   - **Source tags** (default: `book`, `article`, `video`, `lecture`, `literature`, `literature-note`) — mark notes about external material.
   - **Concept tags** (default: `concept`) — the grey zone between own and source.
+  - **Concept folders** (default: none) — folders whose notes count as concepts whether or not they carry a concept tag, for vaults that sort concepts by location instead of tagging each one.
 
 ### Metrics (side view)
 Toggle which secondary metrics appear in the side view's grid below the hero panel:

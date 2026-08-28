@@ -133,6 +133,9 @@ export const ru: Translations = {
 			conceptTags: "Теги концептов",
 			conceptTagsDesc: "Теги, помечающие концепты (серая зона).",
 			conceptTagsPlaceholder: "например, concept",
+			conceptFolders: "Папки концептов",
+			conceptFoldersDesc: "Папки, заметки в которых считаются концептами независимо от наличия тега концепта.",
+			conceptFoldersPlaceholder: "например, 03. Concepts",
 		},
 
 		sideViewHeading: "Боковая панель",
