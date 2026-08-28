@@ -5,7 +5,7 @@ All notable changes to this plugin are recorded here. Format follows [Keep a Cha
 ## [Unreleased]
 
 ### Added
-- **Concept folders** setting (`Settings → What gets counted → Note classification`). Notes under a configured folder now count as concepts even without a concept tag, for vaults that sort concepts by location instead of tagging each one individually. Closes [#55](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues/55).
+- **Concept folders**, **Own folders** and **Source folders** settings (`Settings → What gets counted → Note classification`). Notes under a configured folder now count toward that classification even without the matching tag, for vaults that sort own/source/concept notes by location instead of tagging each one individually. Closes [#55](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues/55).
 
 ## [1.24.2] - 2026-08-11
 

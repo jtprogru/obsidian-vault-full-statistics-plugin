@@ -278,6 +278,20 @@ describe("NoteMetricsCollector.collect — own/source/concept classification", (
 		expect(r?.metrics.conceptNotes).toBe(1);
 	});
 
+	test("classifies own when the note lives under an own folder, tag or not", async () => {
+		nmc.setOwnFolders(["01. Journal"]);
+		const inFolder = { path: "01. Journal/2026-08-28.md" } as TFile;
+		const r = await nmc.collect(inFolder, {} as any);
+		expect(r?.metrics.ownNotes).toBe(1);
+	});
+
+	test("classifies source when the note lives under a source folder, tag or not", async () => {
+		nmc.setSourceFolders(["02. Reading"]);
+		const inFolder = { path: "02. Reading/some-book.md" } as TFile;
+		const r = await nmc.collect(inFolder, {} as any);
+		expect(r?.metrics.sourceNotes).toBe(1);
+	});
+
 	test("classifies concept when the note lives under a concept folder, tag or not", async () => {
 		nmc.setConceptFolders(["03. Concepts"]);
 		const inFolder = { path: "03. Concepts/idea.md" } as TFile;

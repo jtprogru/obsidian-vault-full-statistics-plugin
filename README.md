@@ -61,7 +61,7 @@ After enabling, the status bar shows a count. Click to cycle through statistics;
 
 Open the side view via `Open vault statistics` (command palette or ribbon icon). Sections beyond the hero are opt-in — enable Folder breakdown, Sources-with-trace, Inbox health, Tag taxonomy drift, and History in settings to surface them.
 
-For own/source classification, configure your own/source/concept tags in settings (defaults: `thought`, `book`, `concept`, etc.). Any note carrying one of those tags is counted accordingly.
+For own/source classification, configure your own/source/concept tags in settings (defaults: `thought`, `book`, `concept`, etc.). Any note carrying one of those tags is counted accordingly. Each of the three also has a matching folders list, for vaults that sort notes by location instead of tagging each one.
 
 ## Settings reference
 
@@ -86,7 +86,9 @@ Editable lists — excluded folders, the tag sets, folder groups, inbox folders 
 - **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Added through the vault folder picker; matched as path prefix with a `/` boundary.
 - **Note classification** — the three tag sets behind own/source and the hero panel. The entry warns when either own or source is empty, because the ratio is meaningless then.
   - **Own tags** (default: `thought`, `synthesis`, `fleeting`) — mark notes as your own thinking.
+  - **Own folders** (default: none) — folders whose notes count as your own thinking whether or not they carry an own tag.
   - **Source tags** (default: `book`, `article`, `video`, `lecture`, `literature`, `literature-note`) — mark notes about external material.
+  - **Source folders** (default: none) — folders whose notes count as external material whether or not they carry a source tag.
   - **Concept tags** (default: `concept`) — the grey zone between own and source.
   - **Concept folders** (default: none) — folders whose notes count as concepts whether or not they carry a concept tag, for vaults that sort concepts by location instead of tagging each one.
 

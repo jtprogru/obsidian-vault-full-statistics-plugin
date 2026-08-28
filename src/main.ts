@@ -46,7 +46,9 @@ export default class FullStatisticsPlugin extends Plugin {
 			setFullVaultMetrics(this.vaultMetrics).
 			setExcludedFolders(this.settings.excludedFolders).
 			setOwnTags(this.settings.ownTags).
+			setOwnFolders(this.settings.ownFolders).
 			setSourceTags(this.settings.sourceTags).
+			setSourceFolders(this.settings.sourceFolders).
 			setConceptTags(this.settings.conceptTags).
 			setConceptFolders(this.settings.conceptFolders).
 			setInboxFolders(this.settings.inboxFolders).
@@ -325,7 +327,9 @@ export default class FullStatisticsPlugin extends Plugin {
 		this.vaultMetricsCollector
 			.setExcludedFolders(this.settings.excludedFolders)
 			.setOwnTags(this.settings.ownTags)
+			.setOwnFolders(this.settings.ownFolders)
 			.setSourceTags(this.settings.sourceTags)
+			.setSourceFolders(this.settings.sourceFolders)
 			.setConceptTags(this.settings.conceptTags)
 			.setConceptFolders(this.settings.conceptFolders)
 			.setInboxFolders(this.settings.inboxFolders)

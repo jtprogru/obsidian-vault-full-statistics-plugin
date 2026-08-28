@@ -149,7 +149,9 @@ function pages(all: AnyDef[]): PageDef[] {
 const LIST_MANAGED_KEYS: SettingsKey[] = [
 	"excludedFolders",
 	"ownTags",
+	"ownFolders",
 	"sourceTags",
+	"sourceFolders",
 	"conceptTags",
 	"conceptFolders",
 	"canonicalTags",
