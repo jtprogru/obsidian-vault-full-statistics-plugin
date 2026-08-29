@@ -125,7 +125,7 @@ export const en = {
 			excludedPlaceholder: "e.g. Templates",
 
 			classificationName: "Note classification",
-			classificationDesc: "Tags that sort notes into your own thinking, external material, and concepts.",
+			classificationDesc: "Tags and folders that sort notes into your own thinking, external material, and concepts.",
 			classificationValue: (own: number, source: number) => `${own} own / ${source} source`,
 			ownTags: "Own tags",
 			ownTagsDesc: "Tags marking your own thinking. Leading # is optional.",

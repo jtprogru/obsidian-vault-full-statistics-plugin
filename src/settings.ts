@@ -392,10 +392,16 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 					type: 'page',
 					name: t().settings.counting.classificationName,
 					desc: t().settings.counting.classificationDesc,
-					displayValue: () => t().settings.counting.classificationValue(s().ownTags.length, s().sourceTags.length),
+					displayValue: () => t().settings.counting.classificationValue(
+						s().ownTags.length + s().ownFolders.length,
+						s().sourceTags.length + s().sourceFolders.length,
+					),
 					// Own/source is the headline metric of the whole plugin;
-					// an empty side leaves the hero panel meaningless.
-					status: () => s().ownTags.length === 0 || s().sourceTags.length === 0 ? 'warning' : null,
+					// an empty side leaves the hero panel meaningless. A folder
+					// classifies just as well as a tag, so a side counts as
+					// configured when either list has something in it.
+					status: () => s().ownTags.length + s().ownFolders.length === 0
+						|| s().sourceTags.length + s().sourceFolders.length === 0 ? 'warning' : null,
 					items: [
 						this.stringList({
 							name: t().settings.counting.ownTags,
