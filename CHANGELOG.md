@@ -4,6 +4,9 @@ All notable changes to this plugin are recorded here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Changed
+- Development commands moved from `Taskfile.yml` to a `Makefile`, dropping [Task](https://taskfile.dev) as a prerequisite for what `make` does out of the box. The previous targets are unchanged — `install`, `build`, `test`, `lint`, `dev`, `version` — and `make` on its own lists everything. New: `check` runs the pipeline CI runs (lockfile install, lint, test, build), `deploy VAULT=/path/to/vault` builds and copies `main.js`, `styles.css` and `manifest.json` into a vault, `tag` creates the release tag from `package.json` and refuses when the tag exists or `manifest.json` disagrees on the version, plus `ci-install`, `typecheck`, `test-watch`, `coverage`, `lint-fix` and `clean`. Nothing the plugin ships changed, and the workflows still call `npm` directly, so `make` is not needed on the runners ([#61](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/pull/61)).
+
 ## [1.25.0] - 2026-08-29
 
 Note classification stops being tag-only. Own, source and concept notes can now be recognised by the folder they live in, which is how many vaults are actually organised — a folder of concepts does not need every note in it tagged `#concept` to be counted. Alongside that, a plugin reload no longer damages the day's history row.
