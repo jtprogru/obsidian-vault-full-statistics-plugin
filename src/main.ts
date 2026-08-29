@@ -159,12 +159,17 @@ export default class FullStatisticsPlugin extends Plugin {
 		await this.saveData(payload);
 	}
 
+	// resetTimer is on so the window measures quiet, not elapsed time since
+	// the first event. A rescan fires 'updated' the moment it zeroes the
+	// metrics, and on a large vault the backlog drains through idle
+	// callbacks well past the ten-second mark — without the reset we would
+	// sample in the middle of it and record a vault that looks empty.
 	private maybeSnapshot = debounce(() => {
 		const changed = this.historyStore.recordIfNeeded(new Date(), this.vaultMetrics);
 		if (changed) {
 			void this.persist();
 		}
-	}, 10000, false);
+	}, 10000, true);
 
 	private async exportHistoryCsv() {
 		const snapshots = this.historyStore.all();

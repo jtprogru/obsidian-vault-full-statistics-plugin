@@ -33,9 +33,18 @@ export class HistoryStore {
 	 * the *latest known* state of the vault rather than the first reading
 	 * of the morning.
 	 *
+	 * A reading of zero notes is never recorded. The collector resets its
+	 * metrics to zero at the start of every rescan and only fills them in as
+	 * the backlog drains, so a snapshot taken in that window describes the
+	 * scan, not the vault — and since a same-date row is overwritten rather
+	 * than appended, it would replace a real reading with a crater. An empty
+	 * vault has nothing worth charting, so the guard costs no real data.
+	 *
 	 * Returns true if the snapshots array was mutated.
 	 */
 	public recordIfNeeded(now: Date, metrics: FullVaultMetrics): boolean {
+		if (metrics.notes === 0) return false;
+
 		const date = formatDate(now);
 		const snapshot: Snapshot = {
 			date,
