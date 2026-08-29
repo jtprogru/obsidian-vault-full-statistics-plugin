@@ -4,6 +4,10 @@ All notable changes to this plugin are recorded here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-08-29
+
+Note classification stops being tag-only. Own, source and concept notes can now be recognised by the folder they live in, which is how many vaults are actually organised — a folder of concepts does not need every note in it tagged `#concept` to be counted. Alongside that, a plugin reload no longer damages the day's history row.
+
 ### Added
 - **Concept folders**, **Own folders** and **Source folders** settings (`Settings → What gets counted → Note classification`). Notes under a configured folder now count toward that classification even without the matching tag, for vaults that sort own/source/concept notes by location instead of tagging each one individually. Closes [#55](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues/55).
 
