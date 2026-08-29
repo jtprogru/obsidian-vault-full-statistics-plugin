@@ -8,6 +8,7 @@ All notable changes to this plugin are recorded here. Format follows [Keep a Cha
 - **Concept folders**, **Own folders** and **Source folders** settings (`Settings → What gets counted → Note classification`). Notes under a configured folder now count toward that classification even without the matching tag, for vaults that sort own/source/concept notes by location instead of tagging each one individually. Closes [#55](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues/55).
 
 ### Fixed
+- Reloading the plugin no longer stamps a zeros row into today's history. A rescan zeroes the collector's metrics before the backlog drains, and the snapshot taken in that window used to overwrite the day's real reading; an empty reading is now never recorded, and the snapshot debounce waits for the vault to go quiet instead of firing ten seconds after the rescan started. Closes [#54](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues/54).
 - The **Note classification** settings entry now counts folders alongside tags in its summary and only warns when own or source has neither a tag nor a folder. A vault classified purely by folder no longer reads `0 own / 0 source` under a warning. Closes [#57](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues/57).
 
 ## [1.24.2] - 2026-08-11

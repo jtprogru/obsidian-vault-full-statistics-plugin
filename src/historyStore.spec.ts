@@ -37,6 +37,32 @@ describe("HistoryStore.recordIfNeeded", () => {
 		expect(h.all()[0].notes).toBe(105);
 	});
 
+	test("an empty reading never replaces today's row", () => {
+		const h = new HistoryStore();
+		h.recordIfNeeded(new Date("2026-05-08T10:00:00"), makeMetrics({ notes: 6179, links: 46996, ownNotes: 2149 }));
+		// What a plugin reload produces: metrics zeroed by the rescan, with
+		// the tag count already refreshed.
+		const changed = h.recordIfNeeded(new Date("2026-05-08T18:00:00"), makeMetrics({ notes: 0, tags: 123 }));
+		expect(changed).toBe(false);
+		expect(h.size()).toBe(1);
+		expect(h.all()[0]).toMatchObject({ notes: 6179, links: 46996, ownNotes: 2149 });
+	});
+
+	test("an empty reading does not open a row for a fresh day", () => {
+		const h = new HistoryStore();
+		const changed = h.recordIfNeeded(new Date("2026-05-08T10:00:00"), makeMetrics({ notes: 0, tags: 123 }));
+		expect(changed).toBe(false);
+		expect(h.size()).toBe(0);
+	});
+
+	test("a real reading after an empty one is recorded normally", () => {
+		const h = new HistoryStore();
+		h.recordIfNeeded(new Date("2026-05-08T10:00:00"), makeMetrics({ notes: 0 }));
+		const changed = h.recordIfNeeded(new Date("2026-05-08T10:00:10"), makeMetrics({ notes: 6179 }));
+		expect(changed).toBe(true);
+		expect(h.all()[0].notes).toBe(6179);
+	});
+
 	test("appends a new snapshot on a new day", () => {
 		const h = new HistoryStore();
 		h.recordIfNeeded(new Date("2026-05-08T10:00:00"), makeMetrics({ notes: 100 }));
