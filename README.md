@@ -20,6 +20,7 @@ Quantify the shape of your knowledge base: counts, ratios, and trends right insi
 ## Features
 
 ### Status bar
+
 - Notes, links, tags, QoV (Quality of Vault = links ÷ notes)
 - Own / source counts and percentages
 - Concepts and orphans (no incoming links)
@@ -28,6 +29,7 @@ Quantify the shape of your knowledge base: counts, ratios, and trends right insi
 - CSS snippets to show several stats simultaneously (see [Advanced Usage](#advanced-usage))
 
 ### Side view (`Open vault statistics` command)
+
 - **Hero panel** — notes, total words, QoV in big readable type
 - **Own vs source ratio bar** — your thinking vs external material, with concepts as a grey zone
 - **Metrics grid** — links, tags, concepts, orphans, average words per note (each toggleable)
@@ -38,11 +40,14 @@ Quantify the shape of your knowledge base: counts, ratios, and trends right insi
 - **30-day history sparkline** — daily snapshots of notes, own, source, links, tags, orphans, traced
 
 ### Tangles
+
 A "tangle" is a note that bridges large parts of your graph — many incoming links, many outgoing links, or both. The plugin can:
+
 - List tangles in a dedicated `Open vault tangles` side view, sorted by selected mode (AND / OR / SUM thresholds)
 - Generate a Markdown report note via `Create tangles report note`, dropped into a configurable folder
 
 ### CSV export
+
 `Export statistics history to CSV` opens the native OS save dialog (with an in-vault folder picker fallback) and writes the full history snapshot stream as CSV — for use in spreadsheets, Jupyter, or anything else.
 
 ## Installation
@@ -72,6 +77,7 @@ The tab itself is an index. The first screen holds one toggle and a list of navi
 Editable lists — excluded folders, the tag sets, folder groups, inbox folders — are named by the header sitting directly above them, next to the `+` that adds an entry. What belongs in a list is spelled out inside it while it is still empty. Every list supports drag-to-reorder and removal with Delete or Backspace.
 
 ### Language
+
 - **Language** — `English` (default), `Русский`, or `Auto (follow Obsidian)`. The plugin stays English until you change this: updating it never switches the interface of somebody who did not ask for it. Pick `Auto` if you want it to follow Obsidian's own interface language from now on.
 - Switching redraws the settings tab, both side panels and the status bar right away. Command names and the ribbon tooltip only change after the plugin reloads — Obsidian caches those when they are registered, and a notice reminds you.
 - **Keep hero labels in English** — appears only when the interface is not English. The three top tiles keep `notes` / `words` / `QoV` and the `12.35K` number format, which fit a narrow sidebar better than «заметок» / «слов» and «12,35 тыс.». Tooltips stay translated.
@@ -79,10 +85,12 @@ Editable lists — excluded folders, the tag sets, folder groups, inbox folders 
 - Not translated by design: the CSV export file name and the CSV column headers (it is an interchange format — your spreadsheet formulas keep working), and the default tag values (`thought`, `book`, `concept`, …), which are vault content rather than interface.
 
 ### Status bar
+
 - **Show individual items** — when on, every enabled statistic is rendered as its own status bar slot; when off (default) the bar shows one statistic at a time and clicking cycles.
 - **Status bar items** — page with a toggle per statistic: **Show notes / words / links / tags / quality / own / source / own % / source % / concepts / orphans / trace %**. These apply in both modes; cycling walks only the enabled ones and skips the rest. All on by default except concepts.
 
 ### What gets counted
+
 - **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Added through the vault folder picker; matched as path prefix with a `/` boundary.
 - **Note classification** — the three tag sets and their matching folder lists behind own/source and the hero panel. A side counts as configured when it has a tag or a folder; the entry warns only when own or source has neither, because the ratio is meaningless then.
   - **Own tags** (default: `thought`, `synthesis`, `fleeting`) — mark notes as your own thinking.
@@ -93,32 +101,40 @@ Editable lists — excluded folders, the tag sets, folder groups, inbox folders 
   - **Concept folders** (default: none) — folders whose notes count as concepts whether or not they carry a concept tag, for vaults that sort concepts by location instead of tagging each one.
 
 ### Metrics (side view)
+
 Toggle which secondary metrics appear in the side view's grid below the hero panel:
+
 - **Links**, **Tags**, **Concepts**, **Orphans**, **Avg words** — all on by default.
 
 ### Folder breakdown (PARA)
+
 - **Show folder breakdown** (default: off) — opt-in section that breaks down notes per folder group.
 - **Folder groups** — one row per group, `name = path1, path2`. Multiple paths per group are merged; overlap allowed.
 
 ### Sources with trace
+
 - **Show sources-with-trace** (default: off) — opt-in section showing how many source notes are referenced by at least one own note.
 - **Show dangling notes list** (default: on) — top 5 untraced source notes inside the section.
 
 ### Tag taxonomy drift
+
 - **Show taxonomy drift** (default: off) — opt-in section listing rare tags and tags outside your canonical set.
 - **Rare tag threshold** (default: 3) — tags used fewer than this many times are flagged. Must be a whole number of 1 or more.
 - **Canonical tags** — your accepted tag set. Anything else is flagged as unknown; a canonical parent (e.g. `journal`) covers descendants (`journal/daily`).
 
 ### Inbox health
+
 - **Show inbox health** (default: off) — opt-in section bucketing inbox notes by age.
 - **Inbox folders** — folders treated as inbox. Added through the vault folder picker.
 - **Inbox review tags** (default: `inbox/review`) — tags marking notes that need processing outside inbox folders.
 
 ### History
+
 - **Show history** (default: off) — opt-in 30-day sparkline. Snapshots are recorded daily regardless of this toggle.
 - **History export folder** — last folder used for CSV export, with folder autocomplete. The export command updates this on use.
 
 ### Tangles
+
 - **Selection mode** (default: AND) — `AND` (both directions must meet threshold), `OR` (either direction), `SUM` (in + out must meet a single threshold).
 - **Min incoming links** / **Min outgoing links** (default: 5 each) — thresholds for AND/OR modes.
 - **Min in + out** (default: 10) — threshold for SUM mode.
@@ -141,6 +157,7 @@ The own/source ratio needs notes tagged with own or source tags. Out of the box 
 Once per local day, debounced by 10 seconds after the last metric update. The very first snapshot appears once your vault metrics settle on first load. A second day is required before the sparkline can render a trend.
 
 **How do I set up own/source classification for my own taxonomy?**
+
 1. Decide on tag names that represent your own thinking versus external material.
 2. Add them to **Own tags** / **Source tags** in settings (the leading `#` is optional).
 3. The collector restarts and reclassifies on save — no Obsidian restart needed.
@@ -152,6 +169,7 @@ A note that bridges large parts of your graph — high incoming-link count, high
 No. `isDesktopOnly` is set in the manifest. The metric pipeline (vault scan + memoization) is tuned for desktop and uses APIs not available on iOS.
 
 **How do I exclude a specific note or folder from statistics?**
+
 - **From counts entirely** — add the folder to **Excluded folders**.
 - **From tangle detection only** — use the **Tangles exclude** list (note path or folder prefix).
 
@@ -205,24 +223,32 @@ Requires Node.js 18+ and npm.
 ```bash
 git clone https://github.com/jtprogru/obsidian-vault-full-statistics-plugin
 cd obsidian-vault-full-statistics-plugin
-npm install
-npm run dev      # watch-mode esbuild — rebuilds main.js on save
-npm test         # jest test suite
-npm run lint     # oxlint
-npm run build    # production build (tsc type-check + esbuild)
+make install     # npm install
+make dev         # watch-mode esbuild — rebuilds main.js on save
+make test        # jest test suite
+make lint        # oxlint
+make build       # production build (tsc type-check + esbuild)
+make check       # everything CI runs: lockfile install, lint, test, build
 ```
 
-For iterating against a live vault, symlink the repo into `<vault>/.obsidian/plugins/vault-full-statistics/` and toggle the plugin off/on in Obsidian after each rebuild.
+`make` (or `make help`) lists every target. Besides the ones above there are `ci-install`, `typecheck`, `test-watch`, `coverage`, `lint-fix`, `clean`, `deploy`, `version` and `tag`. Most are thin wrappers over the matching `npm run` script, so plain npm works just as well.
+
+For iterating against a live vault, either symlink the repo into `<vault>/.obsidian/plugins/vault-full-statistics/`, or build and copy the artifacts there:
+
+```bash
+make deploy VAULT=/path/to/vault
+```
+
+Either way, toggle the plugin off and on in Obsidian after each rebuild.
 
 Source code lives in `src/`. Notable modules:
+
 - `main.ts` — plugin entry point, status bar, commands
 - `statisticsView.ts` — side view rendering (hero, sections)
 - `collect.ts` — vault metrics collector and memoized graph derivatives
 - `tangles.ts` / `tanglesView.ts` — high-degree note detection and report
 - `historyStore.ts` — daily snapshots and CSV export
 - `settings.ts` — settings tab
-
-A `Taskfile.yml` is included for common operations if you use [Task](https://taskfile.dev).
 
 ## Changelog
 

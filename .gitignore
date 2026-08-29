@@ -15,6 +15,9 @@ main.js
 # Exclude sourcemaps
 *.map
 
+# jest coverage report
+coverage
+
 # obsidian
 data.json
 
