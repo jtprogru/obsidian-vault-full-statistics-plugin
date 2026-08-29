@@ -122,7 +122,7 @@ export const ru: Translations = {
 			excludedPlaceholder: "например, Templates",
 
 			classificationName: "Классификация заметок",
-			classificationDesc: "Теги, по которым заметки делятся на своё мышление, внешний материал и концепты.",
+			classificationDesc: "Теги и папки, по которым заметки делятся на своё мышление, внешний материал и концепты.",
 			classificationValue: (own, source) => `${own} своих / ${source} источников`,
 			ownTags: "Теги своих заметок",
 			ownTagsDesc: "Теги, помечающие ваше собственное мышление. Ведущий # необязателен.",

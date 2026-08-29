@@ -394,6 +394,25 @@ describe("page summaries", () => {
 		expect(resolve(page(defs({ sourceTags: [] }), "Note classification").status, null)).toBe('warning');
 	});
 
+	test("classification counts folders alongside tags", () => {
+		const withFolders = defs({ ownFolders: ["01. Journal"], sourceFolders: ["02. Reading", "03. Clippings"] });
+		expect(resolve(page(withFolders, "Note classification").displayValue, "")).toBe("4 own / 8 source");
+	});
+
+	test("a side classified only by folder is not flagged", () => {
+		const foldersOnly = defs({
+			ownTags: [], ownFolders: ["01. Journal"],
+			sourceTags: [], sourceFolders: ["02. Reading"],
+		});
+		expect(resolve(page(foldersOnly, "Note classification").status, null)).toBeNull();
+		expect(resolve(page(foldersOnly, "Note classification").displayValue, "")).toBe("1 own / 1 source");
+	});
+
+	test("a side with neither a tag nor a folder is still flagged", () => {
+		const noOwn = defs({ ownTags: [], ownFolders: [], sourceFolders: ["02. Reading"] });
+		expect(resolve(page(noOwn, "Note classification").status, null)).toBe('warning');
+	});
+
 	test("excluded folders and sections summarise their state", () => {
 		expect(resolve(page(defs(), "Excluded folders").displayValue, "")).toBe("No folders");
 		expect(resolve(page(defs({ excludedFolders: ["Templates"] }), "Excluded folders").displayValue, ""))

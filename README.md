@@ -84,7 +84,7 @@ Editable lists — excluded folders, the tag sets, folder groups, inbox folders 
 
 ### What gets counted
 - **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Added through the vault folder picker; matched as path prefix with a `/` boundary.
-- **Note classification** — the three tag sets behind own/source and the hero panel. The entry warns when either own or source is empty, because the ratio is meaningless then.
+- **Note classification** — the three tag sets and their matching folder lists behind own/source and the hero panel. A side counts as configured when it has a tag or a folder; the entry warns only when own or source has neither, because the ratio is meaningless then.
   - **Own tags** (default: `thought`, `synthesis`, `fleeting`) — mark notes as your own thinking.
   - **Own folders** (default: none) — folders whose notes count as your own thinking whether or not they carry an own tag.
   - **Source tags** (default: `book`, `article`, `video`, `lecture`, `literature`, `literature-note`) — mark notes about external material.
