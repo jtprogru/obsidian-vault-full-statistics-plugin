@@ -4,6 +4,9 @@ All notable changes to this plugin are recorded here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+- **Concept folders**, **Own folders** and **Source folders** settings (`Settings → What gets counted → Note classification`). Notes under a configured folder now count toward that classification even without the matching tag, for vaults that sort own/source/concept notes by location instead of tagging each one individually. Closes [#55](https://github.com/jtprogru/obsidian-vault-full-statistics-plugin/issues/55).
+
 ## [1.24.2] - 2026-08-11
 
 A maintenance release. The build toolchain moved to TypeScript 7 and the rest of the dev dependencies were refreshed. Nothing the plugin ships or does changed — no source file was touched, and the linter rule set is identical to the previous one.

@@ -117,13 +117,28 @@ export class FullVaultMetricsCollector {
 		return this;
 	}
 
+	public setOwnFolders(folders: string[]) {
+		this.noteMetricsCollector.setOwnFolders(folders);
+		return this;
+	}
+
 	public setSourceTags(tags: string[]) {
 		this.noteMetricsCollector.setSourceTags(tags);
 		return this;
 	}
 
+	public setSourceFolders(folders: string[]) {
+		this.noteMetricsCollector.setSourceFolders(folders);
+		return this;
+	}
+
 	public setConceptTags(tags: string[]) {
 		this.noteMetricsCollector.setConceptTags(tags);
+		return this;
+	}
+
+	public setConceptFolders(folders: string[]) {
+		this.noteMetricsCollector.setConceptFolders(folders);
 		return this;
 	}
 
@@ -731,11 +746,22 @@ type NoteSignature = { links: number; tagKey: string; mtime: number; words: numb
 export class NoteMetricsCollector {
 	private readonly signatureCache: Map<string, NoteSignature> = new Map();
 	private ownTags: Set<string> = new Set();
+	private ownFolders: string[] = [];
 	private sourceTags: Set<string> = new Set();
+	private sourceFolders: string[] = [];
 	private conceptTags: Set<string> = new Set();
+	private conceptFolders: string[] = [];
 
 	public setOwnTags(tags: string[]) {
 		this.ownTags = normalizeTagSet(tags);
+		this.clearCache();
+		return this;
+	}
+
+	public setOwnFolders(folders: string[]) {
+		this.ownFolders = folders
+			.map(f => f.trim().replace(/\/+$/, ''))
+			.filter(f => f.length > 0);
 		this.clearCache();
 		return this;
 	}
@@ -746,8 +772,24 @@ export class NoteMetricsCollector {
 		return this;
 	}
 
+	public setSourceFolders(folders: string[]) {
+		this.sourceFolders = folders
+			.map(f => f.trim().replace(/\/+$/, ''))
+			.filter(f => f.length > 0);
+		this.clearCache();
+		return this;
+	}
+
 	public setConceptTags(tags: string[]) {
 		this.conceptTags = normalizeTagSet(tags);
+		this.clearCache();
+		return this;
+	}
+
+	public setConceptFolders(folders: string[]) {
+		this.conceptFolders = folders
+			.map(f => f.trim().replace(/\/+$/, ''))
+			.filter(f => f.length > 0);
 		this.clearCache();
 		return this;
 	}
@@ -770,9 +812,12 @@ export class NoteMetricsCollector {
 		metrics.links = linkCount;
 		metrics.tags = noteTags.size;
 		metrics.words = content ? countWords(content) : 0;
-		metrics.ownNotes = hasIntersection(noteTags, this.ownTags) ? 1 : 0;
-		metrics.sourceNotes = hasIntersection(noteTags, this.sourceTags) ? 1 : 0;
-		metrics.conceptNotes = hasIntersection(noteTags, this.conceptTags) ? 1 : 0;
+		metrics.ownNotes = (hasIntersection(noteTags, this.ownTags)
+			|| matchesAnyFolder(file.path, this.ownFolders)) ? 1 : 0;
+		metrics.sourceNotes = (hasIntersection(noteTags, this.sourceTags)
+			|| matchesAnyFolder(file.path, this.sourceFolders)) ? 1 : 0;
+		metrics.conceptNotes = (hasIntersection(noteTags, this.conceptTags)
+			|| matchesAnyFolder(file.path, this.conceptFolders)) ? 1 : 0;
 		metrics.quality = linkCount;
 
 		this.signatureCache.set(file.path, { links: linkCount, tagKey, mtime, words: metrics.words });
