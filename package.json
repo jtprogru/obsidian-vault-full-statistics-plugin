@@ -33,11 +33,11 @@
 		"@swc/core": "^1.16.20",
 		"@swc/jest": "^0.2.39",
 		"@types/jest": "^30.0.0",
-		"@types/node": "^26.6.5",
+		"@types/node": "^26.6.6",
 		"esbuild": "^0.28.2",
 		"jest": "^30.5.2",
 		"obsidian": "1.14.4",
-		"oxlint": "^1.89.0",
+		"oxlint": "^1.90.0",
 		"tslib": "^2.8.1",
 		"typescript": "^7.0.2"
 	},
