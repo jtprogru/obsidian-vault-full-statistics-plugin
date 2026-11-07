@@ -72,7 +72,7 @@ For own/source classification, configure your own/source/concept tags in setting
 
 All settings live under `Settings → Community plugins → Vault Full Statistics`, and are searchable from the settings search box. Defaults are sensible — most users only touch own/source tags and the opt-in section toggles.
 
-The tab itself is an index. The first screen holds one toggle and a list of navigable entries grouped under **What gets counted**, **Side view** and **Tools**; everything below lives one level down on its own page. Each entry shows its current state (`11 of 12`, `3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. If you know what you are looking for, `Settings → Search` finds the row directly and opens the page it lives on.
+The tab itself is an index. The first screen holds general controls and a list of navigable entries grouped under **What gets counted**, **Side view** and **Tools**; everything below lives one level down on its own page. Each entry shows its current state (`11 of 12`, `3 groups`, `AND ≥ 5/5`, `Off`) and carries a warning marker when the section is enabled but configured to render nothing. If you know what you are looking for, `Settings → Search` finds the row directly and opens the page it lives on.
 
 Editable lists — excluded folders, the tag sets, folder groups, inbox folders — are named by the header sitting directly above them, next to the `+` that adds an entry. What belongs in a list is spelled out inside it while it is still empty. Every list supports drag-to-reorder and removal with Delete or Backspace.
 
@@ -90,6 +90,8 @@ Editable lists — excluded folders, the tag sets, folder groups, inbox folders 
 - **Status bar items** — page with a toggle per statistic: **Show notes / words / links / tags / quality / own / source / own % / source % / concepts / orphans / trace %**. These apply in both modes; cycling walks only the enabled ones and skips the rest. All on by default except concepts.
 
 ### What gets counted
+
+- **Count embedded links** — on by default. Links counts regular links, every entry in Obsidian’s `metadata.embeds` (notes, headings, blocks, images, PDFs and Markdown embeds), and frontmatter links. Turn it off to count only regular and frontmatter links. For example, 2 regular links + 3 embeds + 1 frontmatter link gives **6** with this enabled and **3** with it disabled. Repeated occurrences count separately, including missing targets; embedded note contents are not scanned recursively. Changing this setting recalculates Links and QoV in the status bar and side view, plus folder Links totals, without restarting Obsidian. Orphans, Trace and Tangles keep using Obsidian’s existing graph. The current day’s history snapshot updates after metrics settle; past days stay unchanged. Storage and CSV formats are unchanged.
 
 - **Excluded folders** — folders to skip entirely (templates, archives, plugin data). Added through the vault folder picker; matched as path prefix with a `/` boundary.
 - **Note classification** — the three tag sets and their matching folder lists behind own/source and the hero panel. A side counts as configured when it has a tag or a folder; the entry warns only when own or source has neither, because the ratio is meaningless then.

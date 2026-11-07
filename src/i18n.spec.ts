@@ -262,3 +262,15 @@ describe("russian catalogue completeness", () => {
 		expect(suspicious).toStrictEqual([]);
 	});
 });
+
+describe('embedded links translations', () => {
+	test.each([
+		['en', 'Count embedded links'],
+		['ru', 'Учитывать встроенные ссылки'],
+	] as const)('%s supplies the toggle name and scope', (locale, name) => {
+		setLocale(locale);
+		expect(t().settings.counting.countEmbeddedLinksName).toBe(name);
+		expect(t().settings.counting.countEmbeddedLinksDesc).toContain('QoV');
+		expect(t().settings.counting.countEmbeddedLinksDesc).toContain('PDF');
+	});
+});

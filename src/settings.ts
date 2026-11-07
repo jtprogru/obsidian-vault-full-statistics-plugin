@@ -45,6 +45,7 @@ export interface FullStatisticsPluginSettings {
 	showTracePct: boolean,
 	showSourcesTrace: boolean,
 	showDanglingList: boolean,
+	countEmbeddedLinks: boolean,
 	excludedFolders: string[],
 	ownTags: string[],
 	ownFolders: string[],
@@ -106,6 +107,7 @@ export const DEFAULT_SETTINGS: FullStatisticsPluginSettings = {
 	showTracePct: true,
 	showSourcesTrace: false,
 	showDanglingList: true,
+	countEmbeddedLinks: true,
 	excludedFolders: [],
 	ownTags: ["thought", "synthesis", "fleeting"],
 	ownFolders: [],
@@ -143,6 +145,7 @@ export const DEFAULT_SETTINGS: FullStatisticsPluginSettings = {
  * just persist.
  */
 const COLLECTOR_KEYS: ReadonlySet<string> = new Set<SettingsKey>([
+	"countEmbeddedLinks",
 	"excludedFolders",
 	"ownTags",
 	"ownFolders",
@@ -371,6 +374,11 @@ export class FullStatisticsPluginSettingTab extends PluginSettingTab {
 			type: 'group',
 			heading: t().settings.counting.heading,
 			items: [
+				this.toggle(
+					t().settings.counting.countEmbeddedLinksName,
+					'countEmbeddedLinks',
+					t().settings.counting.countEmbeddedLinksDesc,
+				),
 				{
 					type: 'page',
 					name: t().settings.counting.excludedName,
