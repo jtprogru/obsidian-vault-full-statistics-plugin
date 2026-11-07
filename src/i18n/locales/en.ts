@@ -118,6 +118,8 @@ export const en = {
 		},
 
 		counting: {
+			countEmbeddedLinksName: "Count embedded links",
+			countEmbeddedLinksDesc: "Include embedded notes, headings, blocks, images, PDFs and Markdown embeds in Links and QoV. Turning this off keeps regular and frontmatter links. Recalculates vault and folder totals; past history stays unchanged.",
 			heading: "What gets counted",
 			excludedName: "Excluded folders",
 			excludedDesc: "Folders to skip from statistics. Matched as a path prefix, so a folder covers everything under it.",

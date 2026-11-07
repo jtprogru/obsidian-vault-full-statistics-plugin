@@ -112,6 +112,11 @@ export class FullVaultMetricsCollector {
 		return this;
 	}
 
+	public setCountEmbeddedLinks(value: boolean): this {
+		this.noteMetricsCollector.setCountEmbeddedLinks(value);
+		return this;
+	}
+
 	public setOwnTags(tags: string[]) {
 		this.noteMetricsCollector.setOwnTags(tags);
 		return this;
@@ -744,6 +749,7 @@ function matchesAnyFolder(path: string, folders: string[]): boolean {
 type NoteSignature = { links: number; tagKey: string; mtime: number; words: number };
 
 export class NoteMetricsCollector {
+	private countEmbeddedLinks = true;
 	private readonly signatureCache: Map<string, NoteSignature> = new Map();
 	private ownTags: Set<string> = new Set();
 	private ownFolders: string[] = [];
@@ -751,6 +757,14 @@ export class NoteMetricsCollector {
 	private sourceFolders: string[] = [];
 	private conceptTags: Set<string> = new Set();
 	private conceptFolders: string[] = [];
+
+	public setCountEmbeddedLinks(value: boolean): this {
+		if (this.countEmbeddedLinks !== value) {
+			this.countEmbeddedLinks = value;
+			this.clearCache();
+		}
+		return this;
+	}
 
 	public setOwnTags(tags: string[]) {
 		this.ownTags = normalizeTagSet(tags);
@@ -844,7 +858,7 @@ export class NoteMetricsCollector {
 	private countAllLinks(metadata: CachedMetadata): number {
 		let count = 0;
 		if (metadata?.links) count += metadata.links.length;
-		if (metadata?.embeds) count += metadata.embeds.length;
+		if (this.countEmbeddedLinks && metadata?.embeds) count += metadata.embeds.length;
 		if (metadata?.frontmatterLinks) count += metadata.frontmatterLinks.length;
 		return count;
 	}
