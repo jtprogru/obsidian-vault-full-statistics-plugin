@@ -44,6 +44,7 @@ export default class FullStatisticsPlugin extends Plugin {
 			setVault(this.app.vault).
 			setMetadataCache(this.app.metadataCache).
 			setFullVaultMetrics(this.vaultMetrics).
+			setCountEmbeddedLinks(this.settings.countEmbeddedLinks).
 			setExcludedFolders(this.settings.excludedFolders).
 			setOwnTags(this.settings.ownTags).
 			setOwnFolders(this.settings.ownFolders).
@@ -330,6 +331,7 @@ export default class FullStatisticsPlugin extends Plugin {
 
 	public restartCollector() {
 		this.vaultMetricsCollector
+			.setCountEmbeddedLinks(this.settings.countEmbeddedLinks)
 			.setExcludedFolders(this.settings.excludedFolders)
 			.setOwnTags(this.settings.ownTags)
 			.setOwnFolders(this.settings.ownFolders)

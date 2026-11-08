@@ -521,3 +521,26 @@ describe("setControlValue", () => {
 		expect(tab.getControlValue('rareTagThreshold')).toBe(7);
 	});
 });
+
+describe('Count embedded links', () => {
+	test('is an enabled-by-default toggle in What gets counted', () => {
+		expect(DEFAULT_SETTINGS.countEmbeddedLinks).toBe(true);
+		const group = defs().find(d => 'heading' in d && d.heading === 'What gets counted');
+		expect(group).toBeDefined();
+		const toggle = [...walk([group!])].find(d => isControl(d) && d.control.key === 'countEmbeddedLinks');
+		expect(toggle).toMatchObject({
+			name: 'Count embedded links',
+			control: { type: 'toggle', key: 'countEmbeddedLinks', defaultValue: true },
+		});
+	});
+
+	test.each([false, true])('saves %s and restarts the collector', async value => {
+		const { tab, settings, saveSettings, restartCollector } = makeTab();
+		await tab.setControlValue('countEmbeddedLinks', value);
+		expect(settings.countEmbeddedLinks).toBe(value);
+		expect(tab.getControlValue('countEmbeddedLinks')).toBe(value);
+		expect(saveSettings).toHaveBeenCalledTimes(1);
+		expect(restartCollector).toHaveBeenCalledTimes(1);
+		expect(saveSettings.mock.invocationCallOrder[0]).toBeLessThan(restartCollector.mock.invocationCallOrder[0]);
+	});
+});

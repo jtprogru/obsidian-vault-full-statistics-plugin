@@ -701,3 +701,47 @@ describe("FullVaultMetrics — own/source ratio", () => {
 		expect(v.sourcePct()).toBe(0);
 	});
 });
+
+describe('embedded link counting', () => {
+	const file = Object.assign(new TFile(), { path: 'Notes/a.md' });
+	const mixed = {
+		links: [{ link: 'a' }, { link: 'missing' }],
+		embeds: [{ link: 'note' }, { link: 'image.png' }, { link: 'doc.pdf' }],
+		frontmatterLinks: [{ link: 'source' }],
+	};
+
+	test.each([
+		['missing metadata', undefined, 0, 0],
+		['missing fields', {}, 0, 0],
+		['empty fields', { links: [], embeds: [], frontmatterLinks: [] }, 0, 0],
+		['regular links', { links: mixed.links }, 2, 2],
+		['embeds', { embeds: mixed.embeds }, 3, 0],
+		['mixed metadata', mixed, 6, 3],
+	] as const)('%s respects both modes', async (_name, metadata, enabled, disabled) => {
+		const collector = new NoteMetricsCollector();
+		expect((await collector.collect(file, metadata as any))?.metrics.links).toBe(enabled);
+		expect(collector.setCountEmbeddedLinks(false)).toBe(collector);
+		expect((await collector.collect(file, metadata as any))?.metrics.links).toBe(disabled);
+	});
+
+	test.each(['note', 'note#Heading', 'note#^block', 'image.png', 'doc.pdf', 'note.md', 'missing'])
+	('counts every occurrence of %s without resolving or traversing it', async link => {
+		const collector = new NoteMetricsCollector();
+		const metadata = { embeds: [{ link }, { link }] } as any;
+		expect((await collector.collect(file, metadata, '![[other]]'))?.metrics.links).toBe(2);
+		collector.setCountEmbeddedLinks(false);
+		expect((await collector.collect(file, metadata, '![[other]]'))?.metrics.links).toBe(0);
+	});
+
+	test.each([mixed, {}])('invalidates signatures true → false → true with unchanged inputs: %j', async metadata => {
+		const collector = new NoteMetricsCollector();
+		for (const enabled of [true, false, true]) {
+			collector.setCountEmbeddedLinks(enabled);
+			expect(collector.peekSignature(file, metadata as any)).toBe(false);
+			const result = await collector.collect(file, metadata as any);
+			expect(result?.metrics.links).toBe(metadata === mixed ? (enabled ? 6 : 3) : 0);
+			expect(collector.peekSignature(file, metadata as any)).toBe(true);
+			expect(await collector.collect(file, metadata as any)).toBeUndefined();
+		}
+	});
+});
