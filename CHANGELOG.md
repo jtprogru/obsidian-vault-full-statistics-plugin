@@ -4,6 +4,8 @@ All notable changes to this plugin are recorded here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [1.26.0] - 2026-11-08
+
 ### Added
 - **Count embedded links** in **What gets counted**, enabled by default, with English and Russian labels. Disable it to exclude all `metadata.embeds` from Links and QoV while retaining regular and frontmatter links. Vault and folder totals recalculate immediately; today’s snapshot updates after metrics settle and past days remain unchanged. Repeated embeds count separately regardless of target existence; embedded content is not traversed recursively. Orphans, Trace, Tangles, storage and CSV formats are unchanged.
 
